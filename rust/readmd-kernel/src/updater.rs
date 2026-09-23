@@ -2595,7 +2595,7 @@ mod tests {
     /// `{'ok': False, 'error_code': 'update_response_invalid'}` — no `html_url`,
     /// still HTTP 200.
     #[test]
-    fn a_non_string_asset_name_raises_exactly_like_python() {
+    fn a_non_string_asset_name_is_pythons_update_response_invalid() {
         let poison: &[Value] = &[
             json!(5),
             json!(0),
@@ -2702,7 +2702,7 @@ mod tests {
         }
         // `source` is reachable in the decision but not from the host probe: the
         // probe models the packaged app, i.e. Python's `getattr(sys, 'frozen',
-        // False)` being true, which is the mapping batch2.rs:417-420 documents.
+        // False)` being true, which is the mapping [`detect_app_flavor_from`] pins.
         // Asserting the pair here keeps that a *stated* choice rather than a
         // branch that quietly went missing.
         assert_ne!(detect_app_flavor(), "source");
@@ -2826,6 +2826,118 @@ mod tests {
         assert_eq!(payload["release_notes"], json!(""));
         assert_eq!(payload["html_url"], json!(""));
         assert_eq!(payload["sha_url"], Value::Null);
+    }
+
+    /// `updater.py:434-435` hands `data.get('assets', [])` to `match_release_asset`,
+    /// which **iterates** it (`updater.py:135`) inside the `try` at `updater.py:430`.
+    /// Any value that is not a list of mappings therefore raises, and
+    /// `updater.py:464-466` answers with exactly two keys, served 200.  Absorbing
+    /// those shapes into an empty `Vec` made the kernel report a *successful*
+    /// update check for a malformed release document.
+    ///
+    /// The row-level half of the same exception: a mapping whose `name` is not a
+    /// string raises at `name.upper()` (`updater.py:137`) too, and that shape is
+    /// pinned by [`a_non_string_asset_name_is_pythons_update_response_invalid`].
+    #[test]
+    fn check_reports_update_response_invalid_for_uniterable_assets() {
+        let tail = |doc: Value| {
+            let mut calls = 0usize;
+            let payload = release_check_payload("2.4.0", Some(&doc), "", &mut |_| {
+                calls += 1;
+                None
+            });
+            assert_eq!(calls, 0, "the error path must not reach the manifest: {doc}");
+            payload
+        };
+
+        for shape in [
+            json!(null),
+            json!(5),
+            json!(true),
+            json!("ab"),
+            json!({ "a": 1 }),
+            json!([5]),
+            json!(["x"]),
+            json!([true]),
+        ] {
+            assert_eq!(
+                tail(json!({ "tag_name": "2.5.0", "assets": shape.clone() })),
+                json!({ "ok": false, "error_code": "update_response_invalid" }),
+                "`assets: {shape}` raises in CPython, so only these two keys may answer",
+            );
+        }
+
+        // Empty containers iterate to nothing: neither `for` loop runs, so Python
+        // stays on the success path with `asset` and `sha_url` null.
+        for shape in [json!([]), json!({}), json!("")] {
+            let payload = tail(json!({ "tag_name": "2.5.0", "assets": shape.clone() }));
+            assert_eq!(payload["ok"], json!(true), "`assets: {shape}` iterates to nothing");
+            assert_eq!(payload["asset"], Value::Null);
+            assert_eq!(payload["sha_url"], Value::Null);
+        }
+
+        // An absent key takes the `[]` default (`data.get('assets', [])`).
+        let payload = tail(json!({ "tag_name": "2.5.0" }));
+        assert_eq!(payload["ok"], json!(true));
+        assert_eq!(payload["latest_version"], json!("2.5.0"));
+    }
+
+    /// `updater.py:431` and `:451` — `latest_tag = data.get('tag_name', '')` and
+    /// `'release_name': data.get('name') or latest_tag` are *raw* echoes of the
+    /// release document.  Python keeps the three shapes apart (absent key → `''`,
+    /// explicit `null` → `None`, a number stays a number) while
+    /// `is_newer_version` coerces with `str(value or '')` (`versioning.py:14`);
+    /// collapsing all of them to `""` invented a version out of a malformed
+    /// document and made `"latest_version": null` unreachable.
+    #[test]
+    fn check_echoes_the_release_document_without_inventing_values() {
+        let check = |doc: Value| {
+            let mut calls = 0usize;
+            let payload = release_check_payload("2.4.0", Some(&doc), "", &mut |_| {
+                calls += 1;
+                None
+            });
+            assert_eq!(calls, 0, "no assets, no manifest request: {doc}");
+            payload
+        };
+
+        // Absent `tag_name` → `''` (`data.get('tag_name', '')`).
+        let payload = check(json!({}));
+        assert_eq!(payload["ok"], json!(true));
+        assert_eq!(payload["latest_version"], json!(""));
+        assert_eq!(payload["release_name"], json!(""));
+        assert_eq!(payload["has_update"], json!(false));
+        assert_eq!(payload["asset"], Value::Null);
+        assert_eq!(payload["sha_url"], Value::Null);
+        assert_eq!(payload["published_at"], json!(""));
+        assert_eq!(payload["release_notes"], json!(""));
+        assert_eq!(payload["html_url"], json!(""));
+
+        // Present-but-`null` → `None`, and the `or` fallback hands it straight to
+        // `release_name`.
+        let payload = check(json!({ "tag_name": null }));
+        assert_eq!(payload["latest_version"], Value::Null);
+        assert_eq!(payload["release_name"], Value::Null);
+        assert_eq!(payload["has_update"], json!(false));
+
+        // An empty `name` is falsy, so the tag is echoed (`updater.py:451`).
+        let payload = check(json!({ "tag_name": "2.5.0", "name": "" }));
+        assert_eq!(payload["release_name"], json!("2.5.0"));
+        let payload = check(json!({ "tag_name": "2.5.0", "name": "ReadMD 2.5.0" }));
+        assert_eq!(payload["release_name"], json!("ReadMD 2.5.0"));
+
+        // Non-string tags: `0` is falsy so the comparison sees `''`, `9` is
+        // `str(9) == '9'`; both are echoed exactly as the document carried them.
+        let payload = check(json!({ "tag_name": 0 }));
+        assert_eq!(payload["latest_version"], json!(0));
+        assert_eq!(payload["has_update"], json!(false));
+        let payload = check(json!({ "tag_name": 9 }));
+        assert_eq!(payload["latest_version"], json!(9));
+        assert_eq!(payload["release_name"], json!(9));
+        assert_eq!(payload["has_update"], json!(true));
+        let payload = check(json!({ "tag_name": true }));
+        assert_eq!(payload["latest_version"], json!(true));
+        assert_eq!(payload["has_update"], json!(false));
     }
 
     // --------------------------------------------------- query_latest_release

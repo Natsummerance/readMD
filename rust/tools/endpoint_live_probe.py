@@ -7,13 +7,22 @@ endpoint the client calls. That is still a proxy: a registered route can answer
 throwaway workspace and asks it, over HTTP, for every consumer endpoint.
 
 Verdicts per endpoint:
-  served  any reply that is neither 404 nor an unimplemented answer
-  GAP     404  (route missing from dispatch)
+  served  any reply a handler produced, incl. a 404 with a JSON error envelope
+  GAP     404 whose body is the router fallback (no route reached a handler)
   STUB    501, or a body naming not_implemented / unimplemented
   TRANSPORT connection failed or timed out
 
+Status alone cannot prove non-registration: readmd.py dispatches every method
+through one _route, so handlers legitimately answer 404 with their own payload —
+/api/convert/cancel with a bodyless GET reaches _api_convert_cancel and returns
+404 {'ok': False, 'error_code': 'job_not_found'} (readmd.py:3351). The only
+evidence of a missing route is the fallback the dispatcher itself sends: the
+plain-text 'not found' from readmd.py 1378 / 1516 / 2971 / 3566. That signature
+is taken from a control request at runtime, so the classifier tracks the kernel
+rather than an assumed string.
+
 Requests are GET-only. A POST-only handler answers 405 or a validation error,
-never 404, so the non-404 assertion holds without mutating anything.
+never the router fallback, so the assertion holds without mutating anything.
 
 Exit 0 only when GAP == 0 and STUB == 0.
 Run: python rust/tools/endpoint_live_probe.py
@@ -36,6 +45,7 @@ OUT = os.path.join(REPO, "scratch", "rust_parity", "endpoint_gate", "live.txt")
 
 LITERAL = re.compile(r"""['"`](/api/[A-Za-z0-9_\-/.]*)['"`]""")
 UNIMPLEMENTED = ("not_implemented", "unimplemented", "not yet implemented")
+ROUTER_FALLBACK = "not found"
 
 
 def scan(path, found):
@@ -88,10 +98,10 @@ def http(port, path, timeout=10):
         return None, "%s: %s" % (type(e).__name__, e)
 
 
-def classify(status, body):
+def classify(status, body, fallback=ROUTER_FALLBACK):
     if status is None:
         return "TRANSPORT", body[:120]
-    if status == 404:
+    if status == 404 and body.strip().lower() == fallback:
         return "GAP", "404 %s" % body.strip()[:120]
     if status == 501 or any(k in body.lower() for k in UNIMPLEMENTED):
         return "STUB", "%s %s" % (status, body.strip()[:120])
@@ -125,17 +135,26 @@ def main():
             lines.append("FATAL /api/ping never answered 200 (last=%s)" % ready)
             return 2
 
+        ctl_status, ctl_body = http(port, "/api/no/such/endpoint-at-all")
+        fallback = ctl_body.strip().lower()
+        lines.append("control unknown-route reply: %s %s" % (ctl_status, fallback[:80]))
+        if ctl_status != 404 or not fallback or fallback.startswith("{"):
+            lines.append("FATAL router fallback signature unusable; cannot separate GAP from handled 404")
+            return 2
+
+        handled_404 = 0
         for ep in endpoints:
             probe = ep + "/" if ep in ("/api/recent", "/api/upstream-sources") else ep
             status, body = http(port, probe)
-            kind, detail = classify(status, body)
+            kind, detail = classify(status, body, fallback)
+            if kind == "served" and status == 404:
+                handled_404 += 1
+                detail = "404(handled) %s" % body.strip()[:60]
             buckets[kind].append((ep, detail))
 
-        ctl_status, ctl_body = http(port, "/api/no/such/endpoint-at-all")
-        lines.append("control unknown-route reply: %s %s" % (ctl_status, ctl_body.strip()[:80]))
-        lines.append("served=%d GAP=%d STUB=%d TRANSPORT=%d"
+        lines.append("served=%d GAP=%d STUB=%d TRANSPORT=%d handled_404=%d"
                      % (len(buckets["served"]), len(buckets["GAP"]),
-                        len(buckets["STUB"]), len(buckets["TRANSPORT"])))
+                        len(buckets["STUB"]), len(buckets["TRANSPORT"]), handled_404))
         for kind in ("GAP", "STUB", "TRANSPORT"):
             for ep, detail in buckets[kind]:
                 lines.append("  %s %-34s %s" % (kind, ep, detail))

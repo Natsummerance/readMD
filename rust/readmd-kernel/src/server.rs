@@ -6520,81 +6520,6 @@ fn h_pet_interact(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
 
 // ------------------------------------------------------------- pet import
 
-fn h_pet_import(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    if req.method != "POST" {
-        return Err(ApiError::bad_request("method_not_allowed"));
-    }
-    let payload = body_value(req);
-    if !payload.get("confirm").and_then(|v| v.as_bool()).unwrap_or(false) {
-        return Err(ApiError::bad_request("confirm_required"));
-    }
-    let slug = kernel_pet_string(&payload, "slug");
-    if !kernel_valid_slug(&slug) {
-        return Err(ApiError::bad_request("pet_slug_invalid"));
-    }
-    if kernel_builtin_pet_dir(app, &slug).is_dir() {
-        return Err(ApiError::bad_request("pet_reserved_slug"));
-    }
-    let raw = payload.get("image_base64").and_then(|v| v.as_str()).unwrap_or("");
-    if raw.trim().is_empty() {
-        return Err(ApiError::bad_request("pet_image_required"));
-    }
-    let b64 = match raw.split_once(',') {
-        Some((_, rest)) if raw.starts_with("data:") => rest,
-        _ => raw,
-    };
-    let bytes = kernel_b64_decode(b64).ok_or_else(|| ApiError::bad_request("pet_image_invalid"))?;
-    if bytes.is_empty() || bytes.len() > 24 * 1024 * 1024 {
-        return Err(ApiError::new(413, "pet_image_too_large").noted("bytes", bytes.len().to_string()));
-    }
-    let ext = if bytes.starts_with(&[0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a]) {
-        "png"
-    } else if bytes.starts_with(b"RIFF") && bytes.len() > 12 && &bytes[8..12] == b"WEBP" {
-        "webp"
-    } else {
-        return Err(ApiError::bad_request("pet_image_invalid"));
-    };
-    let dir = kernel_installed_pet_dir(app, &slug);
-    let replace = payload.get("replace").and_then(|v| v.as_bool()).unwrap_or(false);
-    if dir.is_dir() && !replace {
-        return Err(ApiError::new(409, "pet_exists"));
-    }
-    std::fs::create_dir_all(&dir).map_err(|e| ApiError::internal(format!("serialize_failed: {e}")))?;
-    let sheet = format!("spritesheet.{ext}");
-    content::write_bytes_atomic(&dir.join(&sheet), &bytes).map_err(|e| ApiError::internal(format!("serialize_failed: {e}")))?;
-    let display_name = {
-        let d = kernel_pet_string(&payload, "display_name");
-        if d.is_empty() { slug.clone() } else { d }
-    };
-    let description = kernel_pet_string(&payload, "description");
-    let meta = json!({
-        "id": slug,
-        "displayName": display_name,
-        "description": description,
-        "spritesheetPath": sheet,
-        "createdBy": kernel_pet_string(&payload, "created_by"),
-    });
-    content::write_bytes_atomic(
-        &dir.join("pet.json"),
-        &serde_json::to_vec_pretty(&meta).map_err(|e| ApiError::internal(format!("serialize_failed: {e}")))?,
-    )
-    .map_err(|e| ApiError::internal(format!("serialize_failed: {e}")))?;
-    if app.setting("pet_slug").as_str().unwrap_or("").is_empty() {
-        app.update_settings(&json!({ "pet_slug": slug }));
-    }
-    ok_json(json!({
-        "ok": true,
-        "pet": {
-            "slug": slug,
-            "display_name": display_name,
-            "description": description,
-            "directory": dir.to_string_lossy(),
-            "spritesheet": dir.join(&sheet).to_string_lossy(),
-            "sha256": kernel_sha256_hex(&bytes),
-            "is_builtin": false,
-        }
-    }))
-}
 
 // ------------------------------------------------------------- module gate
 
@@ -7393,17 +7318,6 @@ fn h_file_save_fixed(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     ok_json(json!({ "ok": true, "path": out_str }))
 }
 
-fn h_readmd_fix(_app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    let body = body_value(req);
-    let content = body.get("content").and_then(|v| v.as_str()).unwrap_or("");
-    let fix_res = crate::readmd_fix::fix_markdown(content);
-    ok_json(json!({
-        "ok": true,
-        "fixed": fix_res.text,
-        "fixes": fix_res.fixes,
-        "stats": fix_res.stats,
-    }))
-}
 
 fn h_system_assoc(_app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
     #[cfg(target_os = "windows")]
