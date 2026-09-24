@@ -527,19 +527,12 @@ fn child_env(runtime: Option<&str>) -> Vec<(String, String)> {
     out
 }
 
-/// 超时后的进程树清理：Windows 先 `taskkill /T /F`，再兜底 kill 直接子进程。
+/// 超时后的进程树清理：Windows 使用原生 Win32 API 遍历子树，再兜底 kill 直接子进程。
 fn terminate_tree(child: &mut Child) {
     if child.id() != 0 {
         #[cfg(target_os = "windows")]
         {
-            let pid = child.id().to_string();
-            let _ = crate::silent_command("taskkill")
-                .args(["/T", "/F", "/PID", pid.as_str()])
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn()
-                .and_then(|mut killer| killer.wait());
+            let _ = crate::pet_launcher::terminate_tree(child.id());
         }
         #[cfg(not(target_os = "windows"))]
         {

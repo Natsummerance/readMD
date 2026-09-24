@@ -1891,10 +1891,9 @@ pub(crate) fn stop_pet_process() {
     }
     #[cfg(target_os = "windows")]
     {
-        let _ = crate::silent_command("taskkill")
-            .args(["/F", "/IM", "readmd-pet-rust.exe"])
-            .output();
-        std::thread::sleep(std::time::Duration::from_millis(100));
+        let _ = crate::pet_launcher::kill_processes_by_target(
+            &std::path::PathBuf::from("plugins/pet/readmd-rust-host/readmd-pet-rust.exe"),
+        );
     }
 }
 

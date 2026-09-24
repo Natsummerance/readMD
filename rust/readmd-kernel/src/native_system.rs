@@ -1721,6 +1721,29 @@ mod win {
             sam_desired: u32,
             result: *mut HKey,
         ) -> i32;
+        fn RegCreateKeyExW(
+            key: HKey,
+            sub_key: *const u16,
+            reserved: u32,
+            class: *mut u16,
+            options: u32,
+            sam_desired: u32,
+            security_attributes: *mut c_void,
+            result: *mut HKey,
+            disposition: *mut u32,
+        ) -> i32;
+        fn RegSetValueExW(
+            key: HKey,
+            value_name: *const u16,
+            reserved: u32,
+            kind: u32,
+            data: *const u8,
+            data_len: u32,
+        ) -> i32;
+        fn RegDeleteValueW(
+            key: HKey,
+            value_name: *const u16,
+        ) -> i32;
         fn RegQueryValueExW(
             key: HKey,
             value_name: *const u16,
@@ -1802,6 +1825,55 @@ mod win {
         Some((kind, buffer))
     }
 
+    pub unsafe fn set_string(root: usize, sub_key: &str, name: &str, value: &str, expand: bool) -> bool {
+        let wide_sub = to_wide(sub_key);
+        let mut handle: HKey = std::ptr::null_mut();
+        let mut disp: u32 = 0;
+        if RegCreateKeyExW(
+            root as HKey,
+            wide_sub.as_ptr(),
+            0,
+            std::ptr::null_mut(),
+            0,
+            0x20006, // KEY_WRITE
+            std::ptr::null_mut(),
+            &mut handle,
+            &mut disp,
+        ) != ERROR_SUCCESS {
+            return false;
+        }
+        let wide_val = to_wide(value);
+        let val_bytes: &[u8] = std::slice::from_raw_parts(
+            wide_val.as_ptr() as *const u8,
+            wide_val.len() * 2,
+        );
+        let kind = if expand { REG_EXPAND_SZ } else { REG_SZ };
+        let rc = if name.is_empty() {
+            RegSetValueExW(handle, std::ptr::null(), 0, kind, val_bytes.as_ptr(), val_bytes.len() as u32)
+        } else {
+            let wide_name = to_wide(name);
+            RegSetValueExW(handle, wide_name.as_ptr(), 0, kind, val_bytes.as_ptr(), val_bytes.len() as u32)
+        };
+        RegCloseKey(handle);
+        rc == ERROR_SUCCESS
+    }
+
+    pub unsafe fn delete_value(root: usize, sub_key: &str, name: &str) -> bool {
+        let wide_sub = to_wide(sub_key);
+        let mut handle: HKey = std::ptr::null_mut();
+        if RegOpenKeyExW(root as HKey, wide_sub.as_ptr(), 0, 0x20006, &mut handle) != ERROR_SUCCESS {
+            return true;
+        }
+        let rc = if name.is_empty() {
+            RegDeleteValueW(handle, std::ptr::null())
+        } else {
+            let wide_name = to_wide(name);
+            RegDeleteValueW(handle, wide_name.as_ptr())
+        };
+        RegCloseKey(handle);
+        rc == ERROR_SUCCESS || rc == 2
+    }
+
     pub unsafe fn shell_open(path: &str) -> bool {
         let operation = to_wide("open");
         let file = to_wide(path);
@@ -1815,6 +1887,16 @@ mod win {
         );
         (ret as isize) > 32
     }
+}
+
+#[cfg(windows)]
+pub fn win_set_reg_string(root: usize, sub_key: &str, name: &str, value: &str, expand: bool) -> bool {
+    unsafe { win::set_string(root, sub_key, name, value, expand) }
+}
+
+#[cfg(windows)]
+pub fn win_delete_reg_value(root: usize, sub_key: &str, name: &str) -> bool {
+    unsafe { win::delete_value(root, sub_key, name) }
 }
 
 /// Decode a `REG_SZ`/`REG_EXPAND_SZ` payload as UTF-16 minus the NULs.  Not

@@ -3128,28 +3128,32 @@ fn set_autostart(app: &Arc<App>, enabled: bool) -> ApiResult<()> {
         return Err(ApiError::pending("autostart.non-windows"));
     }
     app.update_settings(&json!({ "autostart": enabled }));
-    let exe = std::env::current_exe()
-        .unwrap_or_else(|_| PathBuf::from("readmd.exe"))
-        .to_string_lossy()
-        .to_string();
-    let status = if enabled {
-        crate::silent_command("reg")
-            .args(["add", AUTOSTART_KEY, "/v", "ReadMD", "/t", "REG_SZ", "/d", &exe, "/f"])
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status()
-    } else {
-        crate::silent_command("reg")
-            .args(["delete", AUTOSTART_KEY, "/v", "ReadMD", "/f"])
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status()
-    };
-    match status {
-        Ok(s) if s.success() || !enabled => Ok(()),
-        Ok(s) => Err(ApiError::internal(format!("autostart_failed: {}", s))),
-        Err(e) => Err(ApiError::internal(format!("autostart_failed: {e}"))),
+    #[cfg(windows)]
+    {
+        let exe = std::env::current_exe()
+            .unwrap_or_else(|_| PathBuf::from("readmd.exe"))
+            .to_string_lossy()
+            .to_string();
+        let ok = if enabled {
+            crate::native_system::win_set_reg_string(
+                crate::native_system::HKCU,
+                AUTOSTART_SUBKEY,
+                "ReadMD",
+                &exe,
+                false,
+            )
+        } else {
+            crate::native_system::win_delete_reg_value(
+                crate::native_system::HKCU,
+                AUTOSTART_SUBKEY,
+                "ReadMD",
+            )
+        };
+        if !ok {
+            return Err(ApiError::internal("autostart_failed"));
+        }
     }
+    Ok(())
 }
 
 const AUTOSTART_KEY: &str = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
@@ -4367,6 +4371,7 @@ fn h_control_next(app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
 }
 
 fn h_control_pet_batch(app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
+    crate::parity_pets::drain_pet_commands(app);
     let paths = app.control
         .lock()
         .unwrap_or_else(|e| e.into_inner())
@@ -4376,6 +4381,7 @@ fn h_control_pet_batch(app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
 }
 
 fn h_control_pet_menu(app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
+    crate::parity_pets::drain_pet_commands(app);
     let mut queue = app.control.lock().unwrap_or_else(|e| e.into_inner());
     let pending = if queue.pet_menus > 0 {
         queue.pet_menus -= 1;
@@ -7559,22 +7565,42 @@ fn h_system_assoc(_app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
             let exe_str = exe_path.to_string_lossy();
             let cmd = format!("\"{}\" \"%1\"", exe_str);
             for ext in [".md", ".markdown", ".mdown", ".mkd"] {
-                let _ = crate::silent_command("reg")
-                    .args(["add", &format!(r"HKCU\Software\Classes\{}", ext), "/ve", "/d", "ReadMD.markdown", "/f"])
-                    .output();
+                crate::native_system::win_set_reg_string(
+                    crate::native_system::HKCU,
+                    &format!(r"Software\Classes\{}", ext),
+                    "",
+                    "ReadMD.markdown",
+                    false,
+                );
             }
-            let _ = crate::silent_command("reg")
-                .args(["add", r"HKCU\Software\Classes\ReadMD.markdown", "/ve", "/d", "ReadMD Markdown 阅读器", "/f"])
-                .output();
-            let _ = crate::silent_command("reg")
-                .args(["add", r"HKCU\Software\Classes\ReadMD.markdown\DefaultIcon", "/ve", "/d", &format!("\"{}\",0", exe_str), "/f"])
-                .output();
-            let _ = crate::silent_command("reg")
-                .args(["add", r"HKCU\Software\Classes\ReadMD.markdown\shell\open\command", "/ve", "/t", "REG_EXPAND_SZ", "/d", &cmd, "/f"])
-                .output();
-            let _ = crate::silent_command("reg")
-                .args(["add", r"HKCU\Software\Classes\Applications\ReadMD.exe\shell\open\command", "/ve", "/t", "REG_EXPAND_SZ", "/d", &cmd, "/f"])
-                .output();
+            crate::native_system::win_set_reg_string(
+                crate::native_system::HKCU,
+                r"Software\Classes\ReadMD.markdown",
+                "",
+                "ReadMD Markdown 阅读器",
+                false,
+            );
+            crate::native_system::win_set_reg_string(
+                crate::native_system::HKCU,
+                r"Software\Classes\ReadMD.markdown\DefaultIcon",
+                "",
+                &format!("\"{}\",0", exe_str),
+                false,
+            );
+            crate::native_system::win_set_reg_string(
+                crate::native_system::HKCU,
+                r"Software\Classes\ReadMD.markdown\shell\open\command",
+                "",
+                &cmd,
+                true,
+            );
+            crate::native_system::win_set_reg_string(
+                crate::native_system::HKCU,
+                r"Software\Classes\Applications\ReadMD.exe\shell\open\command",
+                "",
+                &cmd,
+                true,
+            );
             return ok_json(json!({ "ok": true }));
         }
     }

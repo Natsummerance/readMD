@@ -3648,6 +3648,47 @@ fn uninstall_companion_pet(app: &App) -> Value {
     json!({ "ok": true, "installed": false, "status": pet_runtime_status(app) })
 }
 
+/// Drain durable command files from the pet overlay into app.control.
+pub fn drain_pet_commands(app: &Arc<App>) {
+    let (bridge_root, _) = bridge_paths(app);
+    let data_dir = bridge_root.parent().unwrap_or(&bridge_root);
+    let bridge = crate::pet_launcher::HermesPetBridge::new(data_dir);
+    while let Some(command) = bridge.take_command() {
+        let json_val = command.to_json();
+        match crate::desktop_pet::route_pet_command(&json_val) {
+            crate::desktop_pet::PetCommand::OpenMenu => {
+                if let Ok(mut ctrl) = app.control.lock() {
+                    ctrl.pet_menus += 1;
+                }
+            }
+            crate::desktop_pet::PetCommand::Drop { paths } => {
+                let path_strs: Vec<String> = if let Some(arr) = paths.as_array() {
+                    arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect()
+                } else {
+                    Vec::new()
+                };
+                if !path_strs.is_empty() {
+                    let fs_paths: Vec<crate::pet_queue::FsPath> = path_strs
+                        .iter()
+                        .map(|s| crate::pet_queue::FsPath::Text(s.clone()))
+                        .collect();
+                    let _ = crate::pet_queue::PetBatchQueue::new().submit(&fs_paths);
+                    if let Ok(mut ctrl) = app.control.lock() {
+                        ctrl.pet_batches.push_back(path_strs);
+                    }
+                }
+            }
+            crate::desktop_pet::PetCommand::Bounds { bounds } => {
+                app.update_settings(&json!({ "pet_bounds": bounds }));
+            }
+            crate::desktop_pet::PetCommand::Scale { scale } => {
+                app.update_settings(&json!({ "pet_scale": scale }));
+            }
+            _ => {}
+        }
+    }
+}
+
 // -------------------------------------------------------------- pet handlers
 
 /// `/api/pets` — `_api_pets` (`readmd.py:1646`).
@@ -3668,6 +3709,7 @@ pub fn h_pets_status(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     if req.method != "GET" {
         return ec(405, "method_not_allowed");
     }
+    drain_pet_commands(app);
     json_at(200, json!({ "ok": true, "status": pet_runtime_status(app) }))
 }
 
