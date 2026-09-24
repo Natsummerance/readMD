@@ -1292,6 +1292,9 @@ pub(crate) fn h_skill_imports_list(app: &Arc<App>, req: &Request) -> ApiResult<R
     if req.method == "DELETE" {
         return h_skill_imports_delete(app, req);
     }
+    if req.method != "GET" {
+        return Err(ApiError::new(405, "method_not_allowed"));
+    }
     let skills_file = app.paths.data_dir.join("skills.json");
     let mut sources = Vec::new();
     if let Ok(content) = std::fs::read_to_string(&skills_file) {
@@ -1302,7 +1305,6 @@ pub(crate) fn h_skill_imports_list(app: &Arc<App>, req: &Request) -> ApiResult<R
         }
     }
     ok_json(json!({
-        "ok": true,
         "schema_version": 2,
         "sources": sources,
     }))
@@ -1310,18 +1312,29 @@ pub(crate) fn h_skill_imports_list(app: &Arc<App>, req: &Request) -> ApiResult<R
 
 pub(crate) fn h_skill_imports_delete(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     let payload = req.json().unwrap_or_else(|_| serde_json::json!({}));
-    let source_id = payload.get("source_id").and_then(|v| v.as_str()).unwrap_or("");
+    let source_id = payload.get("source_id").and_then(|v| v.as_str()).unwrap_or("").trim();
     if source_id.is_empty() {
         return Err(ApiError::bad_request("source_required"));
     }
+    if payload.get("confirm").and_then(|v| v.as_bool()) != Some(true) {
+        return Err(ApiError::bad_request("confirmation_required"));
+    }
     let skills_file = app.paths.data_dir.join("skills.json");
+    let mut found = false;
     if let Ok(content) = std::fs::read_to_string(&skills_file) {
         if let Ok(mut val) = serde_json::from_str::<Value>(&content) {
             if let Some(arr) = val.get_mut("sources").and_then(|v| v.as_array_mut()) {
+                let initial_len = arr.len();
                 arr.retain(|item| item.get("source_id").and_then(|v| v.as_str()) != Some(source_id));
-                let _ = std::fs::write(&skills_file, serde_json::to_string_pretty(&val).unwrap_or_default());
+                if arr.len() < initial_len {
+                    found = true;
+                    let _ = std::fs::write(&skills_file, serde_json::to_string_pretty(&val).unwrap_or_default());
+                }
             }
         }
+    }
+    if !found {
+        return Err(ApiError::not_found("source_not_found"));
     }
     ok_json(json!({
         "ok": true,
@@ -1331,6 +1344,9 @@ pub(crate) fn h_skill_imports_delete(app: &Arc<App>, req: &Request) -> ApiResult
 }
 
 pub(crate) fn h_skill_imports_preview(_app: &Arc<App>, req: &Request) -> ApiResult<Response> {
+    if req.method != "POST" {
+        return Err(ApiError::new(405, "method_not_allowed"));
+    }
     let payload = req.json()?;
     let source_type = payload.get("source_type")
         .and_then(|v| v.as_str())
@@ -1340,10 +1356,12 @@ pub(crate) fn h_skill_imports_preview(_app: &Arc<App>, req: &Request) -> ApiResu
         .and_then(|v| v.as_str())
         .unwrap_or("");
     if source.is_empty() {
-        return Err(ApiError::bad_request("source_required"));
+        let code = if source_type == "github" { "github_url_required" } else { "source_required" };
+        return Err(ApiError::bad_request(code));
     }
 
     let mut skills = Vec::new();
+    let mut canonical_url = source.to_string();
 
     let p = Path::new(source);
     if p.is_dir() {
@@ -1369,6 +1387,7 @@ pub(crate) fn h_skill_imports_preview(_app: &Arc<App>, req: &Request) -> ApiResu
         if parts.len() >= 3 && parts[0].contains("github.com") {
             let owner = parts[1];
             let repo = parts[2].trim_end_matches(".git");
+            canonical_url = format!("https://github.com/{}/{}", owner, repo);
             let api_url = format!("https://api.github.com/repos/{}/{}/contents", owner, repo);
             let resp = ureq::get(&api_url)
                 .set("User-Agent", "ReadMD-App")
@@ -1406,7 +1425,19 @@ pub(crate) fn h_skill_imports_preview(_app: &Arc<App>, req: &Request) -> ApiResu
         }
     }
 
-    let source_id = format!("src-{}", &uuid::Uuid::new_v4().to_string()[..8]);
+    use sha2::{Digest, Sha256};
+    let (prefix, identity) = if source_type == "github" || source.starts_with("http") {
+        ("gh", canonical_url.clone())
+    } else if source_type == "zip" || source.ends_with(".zip") {
+        ("zip", crate::paths::canonicalize_or_clean(Path::new(source)).to_string_lossy().to_string())
+    } else {
+        ("dir", crate::paths::canonicalize_or_clean(Path::new(source)).to_string_lossy().to_string())
+    };
+    let mut hasher = Sha256::new();
+    hasher.update(identity.as_bytes());
+    let hex_hash = format!("{:x}", hasher.finalize());
+    let source_id = format!("{}-{}", prefix, &hex_hash[..20.min(hex_hash.len())]);
+
     ok_json(json!({
         "ok": true,
         "preview": {
@@ -1414,7 +1445,7 @@ pub(crate) fn h_skill_imports_preview(_app: &Arc<App>, req: &Request) -> ApiResu
             "source": {
                 "type": source_type,
                 "url": source,
-                "canonical_url": source,
+                "canonical_url": canonical_url,
             },
             "skills": skills,
             "credential_required": false,

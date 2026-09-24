@@ -3103,31 +3103,49 @@ fn h_autostart_get(app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
 
 fn h_autostart_set(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     let enabled = req
-        .field("enabled")
-        .map(|v| matches!(v.as_str(), "1" | "true" | "yes" | "on"))
-        .unwrap_or(false);
-    set_autostart(app, enabled)?;
-    ok_json(json!({ "ok": true, "enabled": enabled }))
+        .json()
+        .ok()
+        .and_then(|v| v.get("enabled").map(crate::desktop_pet::py_truthy))
+        .unwrap_or_else(|| {
+            req.field("enabled")
+                .map(|v| matches!(v.as_str(), "1" | "true" | "yes" | "on"))
+                .unwrap_or(false)
+        });
+    match set_autostart(app, enabled) {
+        Ok(()) => ok_json(json!({ "ok": true, "enabled": enabled })),
+        Err(e) => ok_json(json!({ "ok": false, "error": e.to_string() })),
+    }
 }
 
 fn autostart_state(_app: &Arc<App>) -> ApiResult<bool> {
-    if !cfg!(windows) {
-        return Err(ApiError::pending("autostart.non-windows"));
+    #[cfg(windows)]
+    {
+        Ok(crate::native_system::registry_string_at(
+            crate::native_system::HKCU,
+            AUTOSTART_SUBKEY,
+            "ReadMD",
+        )
+        .is_some())
     }
-    Ok(crate::native_system::registry_string_at(
-        crate::native_system::HKCU,
-        AUTOSTART_SUBKEY,
-        "ReadMD",
-    )
-    .is_some())
+    #[cfg(target_os = "linux")]
+    {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        let autostart_file = PathBuf::from(home).join(".config/autostart/io.github.natsummerance.readmd.desktop");
+        Ok(autostart_file.is_file())
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        let plist_path = PathBuf::from(home).join("Library/LaunchAgents/io.github.natsummerance.readmd.plist");
+        Ok(plist_path.is_file())
+    }
+    #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
+    {
+        Ok(false)
+    }
 }
 
-fn set_autostart(app: &Arc<App>, enabled: bool) -> ApiResult<()> {
-    if !cfg!(windows) {
-        app.update_settings(&json!({ "autostart": enabled }));
-        return Err(ApiError::pending("autostart.non-windows"));
-    }
-    app.update_settings(&json!({ "autostart": enabled }));
+fn set_autostart(_app: &Arc<App>, enabled: bool) -> ApiResult<()> {
     #[cfg(windows)]
     {
         let exe = std::env::current_exe()
@@ -3152,8 +3170,46 @@ fn set_autostart(app: &Arc<App>, enabled: bool) -> ApiResult<()> {
         if !ok {
             return Err(ApiError::internal("autostart_failed"));
         }
+        Ok(())
     }
-    Ok(())
+    #[cfg(target_os = "linux")]
+    {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        let autostart_dir = PathBuf::from(home).join(".config/autostart");
+        let autostart_file = autostart_dir.join("io.github.natsummerance.readmd.desktop");
+        if enabled {
+            let _ = std::fs::create_dir_all(&autostart_dir);
+            let _ = std::fs::write(&autostart_file, "[Desktop Entry]\nName=ReadMD\nExec=readmd\nType=Application\n");
+        } else {
+            let _ = std::fs::remove_file(&autostart_file);
+        }
+        Ok(())
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        let plist_dir = PathBuf::from(home).join("Library/LaunchAgents");
+        let plist_file = plist_dir.join("io.github.natsummerance.readmd.plist");
+        if enabled {
+            let _ = std::fs::create_dir_all(&plist_dir);
+            let exe = std::env::current_exe()
+                .unwrap_or_else(|_| PathBuf::from("readmd"))
+                .to_string_lossy()
+                .to_string();
+            let content = format!(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n    <key>Label</key>\n    <string>io.github.natsummerance.readmd</string>\n    <key>ProgramArguments</key>\n    <array>\n        <string>{}</string>\n    </array>\n    <key>RunAtLoad</key>\n    <true/>\n</dict>\n</plist>\n",
+                exe
+            );
+            let _ = std::fs::write(&plist_file, content);
+        } else {
+            let _ = std::fs::remove_file(&plist_file);
+        }
+        Ok(())
+    }
+    #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
+    {
+        Err(ApiError::internal("Unsupported platform"))
+    }
 }
 
 const AUTOSTART_KEY: &str = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
