@@ -1930,6 +1930,13 @@ fn resolve_paths(opts: &Options) -> readmd_kernel::Result<AppPaths> {
     let data = opts.data_dir.clone().unwrap_or_else(|| base.data_dir.clone());
     let workspace = opts.workspace.clone().unwrap_or_else(|| base.workspace.clone());
     let assets = opts.assets.clone().unwrap_or_else(|| base.assets_dir.clone());
+    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let data_abs = if data.is_absolute() { data } else { cwd.join(data) };
+    let workspace_abs = if workspace.is_absolute() { workspace } else { cwd.join(workspace) };
+    let assets_abs = if assets.is_absolute() { assets } else { cwd.join(assets) };
+    let data = readmd_kernel::paths::canonicalize_or_clean(&data_abs);
+    let workspace = readmd_kernel::paths::canonicalize_or_clean(&workspace_abs);
+    let assets = readmd_kernel::paths::canonicalize_or_clean(&assets_abs);
     std::fs::create_dir_all(&data)?;
     // Only ever a directory here: the positional document is `opts.file`, so a
     // `.md` path can no longer be `create_dir_all`'d into a folder of its name.

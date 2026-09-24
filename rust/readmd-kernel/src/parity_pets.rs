@@ -521,11 +521,18 @@ fn pet_assets(app: &App) -> PathBuf {
 
 /// `APP_DIR` — the directory that owns `assets/`.
 pub fn app_dir(app: &App) -> PathBuf {
-    app.paths
+    let dir = app
+        .paths
         .assets_dir
         .parent()
         .map(Path::to_path_buf)
-        .unwrap_or_else(|| app.paths.assets_dir.clone())
+        .unwrap_or_else(|| app.paths.assets_dir.clone());
+    if dir.is_absolute() {
+        paths::canonicalize_or_clean(&dir)
+    } else {
+        let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        paths::canonicalize_or_clean(&cwd.join(dir))
+    }
 }
 
 /// The pets library root: Python's `config.DATA_DIR`.
