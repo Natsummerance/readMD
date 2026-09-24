@@ -22,8 +22,8 @@ use std::collections::{HashMap, VecDeque};
 const _M_NS: &str = "http://schemas.openxmlformats.org/officeDocument/2006/math";
 const _W_NS: &str = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 
-/// 希腊字母与常用数学符号映射表
 lazy_static! {
+    /// 希腊字母与常用数学符号映射表
     static ref MATH_SYMBOLS: HashMap<&'static str, &'static str> = {
         let mut m = HashMap::new();
         // 小写希腊字母
@@ -156,8 +156,8 @@ lazy_static! {
     };
 }
 
-/// 一元/多元运算符映射
 lazy_static! {
+    /// 一元/多元运算符映射
     static ref NARY_OPS: HashMap<&'static str, &'static str> = {
         let mut m = HashMap::new();
         m.insert(r"\sum", "∑");
@@ -173,8 +173,8 @@ lazy_static! {
     };
 }
 
-/// 重音符号映射
 lazy_static! {
+    /// 重音符号映射
     static ref ACCENTS: HashMap<&'static str, &'static str> = {
         let mut m = HashMap::new();
         m.insert(r"\hat", "^");
@@ -190,8 +190,8 @@ lazy_static! {
     };
 }
 
-/// 常见数学函数集
 lazy_static! {
+    /// 常见数学函数集
     static ref FUNCTIONS: std::collections::HashSet<&'static str> = {
         let mut s = std::collections::HashSet::new();
         s.insert(r"\sin");

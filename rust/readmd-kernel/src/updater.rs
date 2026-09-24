@@ -1430,6 +1430,7 @@ mod tests {
         Value::Object(map)
     }
 
+    #[allow(dead_code)]
     fn release(tag: &str, extra: &[(&str, Value)]) -> Value {
         let mut map = Map::new();
         map.insert("tag_name".to_string(), json!(tag));

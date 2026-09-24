@@ -87,6 +87,7 @@ impl Ole2Streams {
     }
 
     /// `name in streams`
+    #[allow(dead_code)]
     pub fn contains(&self, name: &str) -> bool {
         self.entries.iter().any(|(k, _)| k == name)
     }
@@ -97,6 +98,7 @@ impl Ole2Streams {
     }
 
     /// `if not streams:`
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }

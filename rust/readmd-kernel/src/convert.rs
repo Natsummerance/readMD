@@ -2654,7 +2654,7 @@ fn docx_to_md(path: &str, form_tables: bool) -> Result<ConvertResult, String> {
 
 #[derive(Debug, Clone)]
 struct CfbEntry {
-    name: String,
+    _name: String,
     entry_type: u8,
     start_sector: u32,
     size: u64,
@@ -2800,7 +2800,7 @@ impl<'a> CfbReader<'a> {
             entries.insert(
                 name.to_lowercase(),
                 CfbEntry {
-                    name,
+                    _name: name,
                     entry_type,
                     start_sector,
                     size,
@@ -3379,6 +3379,7 @@ fn pdf_page_font_map(path: &str) -> Option<Vec<bool>> {
 /// Deliberately *not* the gate that `pdf_tier_ladder` uses before letting a document-wide
 /// blob answer: that ladder keeps its own stricter page-uniformity requirement, because a
 /// document-wide extraction cannot serve a font-less page at all.
+#[cfg_attr(not(test), allow(dead_code))]
 fn pdf_text_layer_is_trusted(path: &str) -> bool {
     pdf_page_font_map(path).map_or(false, |map| {
         !map.is_empty() && map.iter().any(|mappable| *mappable)
@@ -5932,7 +5933,7 @@ fn pptx_rich_to_md(
         let rels = part_rels(entries, &part)?;
         let tree = match slide_roots
             .iter()
-            .find_map(|root| root.child("cSld").and_then(|cSld| cSld.child("spTree")))
+            .find_map(|root| root.child("cSld").and_then(|c_sld| c_sld.child("spTree")))
         {
             Some(tree) => tree,
             None => continue,

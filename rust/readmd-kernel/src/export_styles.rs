@@ -285,6 +285,7 @@ pub fn font(value: Option<&Value>) -> String {
     }
 }
 
+#[allow(dead_code)]
 fn choose(value: Option<&Value>, allowed: &[&str], fallback: &str) -> String {
     match value {
         Some(Value::String(s)) if allowed.contains(&s.as_str()) => s.clone(),

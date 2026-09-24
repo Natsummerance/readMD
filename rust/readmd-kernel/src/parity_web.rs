@@ -2203,6 +2203,7 @@ fn unused_buf() -> PathBuf {
 // ---------------------------------------------------------------------- tests
 
 #[cfg(test)]
+#[allow(dead_code)]
 mod tests {
     use super::*;
     use std::collections::HashMap;

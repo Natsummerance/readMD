@@ -1510,7 +1510,6 @@ impl Re {
                         }
                         pc = alt;
                         pos = apos;
-                        ret = None;
                         continue 'run;
                     }
                     MatchFrame::Ends { ends, i, cont, .. } => {
@@ -1562,14 +1561,12 @@ impl Re {
                                 cur = frames.len() - 1;
                                 pc = 0;
                                 pos = st;
-                                ret = None;
                                 continue 'run;
                             }
                         }
                         if hit == !neg {
                             pc = after;
                             pos = lpos;
-                            ret = None;
                             continue 'run;
                         }
                         ret = None;
@@ -5245,7 +5242,7 @@ mod tests {
     }
 
     #[test]
-    fn md2tex_opts_useCtex_null() {
+    fn md2tex_opts_use_ctex_null() {
         assert_eq!(
             md_to_latex("body", "Academic Document", "", true, &parse_options("{\"tex\": {\"useCtex\": null}}")),
             "\\documentclass[11pt,a4paper]{article}\n\n% --- \u{6838}\u{5fc3}\u{6570}\u{5b66}\u{4e0e}\u{5b66}\u{672f}\u{5b8f}\u{5305} ---\n\\usepackage[utf8]{inputenc}\n\\usepackage[margin=2.5cm]{geometry}\n\\usepackage{amsmath,amssymb,amsfonts,amsthm,mathtools}\n\\usepackage{booktabs}\n\\usepackage{tabularx}\n\\usepackage{multirow}\n\\usepackage{graphicx}\n\\usepackage{hyperref}\n\\usepackage{listings}\n\\usepackage{xcolor}\n\\usepackage{tcolorbox}\n\\usepackage{microtype}\n\n\\usepackage[backend=biber,style=numeric]{biblatex}\n\n% --- \u{8d85}\u{94fe}\u{63a5}\u{4e0e}\u{4e3b}\u{9898}\u{8272}\u{5f69} ---\n\\hypersetup{\n    colorlinks=true,\n    linkcolor=blue!70!black,\n    citecolor=blue!70!black,\n    urlcolor=blue!70!black\n}\n\n% --- \u{4ee3}\u{7801}\u{5757}\u{6837}\u{5f0f} ---\n\\lstset{\n    basicstyle=\\ttfamily\\small,\n    breaklines=true,\n    frame=single,\n    backgroundcolor=\\color{gray!8},\n    keywordstyle=\\color{blue!80!black},\n    commentstyle=\\color{green!50!black},\n    stringstyle=\\color{red!70!black},\n    showstringspaces=false\n}\n\n% --- \u{5f15}\u{7528}\u{5757}\u{4e0e}\u{63d0}\u{793a}\u{6846} ---\n\\tcolorboxenvironment{quote}{\n    colback=gray!5,\n    colframe=gray!40,\n    arc=2mm,\n    left=3mm,\n    right=3mm,\n    top=2mm,\n    bottom=2mm\n}\n\n\\title{Academic Document}\n\\author{}\n\\date{\\today}\n\n\\begin{document}\n\\maketitle\n\nbody\n\n\\end{document}\n",
@@ -5338,7 +5335,7 @@ mod tests {
 
     #[test]
     fn macro_builtins() {
-        let mut ex = MacroExpander::new();
+        let ex = MacroExpander::new();
         assert_eq!(ex.expand("\\bs{\\alpha} \\in \\R, \\degree C, \\i + \\e"), "\\mathbf{\\alpha} \\in \\mathbb{R}, ^\\circ C, \\mathrm{i} + \\mathrm{e}");
     }
 
@@ -5379,13 +5376,13 @@ mod tests {
 
     #[test]
     fn macro_undefined() {
-        let mut ex = MacroExpander::new();
+        let ex = MacroExpander::new();
         assert_eq!(ex.expand("\\undefinedthing{x} \\mathbf{y}"), "\\undefinedthing{x} \\mathbf{y}");
     }
 
     #[test]
     fn macro_empty_macros_input() {
-        let mut ex = MacroExpander::new();
+        let ex = MacroExpander::new();
         assert_eq!(ex.expand("\\R"), "\\mathbb{R}");
     }
 

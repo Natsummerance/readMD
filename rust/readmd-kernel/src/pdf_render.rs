@@ -3310,7 +3310,7 @@ enum ImgKind {
     },
 }
 
-pub fn load_image(src: &str) -> Option<ImgKind> {
+fn load_image(src: &str) -> Option<ImgKind> {
     let raw = std::fs::read(src).ok()?;
     if raw.len() > 2 && raw[0] == 0xff && raw[1] == 0xd8 {
         return Some(ImgKind::Jpeg(raw));
@@ -3828,6 +3828,7 @@ pub fn write_pdf(doc: &RenderedDoc) -> Vec<u8> {
 // oracle file names one-for-one.
 
 #[cfg(test)]
+#[allow(non_snake_case)]
 mod tests {
     use super::*;
     use crate::pdf_editor::{audit_pages, py_round};

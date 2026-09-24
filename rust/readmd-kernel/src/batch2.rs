@@ -1,5 +1,6 @@
 //! Batch 2: update, diagram, export, plugins, skill-imports, convert
 //! Offline-feasible routes that don't require DEFLATE inflate or office conversion
+#![allow(dead_code)]
 
 use crate::error::{ApiError, ApiResult};
 use crate::server::{Request, Response, ok_json};
@@ -1871,6 +1872,7 @@ lazy_static::lazy_static! {
     static ref PET_PROCESS: std::sync::Mutex<Option<std::process::Child>> = std::sync::Mutex::new(None);
 }
 
+#[allow(dead_code)]
 pub(crate) fn find_pet_host_exe(app: &Arc<App>) -> Option<std::path::PathBuf> {
     let app_root = app.paths.assets_dir.parent().map(|p| p.to_path_buf()).unwrap_or_else(|| app.paths.workspace.clone());
     let candidates = [
@@ -2396,6 +2398,7 @@ fn transcribe_fields(body: &Value) -> (String, Option<String>, String) {
 /// when neither engine is present, which is the answer a user without whisper sees.
 /// Otherwise a truthy error is 422 `transcribe_failed` + `error_detail`, and a
 /// silent failure is 500 `transcribe_empty`.
+#[allow(dead_code)]
 pub(crate) fn h_transcribe(_app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     if req.method != "POST" {
         return Ok(api_error(405, "method_not_allowed"));

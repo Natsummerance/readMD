@@ -2655,12 +2655,12 @@ pub const PURE_GOLDENS: &[PureGolden] = &[
     struct MockEngines {
         com: String,
         soffice: String,
-        tag: &'static str,
+        _tag: &'static str,
     }
 
     impl MockEngines {
         fn new(com: &str, soffice: &str) -> MockEngines {
-            MockEngines { com: com.to_string(), soffice: soffice.to_string(), tag: "x" }
+            MockEngines { com: com.to_string(), soffice: soffice.to_string(), _tag: "x" }
         }
         /// `soffice` names a file in this test's scratch directory.
         fn with_real_output(mut self, file: &Path) -> MockEngines {

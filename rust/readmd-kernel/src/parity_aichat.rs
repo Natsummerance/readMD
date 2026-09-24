@@ -33,9 +33,9 @@ use std::collections::HashSet;
 /// a `fn` whose Python body is not wrapped in `try`, and the caller converts
 /// it into that `try`'s `except Exception: pass`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Raised;
+pub struct Raised;
 
-type PRes<T> = Result<T, Raised>;
+pub type PRes<T> = Result<T, Raised>;
 
 // ------------------------------------------------------------- AI_PLATFORMS
 

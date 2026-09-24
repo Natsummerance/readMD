@@ -1690,19 +1690,6 @@ fn resolve_arg(app: &Arc<App>, req: &Request, keys: &[&str]) -> ApiResult<PathBu
     Err(ApiError::bad_request("missing_path"))
 }
 
-fn dir_arg(app: &Arc<App>, req: &Request, keys: &[&str]) -> ApiResult<PathBuf> {
-    let candidate = resolve_arg(app, req, keys).ok();
-    let dir = match candidate {
-        Some(p) if p.is_dir() => p,
-        Some(p) => p.parent().map(|d| d.to_path_buf()).unwrap_or(p),
-        None => app.paths.workspace.clone(),
-    };
-    // Same envelope rule as [`resolve_arg`]: a denial is a 403 with a stable
-    // code, never a 500 that quotes the rejected path.
-    app.paths.check_allowed(&dir).map_err(ApiError::from)?;
-    Ok(dir)
-}
-
 /// The legacy reader/raw/save routes take the path exactly as the client typed
 /// it: `_route()` does `unquote(qs.get('p', [''])[0])` and hands that string to
 /// `os.path.isfile` / `open()` without resolving it against a document root.
@@ -2896,19 +2883,6 @@ fn h_settings(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     ok_json(json!({ "ok": true, "settings": merged }))
 }
 
-/// **Dead code since Wave E1 (F2).**  Its `ROUTES` row was deleted: `readmd.py`
-/// has no `/api/settings/save` branch — Python answers `404 text/plain
-/// "not found"` (`readmd.py:1378`) — and the path appears in no asset, no
-/// `src/readmd_modules/**` file and not in `main.rs`'s shim, whose
-/// `save_settings` posts to `/api/settings`.  The same merge is already what
-/// `POST /api/settings` does, so the row bought nothing but an over-surface the
-/// differential harness reports as RUST-ONLY.  The body is left in place exactly
-/// the way Wave B left its ten removed handlers, for a cleanup wave to delete.
-fn h_settings_save(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    let patch = body_value(req);
-    let merged = app.update_settings(&patch.as_object().cloned().map(Value::Object).unwrap_or(patch));
-    ok_json(json!({ "ok": true, "settings": merged, "saved": true }))
-}
 
 /// CPython's `str.strip()` whitespace set: the Unicode `White_Space` property
 /// plus U+001C..U+001F, which `str.isspace()` also counts and Rust's
@@ -3212,9 +3186,8 @@ fn set_autostart(_app: &Arc<App>, enabled: bool) -> ApiResult<()> {
     }
 }
 
-const AUTOSTART_KEY: &str = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-/// `AUTOSTART_KEY` without the hive prefix: `RegOpenKeyExW` takes the root as a
-/// separate argument, `reg.exe` expects it glued into a single string.
+/// `AUTOSTART_SUBKEY`: `RegOpenKeyExW` takes the root HKEY_CURRENT_USER as a
+/// separate argument, and subkey path relative to it.
 const AUTOSTART_SUBKEY: &str = "Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 
 fn h_modules(_app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
@@ -3230,10 +3203,6 @@ fn h_modules(_app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
         },
         "win7": false
     }))
-}
-
-fn module(id: &str, state: &str, note: &str) -> Value {
-    json!({ "id": id, "name": id, "state": state, "note": note, "engine": "rust" })
 }
 
 fn h_skills(app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
@@ -3300,88 +3269,7 @@ fn push_skill(out: &mut Vec<Value>, app: &App, id: &str, file: &Path) {
     }));
 }
 
-fn h_pets(app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
-    let pets_cfg = app.setting("pets");
-    let pet_slug_val = app.setting("pet_slug");
-    let active = pets_cfg
-        .get("character")
-        .and_then(|v| v.as_str())
-        .or_else(|| pet_slug_val.as_str())
-        .unwrap_or("hermes")
-        .to_string();
 
-    let catalog_path = app.paths.assets_dir.join("pet").join("catalog.json");
-    let catalog: Value = std::fs::read_to_string(&catalog_path)
-        .ok()
-        .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or_else(|| json!([]));
-
-    let builtins = vec![
-        json!({ "slug": "hermes", "display_name": "伴读使者", "name": "Hermes", "is_builtin": true }),
-        json!({ "slug": "mochi", "display_name": "Mochi", "name": "Mochi", "is_builtin": true }),
-        json!({ "slug": "moss", "display_name": "Moss", "name": "Moss", "is_builtin": true }),
-        json!({ "slug": "amber", "display_name": "Amber", "name": "Amber", "is_builtin": true }),
-        json!({ "slug": "arch-chan", "display_name": "Arch-chan (Live2D)", "name": "Arch-chan", "is_builtin": true, "renderer": "live2d" }),
-    ];
-
-    ok_json(json!({
-        "ok": true,
-        "active": active,
-        "pets": builtins,
-        "catalog": catalog,
-        "count": builtins.len(),
-    }))
-}
-
-fn h_pets_status(app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
-    let root_enabled = app.setting("pet_enabled").as_bool();
-    let root_in_app = app.setting("pet_in_app").as_bool();
-    let root_renderer = app.setting("pet_renderer").as_str().map(|s| s.to_string());
-    let root_scale = app.setting("pet_scale").as_f64();
-    let root_opacity = app.setting("pet_opacity").as_f64();
-    let root_slug = app.setting("pet_slug").as_str().map(|s| s.to_string());
-
-    let stored = app.setting("pets");
-    let enabled = root_enabled.or_else(|| stored.get("enabled").and_then(|v| v.as_bool())).unwrap_or(false);
-    let in_app = root_in_app.or_else(|| stored.get("in_app").and_then(|v| v.as_bool())).unwrap_or(true);
-    let renderer = root_renderer.or_else(|| stored.get("renderer").and_then(|v| v.as_str()).map(|s| s.to_string())).unwrap_or_else(|| "hermes-sprite".to_string());
-    let scale = root_scale.or_else(|| stored.get("scale").and_then(|v| v.as_f64())).unwrap_or(0.33);
-    let opacity = root_opacity.or_else(|| stored.get("opacity").and_then(|v| v.as_f64())).unwrap_or(1.0);
-    let character = root_slug.or_else(|| stored.get("character").and_then(|v| v.as_str()).map(|s| s.to_string())).unwrap_or_else(|| "hermes".to_string());
-    let running = batch2::is_pet_running();
-
-    let pet_status_obj = json!({
-        "adapter": { "available": true, "name": "Desktop Pet Adapter" },
-        "active_pet": &renderer,
-        "active_slug": character,
-        "enabled": enabled,
-        "installed": true,
-        "in_app": in_app,
-        "preferences": {
-            "renderer": &renderer,
-            "scale": scale,
-            "opacity": opacity,
-        },
-        "running": running,
-    });
-
-    ok_json(json!({
-        "ok": true,
-        "enabled": enabled,
-        "installed": true,
-        "in_app": in_app,
-        "running": running,
-        "active_pet": &renderer,
-        "active_slug": character,
-        "preferences": {
-            "renderer": &renderer,
-            "scale": scale,
-            "opacity": opacity,
-        },
-        "adapter": { "available": true, "name": "Desktop Pet Adapter" },
-        "status": pet_status_obj
-    }))
-}
 
 fn h_plugins_list(app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
     ok_json(crate::plugin_manager::load_manifest(app))
@@ -4180,58 +4068,7 @@ fn h_web_cancel_parity(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     Ok(parity_web::h_web_cancel(app, req))
 }
 
-// SUPERSEDED — `/api/url` is answered by [`h_url_parity`] against the ported
-// `readmd.py:3373` handler.  Left in place as dead code for a later cleanup
-// wave, the same convention `ROUTES` documents for the Wave B removals.
-fn h_url(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    let raw = req.field("u").or_else(|| req.field("url")).ok_or_else(|| ApiError::bad_request("missing_url"))?;
-    let crawl = req.q("crawl") == Some("1") || raw.trim_end_matches('/').ends_with("sitemap.xml");
-    fetch_web(app, &raw, crawl)
-}
 
-fn h_web_extract(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    let payload = body_value(req);
-    let raw = payload
-        .get("url")
-        .and_then(value_to_string)
-        .or_else(|| req.q("u").map(|s| s.to_string()))
-        .ok_or_else(|| ApiError::bad_request("missing_url"))?;
-    let crawl = payload.get("crawl").and_then(|v| v.as_bool()).unwrap_or(false);
-    fetch_web(app, &raw, crawl)
-}
-
-fn fetch_web(app: &Arc<App>, raw: &str, crawl: bool) -> ApiResult<Response> {
-    let (status, bytes) = http_get(raw, &[], 45).map_err(|e| ApiError::internal(format!("fetch_failed: {e}")))?;
-    if !(200..300).contains(&status) {
-        return Err(ApiError::internal("fetch_status").noted("status", status.to_string()).noted("url", raw.to_string()));
-    }
-    let html = content::strip_bom(&bytes);
-    let title = extract_title(&html);
-    let text = html_to_text(&html);
-    let mut value = json!({
-        "ok": true,
-        "url": raw,
-        "title": title,
-        "content": text,
-        "text": text,
-        "bytes": bytes.len() as i64,
-        "status": status,
-    });
-    if crawl {
-        let links = extract_href_links(&html);
-        if let Some(obj) = value.as_object_mut() {
-            obj.insert("links".into(), json!(links));
-        }
-    }
-    if raw.ends_with(".md") || raw.ends_with(".markdown") {
-        let _ = app;
-    }
-    ok_json(value)
-}
-
-fn h_web_cancel(_app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
-    ok_json(json!({ "ok": true, "cancelled": true }))
-}
 
 fn h_bibtex(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     let text = match req.field("content") {
@@ -4247,21 +4084,6 @@ fn h_bibtex(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     ok_json(json!({ "ok": true, "entries": entries, "count": entries.len() }))
 }
 
-fn h_diagram_capabilities(_app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
-    ok_json(json!({
-        "ok": true,
-        "engine": "rust",
-        "capabilities": {
-            "mermaid": true,
-            "katex": true,
-            "mathjax": true,
-            "plantuml": false,
-            "graphviz": false,
-            "serverSideRender": false
-        },
-        "note": "mermaid/katex render in the webview; server-side rendering is not ported yet."
-    }))
-}
 
 /// `Handler._api_import_process` (`readmd.py:1954-1966`).
 ///
@@ -4780,82 +4602,6 @@ pub fn truncate_text(text: &str, max: usize) -> String {
     out
 }
 
-fn extract_title(html: &str) -> String {
-    let lower = html.to_ascii_lowercase();
-    let Some(start) = lower.find("<title") else { return String::new() };
-    let Some(gt) = lower[start..].find('>') else { return String::new() };
-    let body_start = start + gt + 1;
-    let Some(end) = lower[body_start..].find("</title>") else { return String::new() };
-    html[body_start..body_start + end].trim().to_string()
-}
-
-fn html_to_text(html: &str) -> String {
-    let mut out = String::with_capacity(html.len() / 2 + 16);
-    let mut in_tag = false;
-    let mut pending_space = false;
-    for ch in html.chars() {
-        if ch == '<' {
-            in_tag = true;
-            continue;
-        }
-        if in_tag {
-            if ch == '>' {
-                in_tag = false;
-                pending_space = true;
-            }
-            continue;
-        }
-        if ch == '\n' || ch == '\r' || ch == '\t' {
-            pending_space = true;
-            continue;
-        }
-        if ch == ' ' {
-            pending_space = true;
-            continue;
-        }
-        if pending_space {
-            if !out.is_empty() && !out.ends_with(' ') {
-                out.push(' ');
-            }
-            pending_space = false;
-        }
-        out.push(ch);
-    }
-    out.split_whitespace()
-        .collect::<Vec<&str>>()
-        .join(" ")
-}
-
-fn extract_href_links(html: &str) -> Vec<String> {
-    let mut out = Vec::new();
-    let mut rest = html;
-    while let Some(pos) = rest.find("href=") {
-        rest = &rest[pos + 5..];
-        let quote = rest.chars().next().filter(|c| *c == '"' || *c == '\'');
-        let (clean, tail) = match quote {
-            Some(q) => match rest[1..].find(q) {
-                Some(end) => (&rest[1..end + 1], &rest[end + 2..]),
-                None => break,
-            },
-            None => match rest.find(|c: char| c.is_whitespace() || c == '>') {
-                Some(end) => (&rest[..end], &rest[end..]),
-                None => (rest, ""),
-            },
-        };
-        rest = tail;
-        let link = clean.trim().trim_matches('"').trim_matches('\'');
-        if link.is_empty() || link.starts_with('#') || link.starts_with("javascript:") {
-            continue;
-        }
-        if !out.contains(&link.to_string()) {
-            out.push(link.to_string());
-        }
-        if out.len() >= 500 {
-            break;
-        }
-    }
-    out
-}
 
 pub fn parse_bibtex(text: &str) -> Vec<Value> {
     let mut entries = Vec::new();
@@ -6319,14 +6065,9 @@ mod tests {
 // them natively instead of returning 501.
 // ===========================================================================
 
-fn kernel_app_root(app: &Arc<App>) -> PathBuf {
-    app.paths
-        .assets_dir
-        .parent()
-        .map(|p| p.to_path_buf())
-        .unwrap_or_else(|| app.paths.assets_dir.clone())
-}
 
+
+#[cfg_attr(not(test), allow(dead_code))]
 fn kernel_valid_slug(slug: &str) -> bool {
     let bytes = slug.as_bytes();
     if bytes.is_empty() || bytes.len() > 64 || slug.contains("..") {
@@ -6338,6 +6079,7 @@ fn kernel_valid_slug(slug: &str) -> bool {
     bytes.iter().all(|b| b.is_ascii_alphanumeric() || *b == b'-' || *b == b'_' || *b == b'.')
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 fn kernel_copy_tree(src: &Path, dst: &Path) -> std::io::Result<u64> {
     std::fs::create_dir_all(dst)?;
     let mut count = 0u64;
@@ -6355,6 +6097,7 @@ fn kernel_copy_tree(src: &Path, dst: &Path) -> std::io::Result<u64> {
     Ok(count)
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 fn kernel_b64_decode(input: &str) -> Option<Vec<u8>> {
     fn sextet(c: u8) -> Option<u32> {
         match c {
@@ -6391,429 +6134,12 @@ fn kernel_sha256_hex(bytes: &[u8]) -> String {
     digest.iter().map(|b| format!("{b:02x}")).collect()
 }
 
-fn kernel_builtin_pet_dir(app: &Arc<App>, slug: &str) -> PathBuf {
-    app.paths.assets_dir.join("pet").join(slug)
-}
-
-fn kernel_installed_pet_dir(app: &Arc<App>, slug: &str) -> PathBuf {
-    app.paths.data_dir.join("pets").join(slug)
-}
 
 fn kernel_pet_string(payload: &Value, key: &str) -> String {
     payload.get(key).and_then(|v| v.as_str()).unwrap_or("").trim().to_string()
 }
 
-fn is_builtin_slug(app: &Arc<App>, slug: &str) -> bool {
-    const BUILTIN_SLUGS: &[&str] = &[
-        "hermes", "mochi", "moss", "amber", "arch-chan", "cache-capy", "niu-lai",
-    ];
-    if BUILTIN_SLUGS.contains(&slug) {
-        return true;
-    }
-    let pet_dir = app.paths.assets_dir.join("pet");
-    if pet_dir.join(slug).is_dir() {
-        return true;
-    }
-    if pet_dir.join(format!("{slug}-sprite.png")).is_file() {
-        return true;
-    }
-    false
-}
 
-fn kernel_pet_spritesheet(app: &Arc<App>, slug: &str) -> Option<PathBuf> {
-    let direct_sprite = app.paths.assets_dir.join("pet").join(format!("{slug}-sprite.png"));
-    if direct_sprite.is_file() {
-        return Some(direct_sprite);
-    }
-    for dir in [kernel_installed_pet_dir(app, slug), kernel_builtin_pet_dir(app, slug)] {
-        if let Ok(text) = content::read_text(&dir.join("pet.json")) {
-            if let Ok(v) = serde_json::from_str::<Value>(&text) {
-                for key in ["spritesheetPath", "spritesheet"] {
-                    if let Some(rel) = v.get(key).and_then(|s| s.as_str()) {
-                        if rel.trim().is_empty() {
-                            continue;
-                        }
-                        let joined = dir.join(rel.replace('/', std::path::MAIN_SEPARATOR_STR));
-                        if joined.is_file() {
-                            return Some(joined);
-                        }
-                    }
-                }
-            }
-        }
-        for name in ["spritesheet.png", "spritesheet.webp", "sheet.png"] {
-            let cand = dir.join(name);
-            if cand.is_file() {
-                return Some(cand);
-            }
-        }
-    }
-    None
-}
-
-fn kernel_pet_image(app: &Arc<App>, path: &Path, max: u64, cache: &str) -> ApiResult<Response> {
-    let canonical = paths::canonical_existing(path).map_err(|_| ApiError::not_found("pet_not_found"))?;
-    let roots: Vec<PathBuf> = vec![
-        paths::canonicalize_or_clean(&app.paths.assets_dir),
-        paths::canonicalize_or_clean(&app.paths.data_dir),
-    ];
-    if !roots.iter().any(|r| canonical.starts_with(r)) {
-        return Err(ApiError::forbidden("pet_path_invalid"));
-    }
-    let len = std::fs::metadata(&canonical).map(|m| m.len()).unwrap_or(0);
-    if len > max {
-        return Err(ApiError::new(413, "pet_spritesheet_too_large").noted("bytes", len.to_string()));
-    }
-    let bytes = std::fs::read(&canonical).map_err(|e| ApiError::internal(format!("serialize_failed: {e}")))?;
-    let ctype = mime_of(&content::ext_of(&canonical));
-    Ok(Response::raw_bytes(200, ctype, bytes).header("Cache-Control", cache))
-}
-
-// ------------------------------------------------------------- pet lifecycle
-
-fn h_pet_active(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    if req.method != "POST" {
-        return Err(ApiError::bad_request("method_not_allowed"));
-    }
-    let payload = body_value(req);
-    if !payload.get("confirm").and_then(|v| v.as_bool()).unwrap_or(false) {
-        return Err(ApiError::bad_request("confirm_required"));
-    }
-    let slug = kernel_pet_string(&payload, "slug");
-    if slug.is_empty() {
-        app.update_settings(&json!({ "pet_slug": "", "pet_enabled": false }));
-        return ok_json(json!({ "ok": true, "active": Value::Null }));
-    }
-    if !kernel_valid_slug(&slug) {
-        return Err(ApiError::bad_request("pet_slug_invalid"));
-    }
-    let is_builtin = is_builtin_slug(app, &slug);
-    let builtin = kernel_builtin_pet_dir(app, &slug);
-    let installed = kernel_installed_pet_dir(app, &slug);
-    if !is_builtin && !installed.is_dir() {
-        return Err(ApiError::not_found("pet_not_found"));
-    }
-    if builtin.is_dir() && !installed.is_dir() {
-        let _ = kernel_copy_tree(&builtin, &installed);
-    }
-    let renderer = if slug == "arch-chan" {
-        "live2d"
-    } else {
-        "hermes-sprite"
-    };
-
-    app.update_settings(&json!({
-        "pet_slug": &slug,
-        "pet_renderer": renderer,
-        "pet_enabled": true,
-        "installed": true,
-        "pets": {
-            "character": &slug,
-            "renderer": renderer,
-            "enabled": true,
-        }
-    }));
-
-    let scale = app.setting("pet_scale").as_f64().unwrap_or(0.33);
-    let opacity = app.setting("pet_opacity").as_f64().unwrap_or(1.0);
-    let in_app = app.setting("pet_in_app").as_bool().unwrap_or(false);
-    crate::batch2::ensure_pet_state_file(app, true, in_app, renderer, scale, opacity, &slug);
-
-    ok_json(json!({
-        "ok": true,
-        "active": slug,
-        "directory": if installed.is_dir() { installed.to_string_lossy().to_string() } else { builtin.to_string_lossy().to_string() },
-        "is_builtin": is_builtin,
-    }))
-}
-
-fn h_pet_remove(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    if req.method != "POST" && req.method != "DELETE" {
-        return Err(ApiError::bad_request("method_not_allowed"));
-    }
-    let payload = body_value(req);
-    if !payload.get("confirm").and_then(|v| v.as_bool()).unwrap_or(false) {
-        return Err(ApiError::bad_request("confirm_required"));
-    }
-    let slug = kernel_pet_string(&payload, "slug");
-    if !kernel_valid_slug(&slug) {
-        return Err(ApiError::bad_request("pet_slug_invalid"));
-    }
-    if kernel_builtin_pet_dir(app, &slug).is_dir() {
-        return Err(ApiError::forbidden("pet_cannot_delete_builtin"));
-    }
-    let dir = kernel_installed_pet_dir(app, &slug);
-    if !dir.is_dir() {
-        return Err(ApiError::not_found("pet_not_found"));
-    }
-    std::fs::remove_dir_all(&dir)
-        .map_err(|e| ApiError::internal("pet_remove_failed").noted("detail", e.to_string()))?;
-    if app.setting("pet_slug").as_str().unwrap_or("") == slug.as_str() {
-        app.update_settings(&json!({ "pet_slug": "", "pet_enabled": false }));
-    }
-    ok_json(json!({ "ok": true, "removed": slug }))
-}
-
-fn h_pet_thumb(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    let slug = req.q("slug").unwrap_or("").trim().to_string();
-    if slug.is_empty() {
-        return Err(ApiError::bad_request("pet_slug_invalid"));
-    }
-    if !kernel_valid_slug(&slug) {
-        return Err(ApiError::forbidden("pet_path_invalid"));
-    }
-    let thumb = app.paths.assets_dir.join("pet").join("thumbs").join(format!("{slug}.png"));
-    if thumb.is_file() {
-        return kernel_pet_image(app, &thumb, 5 * 1024 * 1024, "private, max-age=86400");
-    }
-    match kernel_pet_spritesheet(app, &slug) {
-        Some(sheet) => kernel_pet_image(app, &sheet, 20 * 1024 * 1024, "private, max-age=3600"),
-        None => Err(ApiError::not_found("pet_not_found")),
-    }
-}
-
-fn h_pet_update_status(app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
-    let install = kernel_app_root(app).join("plugins").join("pet").join("readmd-pet-rust-host");
-    let mut version = Value::Null;
-    let mut updated_at = Value::Null;
-    let mut release: Value = Value::Null;
-    for name in ["pet-release-info.json", "runtime-manifest.json"] {
-        let file = install.join(name);
-        let Ok(text) = content::read_text(&file) else { continue };
-        let Ok(v) = serde_json::from_str::<Value>(&text) else { continue };
-        if version.is_null() {
-            version = v.get("version").cloned().unwrap_or(Value::Null);
-        }
-        if updated_at.is_null() {
-            updated_at = v.get("updated_at").or_else(|| v.get("generated_at")).cloned().unwrap_or(Value::Null);
-        }
-        if name.starts_with("pet-release") {
-            release = v;
-        }
-    }
-    let installed = install.is_dir();
-    if !installed {
-        version = Value::Null;
-    }
-    ok_json(json!({
-        "ok": true,
-        "installed": installed,
-        "install_path": install.to_string_lossy(),
-        "legacy_install_path": Value::Null,
-        "version": version,
-        "source": if installed { "bundled" } else { "none" },
-        "updated_at": updated_at,
-        "has_update": false,
-        "update_info": release,
-        "progress": Value::Null,
-        "runtime": "rust",
-    }))
-}
-
-fn h_pet_uninstall(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    if req.method != "POST" && req.method != "DELETE" {
-        return Err(ApiError::bad_request("method_not_allowed"));
-    }
-    let root = kernel_app_root(app).join("plugins").join("pet");
-    let mut removed: Vec<String> = Vec::new();
-    let mut failed: Vec<String> = Vec::new();
-    for name in ["readmd-pet-rust-host", "hermes-adapter"] {
-        let dir = root.join(name);
-        if !dir.exists() {
-            continue;
-        }
-        match std::fs::remove_dir_all(&dir) {
-            Ok(_) => removed.push(name.to_string()),
-            Err(e) => failed.push(format!("{name}: {}", e)),
-        }
-    }
-    app.update_settings(&json!({ "pet_installed": false, "pet_enabled": false }));
-    if failed.is_empty() {
-        ok_json(json!({ "ok": true, "installed": false, "status": "uninstalled", "removed": removed }))
-    } else {
-        Ok(Response::json_status(
-            500,
-            &json!({ "ok": false, "code": "pet_plugin_remove_failed", "status": "failed", "failed": failed }),
-        ))
-    }
-}
-
-// ---------------------------------------------------------- pet companion sim
-
-fn h_pet_interact(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    if req.method != "POST" {
-        return Err(ApiError::bad_request("method_not_allowed"));
-    }
-    let payload = body_value(req);
-    let action = kernel_pet_string(&payload, "action");
-    const ACTIONS: &[&str] = &["pet", "feed", "play", "rest", "wake"];
-    if !ACTIONS.iter().any(|a| *a == action.as_str()) {
-        return Err(ApiError::bad_request("pet_action_invalid"));
-    }
-    let character = {
-        let raw = kernel_pet_string(&payload, "character");
-        if raw.is_empty() { "hermes".to_string() } else { raw }
-    };
-    if character.len() > 64 || !kernel_valid_slug(&character) {
-        return Err(ApiError::bad_request("pet_character_invalid"));
-    }
-    let file = app.paths.data_dir.join("pet").join("companion.json");
-    if let Some(parent) = file.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    let mut doc: Value = match std::fs::read(&file) {
-        Ok(bytes) if bytes.len() <= 1024 * 1024 => serde_json::from_slice(&bytes).unwrap_or_else(|_| json!({})),
-        _ => json!({}),
-    };
-    if !doc.is_object() {
-        doc = json!({});
-    }
-    if doc.get("version").and_then(|v| v.as_i64()).is_none() {
-        doc["version"] = json!(1);
-    }
-    if !doc.get("profiles").map(|p| p.is_object()).unwrap_or(false) {
-        doc["profiles"] = json!({});
-    }
-    let now = (crate::store::now_millis() as f64) / 1000.0;
-    let profiles = doc["profiles"].as_object_mut().expect("profiles object");
-    if !profiles.contains_key(&character) && profiles.len() >= 256 {
-        return Err(ApiError::new(409, "pet_profile_limit"));
-    }
-    let entry = profiles.entry(character.clone()).or_insert_with(|| {
-        json!({
-            "energy": 80.0,
-            "mood": 75.0,
-            "affection": 0.0,
-            "xp": 0,
-            "resting": false,
-            "updated_at": now,
-            "last_actions": {},
-            "revision": 0,
-            "last_action": ""
-        })
-    });
-
-    let mut energy = entry.get("energy").and_then(|v| v.as_f64()).unwrap_or(80.0);
-    let mut mood = entry.get("mood").and_then(|v| v.as_f64()).unwrap_or(75.0);
-    let mut affection = entry.get("affection").and_then(|v| v.as_f64()).unwrap_or(0.0);
-    let mut xp = entry.get("xp").and_then(|v| v.as_i64()).unwrap_or(0);
-    let mut resting = entry.get("resting").and_then(|v| v.as_bool()).unwrap_or(false);
-    let mut updated_at = entry.get("updated_at").and_then(|v| v.as_f64()).unwrap_or(now);
-    let mut revision = entry.get("revision").and_then(|v| v.as_i64()).unwrap_or(0);
-    let mut last_action = entry.get("last_action").and_then(|v| v.as_str()).unwrap_or("").to_string();
-
-    let mut last_actions = entry.get("last_actions").and_then(|v| v.as_object()).cloned().unwrap_or_default();
-
-    let elapsed = (now - updated_at).max(0.0).min(86400.0);
-    if elapsed >= 60.0 {
-        if resting {
-            energy = (energy + (elapsed / 60.0) * 2.0).min(100.0);
-        }
-        updated_at = now;
-    }
-
-    let calc_cooldowns = |acts: &serde_json::Map<String, Value>, clock: f64| -> serde_json::Map<String, Value> {
-        let mut map = serde_json::Map::new();
-        let defs = [("pet", 2.0), ("feed", 30.0), ("play", 20.0), ("rest", 0.0), ("wake", 0.0)];
-        for (k, secs) in defs {
-            let last_ts = acts.get(k).and_then(|v| v.as_f64()).unwrap_or(0.0);
-            let rem = (last_ts + secs - clock).ceil().max(0.0);
-            map.insert(k.to_string(), json!(rem as i64));
-        }
-        map
-    };
-
-    let make_snapshot = |char_name: &str, en: f64, md: f64, aff: f64, cur_xp: i64, rst: bool, acts: &serde_json::Map<String, Value>, rev: i64, lact: &str, up_at: f64, clock: f64| -> Value {
-        json!({
-            "character": char_name,
-            "level": 1 + (cur_xp / 50),
-            "energy": en.round() as i64,
-            "mood": md.round() as i64,
-            "affection": aff.round() as i64,
-            "xp": cur_xp,
-            "resting": rst,
-            "cooldowns": calc_cooldowns(acts, clock),
-            "revision": rev,
-            "last_action": lact,
-            "last_actions": acts,
-            "updated_at": up_at,
-        })
-    };
-
-    let cds = calc_cooldowns(&last_actions, now);
-    let wait = cds.get(&action).and_then(|v| v.as_i64()).unwrap_or(0);
-    if wait > 0 {
-        let snap = make_snapshot(&character, energy, mood, affection, xp, resting, &last_actions, revision, &last_action, updated_at, now);
-        return Ok(Response::json_status(429, &json!({
-            "ok": false,
-            "code": "pet_action_cooldown",
-            "retry_after": wait,
-            "companion": snap,
-        })));
-    }
-
-    if action == "play" && energy < 10.0 {
-        let snap = make_snapshot(&character, energy, mood, affection, xp, resting, &last_actions, revision, &last_action, updated_at, now);
-        return Ok(Response::json_status(409, &json!({
-            "ok": false,
-            "code": "pet_needs_rest",
-            "companion": snap,
-        })));
-    }
-
-    match action.as_str() {
-        "feed" => {
-            energy = (energy + 15.0).min(100.0);
-            mood = (mood + 4.0).min(100.0);
-        }
-        "play" => {
-            energy = (energy - 10.0).max(0.0);
-            mood = (mood + 12.0).min(100.0);
-            resting = false;
-        }
-        "pet" => {
-            mood = (mood + 6.0).min(100.0);
-        }
-        "rest" => {
-            resting = true;
-        }
-        "wake" => {
-            resting = false;
-        }
-        _ => {}
-    }
-    if action == "pet" || action == "feed" || action == "play" {
-        affection = (affection + 1.0).min(100.0);
-        xp = (xp + if action == "play" { 10 } else { 3 }).min(1_000_000);
-    }
-    revision += 1;
-    last_action = action.clone();
-    last_actions.insert(action.clone(), json!(now));
-    updated_at = now;
-
-    *entry = json!({
-        "energy": energy,
-        "mood": mood,
-        "affection": affection,
-        "xp": xp,
-        "resting": resting,
-        "updated_at": updated_at,
-        "last_actions": last_actions,
-        "revision": revision,
-        "last_action": last_action,
-    });
-
-    let bytes = serde_json::to_vec_pretty(&doc).map_err(|e| ApiError::internal(format!("serialize_failed: {e}")))?;
-    content::write_bytes_atomic(&file, &bytes).map_err(|e| ApiError::internal(format!("serialize_failed: {e}")))?;
-
-    let snapshot = make_snapshot(&character, energy, mood, affection, xp, resting, &last_actions, revision, &last_action, updated_at, now);
-    ok_json(json!({
-        "ok": true,
-        "companion": snapshot,
-    }))
-}
-
-// ------------------------------------------------------------- pet import
 
 
 // ------------------------------------------------------------- module gate
@@ -7010,7 +6336,7 @@ fn h_upstream_dynamic(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
 struct ShareSession {
     port: u16,
     token: String,
-    root: PathBuf,
+    _root: PathBuf,
 }
 
 static SHARE: OnceLock<std::sync::Mutex<Option<ShareSession>>> = OnceLock::new();
@@ -7194,7 +6520,7 @@ fn h_share_start(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     };
     let port = addr.port();
     let token = kernel_share_token(app, port);
-    let session = ShareSession { port, token: token.clone(), root: canonical.clone() };
+    let session = ShareSession { port, token: token.clone(), _root: canonical.clone() };
     SHARE_STOP.store(false, Ordering::SeqCst);
     std::thread::spawn(move || {
         for incoming in listener.incoming() {

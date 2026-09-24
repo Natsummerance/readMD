@@ -35,6 +35,7 @@ fn py_strip_start(s: &str) -> &str {
 }
 
 /// Py `str.rstrip()`.
+#[allow(dead_code)]
 fn py_strip_end(s: &str) -> &str {
     s.trim_end_matches(py_isspace as fn(char) -> bool)
 }
