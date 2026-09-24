@@ -263,7 +263,7 @@ impl PlatformBackend for GnomeCompanionBackend {
     }
 }
 
-pub fn select_linux_backend() -> Box<dyn PlatformBackend> {
+pub fn select_linux_backend(session_token: &str) -> Box<dyn PlatformBackend> {
     let desktop = env::var("XDG_CURRENT_DESKTOP")
         .unwrap_or_default()
         .to_ascii_lowercase();
@@ -273,7 +273,11 @@ pub fn select_linux_backend() -> Box<dyn PlatformBackend> {
     // GNOME's shell owns layer-shell policy through the companion extension;
     // never select gtk-layer-shell for a GNOME session.
     if desktop.contains("gnome") || session.contains("gnome") {
-        return Box::new(GnomeCompanionBackend::default());
+        let mut backend = GnomeCompanionBackend::default();
+        if !session_token.is_empty() {
+            backend.token = session_token.to_string();
+        }
+        return Box::new(backend);
     }
     if env::var_os("WAYLAND_DISPLAY").is_some()
         && env::var("READMD_PET_LAYER_SHELL").ok().as_deref() != Some("0")

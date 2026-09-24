@@ -15,7 +15,7 @@ pub fn parse_renderer_message(raw: &str) -> Option<RendererMessage> {
     let value: serde_json::Value = serde_json::from_str(raw).ok()?;
     let object = value.as_object()?;
     let kind = object.get("type")?.as_str()?.to_string();
-    if kind.len() > 64 {
+    if kind.is_empty() || kind.len() > 64 {
         return None;
     }
     let payload = object.get("payload").cloned().unwrap_or(value);
@@ -50,19 +50,37 @@ mod tests {
 
     #[test]
     fn ipc_parser_fails_closed_for_malformed_and_oversized_messages() {
-        let samples = [
+        let malformed = [
             "",
             "null",
             "[]",
             "{}",
             r#"{"type":null}"#,
             r#"{"type":""}"#,
-            r#"{"type":"renderer-ready","payload":[]}"#,
-            &format!(r#"{{"type":"state","payload":"{}"}}"#, "x".repeat(100_000)),
         ];
-        for sample in samples {
-            let _ = parse_renderer_message(sample);
+        for sample in malformed {
+            assert!(
+                parse_renderer_message(sample).is_none(),
+                "expected malformed sample {:?} to fail closed",
+                sample
+            );
         }
+
+        // Valid payload shapes parse cleanly
+        let ready = parse_renderer_message(r#"{"type":"renderer-ready","payload":[]}"#).unwrap();
+        assert_eq!(ready.kind, "renderer-ready");
+        assert_eq!(ready.payload, serde_json::json!([]));
+
+        let state = parse_renderer_message(&format!(
+            r#"{{"type":"state","payload":"{}"}}"#,
+            "x".repeat(100_000)
+        )).unwrap();
+        assert_eq!(state.kind, "state");
+
+        // Type length strictly limited to 64 bytes
         assert!(parse_renderer_message(&format!("{{\"type\":\"{}\"}}", "x".repeat(65))).is_none());
+
+        // Body length strictly limited to MAX_RENDERER_MESSAGE_BYTES
+        assert!(parse_renderer_message(&"a".repeat(MAX_RENDERER_MESSAGE_BYTES + 1)).is_none());
     }
 }

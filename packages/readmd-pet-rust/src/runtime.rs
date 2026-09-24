@@ -144,11 +144,9 @@ impl PetHost {
             .build(&event_loop)
             .map_err(|error| HostError::Backend(format!("window_create:{error}")))?;
         // The GNOME companion authenticates both the application id and the
-        // per-host session token.  HostConfig owns the token used by WRY, so
-        // make the same value available to the Linux platform backend before
-        // it is constructed.
-        env::set_var("READMD_PET_SESSION_TOKEN", &config.session_token);
-        let mut backend = create_backend();
+        // per-host session token. Pass the token directly to the backend rather
+        // than mutating the process environment.
+        let mut backend = create_backend(&config.session_token);
         backend.init(&window)?;
         backend.set_bounds(&window, SnapshotBounds::default())?;
         backend.set_click_through(&window, false)?;

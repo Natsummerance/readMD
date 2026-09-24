@@ -99,21 +99,21 @@ fn configure_builder_platform(builder: WindowBuilder) -> WindowBuilder {
 }
 
 #[cfg(windows)]
-pub fn create_backend() -> Box<dyn PlatformBackend> {
+pub fn create_backend(_session_token: &str) -> Box<dyn PlatformBackend> {
     Box::new(WindowsBackend::default())
 }
 
 #[cfg(target_os = "macos")]
-pub fn create_backend() -> Box<dyn PlatformBackend> {
+pub fn create_backend(_session_token: &str) -> Box<dyn PlatformBackend> {
     Box::new(MacOsBackend::default())
 }
 
 #[cfg(target_os = "linux")]
-pub fn create_backend() -> Box<dyn PlatformBackend> {
-    select_linux_backend()
+pub fn create_backend(session_token: &str) -> Box<dyn PlatformBackend> {
+    select_linux_backend(session_token)
 }
 
 #[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
-pub fn create_backend() -> Box<dyn PlatformBackend> {
+pub fn create_backend(_session_token: &str) -> Box<dyn PlatformBackend> {
     Box::new(fallback::FallbackBackend::default())
 }
