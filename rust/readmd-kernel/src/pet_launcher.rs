@@ -263,6 +263,19 @@ impl OrdValue {
     pub fn object(fields: Vec<(&str, OrdValue)>) -> OrdValue {
         OrdValue::Object(fields.into_iter().map(|(key, value)| (key.to_string(), value)).collect())
     }
+    pub fn from_json(value: &Value) -> OrdValue {
+        match value {
+            Value::Object(map) => {
+                let mut fields = Vec::with_capacity(map.len());
+                for (k, v) in map {
+                    fields.push((k.clone(), Self::from_json(v)));
+                }
+                OrdValue::Object(fields)
+            }
+            Value::Array(items) => OrdValue::Array(items.iter().map(Self::from_json).collect()),
+            other => OrdValue::Json(other.clone()),
+        }
+    }
     /// `json.dumps(payload, ensure_ascii=False, separators=(",", ":"))`
     /// (`hermes_adapter.py:121`).
     pub fn dump(&self) -> String {

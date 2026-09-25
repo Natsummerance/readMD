@@ -3343,6 +3343,262 @@ pub fn pet_runtime_status(app: &App) -> Value {
     status
 }
 
+/// Reads image dimensions from file headers (PNG / WebP).
+fn read_image_size(path: &Path) -> Option<(u32, u32)> {
+    let mut file = fs::File::open(path).ok()?;
+    use std::io::Read;
+    let mut buf = [0u8; 32];
+    let n = file.read(&mut buf).ok()?;
+    if n >= 24 && buf.starts_with(b"\x89PNG\r\n\x1a\n") {
+        let w = u32::from_be_bytes(buf[16..20].try_into().ok()?);
+        let h = u32::from_be_bytes(buf[20..24].try_into().ok()?);
+        return Some((w, h));
+    }
+    if n >= 30 && &buf[0..4] == b"RIFF" && &buf[8..12] == b"WEBP" {
+        if &buf[12..16] == b"VP8 " && n >= 30 {
+            let w = (buf[26] as u32 | ((buf[27] as u32) << 8)) & 0x3fff;
+            let h = (buf[28] as u32 | ((buf[29] as u32) << 8)) & 0x3fff;
+            return Some((w, h));
+        }
+        if &buf[12..16] == b"VP8L" && n >= 25 {
+            let b0 = buf[21] as u32;
+            let b1 = buf[22] as u32;
+            let b2 = buf[23] as u32;
+            let b3 = buf[24] as u32;
+            let w = 1 + (((b1 & 0x3f) << 8) | b0);
+            let h = 1 + (((b3 & 0x0f) << 10) | (b2 << 2) | ((b1 & 0xc0) >> 6));
+            return Some((w, h));
+        }
+    }
+    None
+}
+
+/// Inspect sprite geometry, returning frame dimensions and layout definition.
+fn inspect_sprite_geometry(path: &Path, metadata: Option<&Value>) -> Value {
+    if let Some(meta) = metadata {
+        if meta.get("frameW").is_some() && meta.get("frameH").is_some() {
+            return json!({
+                "frameW": meta.get("frameW").and_then(Value::as_i64).unwrap_or(384),
+                "frameH": meta.get("frameH").and_then(Value::as_i64).unwrap_or(512),
+                "framesPerState": meta.get("framesPerState").and_then(Value::as_i64).unwrap_or(4),
+                "stateRows": meta.get("stateRows").cloned().unwrap_or_else(|| json!(["idle", "wave"])),
+                "isSingleFrame": meta.get("isSingleFrame").and_then(Value::as_bool).unwrap_or(false),
+            });
+        }
+    }
+    if let Some(parent) = path.parent() {
+        let cand = parent.join("pet.json");
+        if cand.is_file() {
+            if let Ok(text) = fs::read_to_string(&cand) {
+                if let Ok(meta) = serde_json::from_str::<Value>(&text) {
+                    if meta.get("frameW").is_some() && meta.get("frameH").is_some() {
+                        return json!({
+                            "frameW": meta.get("frameW").and_then(Value::as_i64).unwrap_or(384),
+                            "frameH": meta.get("frameH").and_then(Value::as_i64).unwrap_or(512),
+                            "framesPerState": meta.get("framesPerState").and_then(Value::as_i64).unwrap_or(4),
+                            "stateRows": meta.get("stateRows").cloned().unwrap_or_else(|| json!(["idle", "wave"])),
+                            "isSingleFrame": meta.get("isSingleFrame").and_then(Value::as_bool).unwrap_or(false),
+                        });
+                    }
+                }
+            }
+        }
+    }
+    if let Some((w, h)) = read_image_size(path) {
+        if w == 1536 && h == 1024 {
+            return json!({
+                "frameW": 384,
+                "frameH": 512,
+                "framesPerState": 4,
+                "stateRows": ["idle", "wave"],
+                "isSingleFrame": false,
+            });
+        }
+        if w == 1536 && h == 2288 {
+            return json!({
+                "frameW": 192,
+                "frameH": 208,
+                "framesPerState": 6,
+                "stateRows": [
+                    "idle", "running-right", "running-left", "waving",
+                    "jumping", "failed", "waiting", "running", "review"
+                ],
+                "isSingleFrame": false,
+            });
+        }
+        if w <= 160 && h <= 160 {
+            return json!({
+                "frameW": 192,
+                "frameH": 208,
+                "framesPerState": 1,
+                "stateRows": ["idle"],
+                "isSingleFrame": true,
+            });
+        }
+        if w % 192 == 0 && h % 208 == 0 {
+            return json!({
+                "frameW": 192,
+                "frameH": 208,
+                "framesPerState": (w / 192).min(6),
+                "stateRows": Value::Null,
+                "isSingleFrame": false,
+            });
+        }
+    }
+    json!({
+        "frameW": 384,
+        "frameH": 512,
+        "framesPerState": 4,
+        "stateRows": ["idle", "wave"],
+        "isSingleFrame": false,
+    })
+}
+
+/// Returns the bundled Hermes sheet used before a gallery selection (`readmd.py:5175`).
+fn default_pet_sprite_info(app: &App) -> Value {
+    let candidates = [
+        pet_assets(app).join("hermes-sprite.png"),
+        app_dir(app).join("assets").join("pet").join("hermes-sprite.png"),
+        app.paths.workspace.join("assets").join("pet").join("hermes-sprite.png"),
+        PathBuf::from("assets/pet/hermes-sprite.png"),
+    ];
+    for candidate in candidates {
+        if candidate.is_file() {
+            if let Ok(raw) = fs::read(&candidate) {
+                use base64::Engine;
+                let b64 = base64::engine::general_purpose::STANDARD.encode(&raw);
+                use sha2::{Digest, Sha256};
+                let mut hasher = Sha256::new();
+                hasher.update(&raw);
+                let sha = format!("{:x}", hasher.finalize());
+                let geo = inspect_sprite_geometry(&candidate, None);
+                return json!({
+                    "enabled": true,
+                    "displayName": "ReadMD",
+                    "spritesheetBase64": b64,
+                    "spritesheetRevision": sha,
+                    "mime": "image/png",
+                    "frameW": geo.get("frameW").cloned().unwrap_or(json!(384)),
+                    "frameH": geo.get("frameH").cloned().unwrap_or(json!(512)),
+                    "framesPerState": geo.get("framesPerState").cloned().unwrap_or(json!(4)),
+                    "isSingleFrame": geo.get("isSingleFrame").cloned().unwrap_or(json!(false)),
+                    "stateRows": geo.get("stateRows").cloned().unwrap_or_else(|| json!(["idle", "wave"])),
+                });
+            }
+        }
+    }
+    json!({ "enabled": false })
+}
+
+/// `_publish_pet_runtime` (`readmd.py:5119-5174`), atomically writing the
+/// narrow overlay state consumed by `readmd-pet-rust.exe`.
+pub fn publish_pet_runtime(app: &App, runtime: Option<&Value>, renderer_override: Option<&str>) -> Value {
+    let in_app = with_state(|state| state.in_app);
+    let mut runtime_val = match runtime {
+        Some(v) if v.is_object() => v.clone(),
+        _ => with_state(|state| state.controller.snapshot()),
+    };
+    let enabled = runtime_val.get("enabled").and_then(Value::as_bool).unwrap_or(false);
+    let is_visible = enabled && !in_app;
+    runtime_val["visible"] = json!(is_visible);
+
+    let prefs = pet_preferences(app);
+    let mut info = prefs.get("info").cloned().unwrap_or_else(|| json!({}));
+    let default_renderer = prefs
+        .get("renderer")
+        .and_then(Value::as_str)
+        .unwrap_or("hermes-sprite")
+        .to_string();
+    let renderer = match renderer_override {
+        Some(r) if r == "hermes-sprite" || r == "live2d" => r.to_string(),
+        _ => default_renderer,
+    };
+
+    if let Some(anim_en) = runtime_val.get("animation_enabled") {
+        let fps_cap = runtime_val.get("fps_cap").cloned().unwrap_or(json!(0));
+        info["animation"] = json!({
+            "enabled": anim_en.as_bool().unwrap_or(false),
+            "fpsCap": fps_cap,
+        });
+    }
+
+    let settings = app.settings_all();
+    let slug = settings
+        .get("pet_slug")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    if !slug.is_empty() {
+        if let Some(pet) = find_pet(&pet_data_dir(app), &pet_assets(app), slug) {
+            if pet.spritesheet.is_file() {
+                if let Ok(raw) = fs::read(&pet.spritesheet) {
+                    use base64::Engine;
+                    let b64 = base64::engine::general_purpose::STANDARD.encode(&raw);
+                    let geo = inspect_sprite_geometry(&pet.spritesheet, None);
+                    let is_webp = pet
+                        .spritesheet
+                        .extension()
+                        .map(|e| e.to_string_lossy().to_ascii_lowercase() == "webp")
+                        .unwrap_or(false);
+                    info["spritesheetBase64"] = json!(b64);
+                    info["spritesheetRevision"] = json!(pet.sha256);
+                    info["mime"] = json!(if is_webp { "image/webp" } else { "image/png" });
+                    info["displayName"] = json!(pet.display_name);
+                    info["frameW"] = geo.get("frameW").cloned().unwrap_or(json!(384));
+                    info["frameH"] = geo.get("frameH").cloned().unwrap_or(json!(512));
+                    info["framesPerState"] = geo.get("framesPerState").cloned().unwrap_or(json!(4));
+                    info["isSingleFrame"] = geo.get("isSingleFrame").cloned().unwrap_or(json!(false));
+                    if let Some(state_rows) = geo.get("stateRows") {
+                        if !state_rows.is_null() {
+                            info["stateRows"] = state_rows.clone();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if info.get("spritesheetBase64").and_then(Value::as_str).is_none() {
+        let fallback = default_pet_sprite_info(app);
+        if let Some(fallback_obj) = fallback.as_object() {
+            for (k, v) in fallback_obj {
+                if info.get(k).is_none() || info[k].is_null() {
+                    info[k] = v.clone();
+                }
+            }
+        }
+    }
+
+    if info.get("spritesheetBase64").and_then(Value::as_str).is_some() {
+        info["enabled"] = json!(is_visible);
+    }
+
+    let companion_character = if slug.is_empty() { "arch-chan" } else { slug };
+    if let Ok(profile) = PetCompanion::load(&pet_data_dir(app)).snapshot(companion_character) {
+        info["companion"] = profile;
+    }
+
+    let (bridge_root, _) = bridge_paths(app);
+    let data_dir = bridge_root.parent().unwrap_or(&bridge_root);
+    let bridge = crate::pet_launcher::HermesPetBridge::new(data_dir);
+    let mut options = crate::pet_launcher::PublishOptions::default();
+    if let Some(obj) = info.as_object() {
+        for (k, v) in obj {
+            options.info.push((k.clone(), crate::pet_launcher::ord_from_value(v)));
+        }
+    }
+    options.bounds = prefs.get("bounds").cloned();
+    options.renderer = Some(json!(renderer));
+    options.fullscreen = Some(json!(false));
+
+    match bridge.publish(&runtime_val, &options) {
+        Ok(published) => published.to_json(),
+        Err(e) => {
+            log::warn!("failed to publish pet runtime: {e:?}");
+            json!({ "ok": false, "error": format!("{e:?}") })
+        }
+    }
+}
+
 /// `configure_pet(settings)` including the launch-failure rollback.
 pub fn configure_pet(app: &App, settings: &Value) -> Value {
     let Some(settings) = settings.as_object() else {
@@ -3415,6 +3671,9 @@ pub fn configure_pet(app: &App, settings: &Value) -> Value {
     // `readmd.py` disables through `PetRuntimeOrchestrator.stop()`, which only
     // touches the backend this process started.  Without it a hidden pet keeps
     // its always-on-top overlay and its WebView2 process alive.
+    if (in_app != previous_in_app) || (!enabled && !in_app) {
+        stop_pet_host();
+    }
     if !enabled {
         stop_pet_host();
     }
@@ -3428,6 +3687,7 @@ pub fn configure_pet(app: &App, settings: &Value) -> Value {
         }
     });
     with_state(|state| state.in_app = in_app);
+    publish_pet_runtime(app, Some(&runtime), Some(&renderer));
     if enabled && !in_app {
         let launched = start_pet_host(app);
         if launched.get("ok").and_then(Value::as_bool) != Some(true) {
@@ -3440,6 +3700,7 @@ pub fn configure_pet(app: &App, settings: &Value) -> Value {
                 "pet_in_app": previous_in_app,
                 "pet_renderer": default_renderer,
             }));
+            publish_pet_runtime(app, None, None);
             return launched;
         }
     }
@@ -3691,6 +3952,9 @@ pub fn drain_pet_commands(app: &Arc<App>) {
             crate::desktop_pet::PetCommand::Scale { scale } => {
                 app.update_settings(&json!({ "pet_scale": scale }));
             }
+            crate::desktop_pet::PetCommand::Ready => {
+                publish_pet_runtime(app, None, None);
+            }
             _ => {}
         }
     }
@@ -3889,6 +4153,7 @@ pub fn h_pet_active(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     } else {
         app.update_settings(&json!({ "pet_slug": slug.clone() }));
     }
+    publish_pet_runtime(app, None, None);
     json_at(200, json!({ "ok": true, "active": slug }))
 }
 
@@ -4106,6 +4371,7 @@ pub fn h_pet_interact(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
         Ok(result) => {
             if result.get("ok").and_then(Value::as_bool) == Some(true) {
                 with_state(|state| state.controller.snapshot());
+                publish_pet_runtime(app, None, None);
             }
             json_at(200, result)
         }

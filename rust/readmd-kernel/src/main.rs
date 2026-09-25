@@ -3654,6 +3654,16 @@ fn run_window(url: String, data_dir: PathBuf, probe: Option<Probe>, probe_json: 
                         return await res.json();
                     } catch(e) { return { ok: false }; }
                 },
+                configure_pet: async function(config) {
+                    try {
+                        const res = await fetch('/api/pets/configure', {
+                            method: 'POST',
+                            headers: bridgeHeaders(true),
+                            body: JSON.stringify(config || {})
+                        });
+                        return await res.json();
+                    } catch(e) { return { ok: false, error: e.message }; }
+                },
                 interact_pet: async function(action, character) {
                     try {
                         const res = await fetch('/api/pets/interact', {
