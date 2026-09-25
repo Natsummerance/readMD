@@ -2004,7 +2004,16 @@ fn pet_preferences(app: &App) -> Value {
     let settings = app.settings_all();
     let settings = settings.as_object().cloned().unwrap_or_default();
     let bounds = match settings.get("pet_bounds") {
-        Some(value @ Value::Object(_)) => value.clone(),
+        Some(Value::Object(map)) => {
+            let mut m = map.clone();
+            let w = m.get("width").and_then(Value::as_f64).unwrap_or(0.0);
+            let h = m.get("height").and_then(Value::as_f64).unwrap_or(0.0);
+            if w < 320.0 || h < 380.0 {
+                m.insert("width".into(), json!(320.0));
+                m.insert("height".into(), json!(380.0));
+            }
+            Value::Object(m)
+        }
         _ => Value::Null,
     };
     let scale = clamp(
@@ -3576,6 +3585,9 @@ pub fn publish_pet_runtime(app: &App, runtime: Option<&Value>, renderer_override
     if let Ok(profile) = PetCompanion::load(&pet_data_dir(app)).snapshot(companion_character) {
         info["companion"] = profile;
     }
+    runtime_val["character"] = json!(companion_character);
+    info["character"] = json!(companion_character);
+    info["slug"] = json!(companion_character);
 
     let (bridge_root, _) = bridge_paths(app);
     let data_dir = bridge_root.parent().unwrap_or(&bridge_root);
@@ -3657,6 +3669,14 @@ pub fn configure_pet(app: &App, settings: &Value) -> Value {
     };
     if settings.contains_key("enabled") {
         preference_updates.insert("pet_enabled".into(), json!(enabled));
+    }
+    if let Some(slug) = settings
+        .get("slug")
+        .or_else(|| settings.get("character"))
+        .or_else(|| settings.get("pet_slug"))
+        .and_then(Value::as_str)
+    {
+        preference_updates.insert("pet_slug".into(), json!(slug));
     }
     if !preference_updates.is_empty() {
         app.update_settings(&Value::Object(preference_updates));
