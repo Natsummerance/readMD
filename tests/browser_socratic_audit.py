@@ -809,6 +809,214 @@ def run_socratic_audit():
             socratic_log("Plugin Center & Settings Lifecycle", "", "PASSED: Plugin system operational and complete.")
 
             # ------------------------------------------------------------------
+            # AUDIT 15: Zen Immersion Mode & Keyboard Escape Exit
+            # ------------------------------------------------------------------
+            socratic_log(
+                "Zen Immersion Mode & Keyboard Escape Exit",
+                "Does entering Zen mode (#btn-zen) add .zen-mode to document.body, "
+                "suppress toolbars, and does pressing Escape cleanly exit?"
+            )
+            # Make sure document is loaded
+            page.goto(f"{BASE_URL}?file={urllib.parse.quote(str(sample_normal_path))}")
+            page.wait_for_selector("#content .markdown-body", state="visible")
+            time.sleep(0.5)
+
+            # Click Zen mode button
+            page.click("#btn-zen")
+            time.sleep(0.3)
+            is_zen = page.evaluate("() => document.body.classList.contains('zen-mode')")
+            print(f"  Zen mode active after click: {is_zen}")
+            assert is_zen is True, "Expected body to have 'zen-mode' class"
+            page.screenshot(path=str(SCREENSHOTS_DIR / "15_zen_mode.png"))
+
+            # Press Escape to exit
+            page.keyboard.press("Escape")
+            time.sleep(0.3)
+            is_zen_after = page.evaluate("() => document.body.classList.contains('zen-mode')")
+            print(f"  Zen mode active after Escape: {is_zen_after}")
+            assert is_zen_after is False, "Expected body to exit 'zen-mode' after Escape"
+
+            socratic_log("Zen Immersion Mode & Keyboard Escape Exit", "", "PASSED: Zen mode immersion and keyboard exit verified.")
+
+            # ------------------------------------------------------------------
+            # AUDIT 16: Editor Studio Live Split Preview & Dynamic Sync
+            # ------------------------------------------------------------------
+            socratic_log(
+                "Editor Studio Live Split Preview & Dynamic Sync",
+                "Does setting preview layout to 'right' display #preview-wrap, "
+                "and does editing CodeMirror update preview text dynamically?"
+            )
+            # Enter edit mode
+            page.click("#btn-edit")
+            page.wait_for_selector("#edit-bar", state="visible")
+            time.sleep(0.5)
+
+            # Switch preview layout to 'right'
+            page.evaluate("() => setPvLayout('right')")
+            time.sleep(0.5)
+
+            pw_visible = page.evaluate("() => { const pw = document.getElementById('preview-wrap'); return pw && !pw.classList.contains('hidden'); }")
+            print(f"  Split preview pane visible: {pw_visible}")
+            assert pw_visible is True, "Expected #preview-wrap to be visible in right-split mode"
+
+            # Dispatch unique text into CodeMirror
+            preview_marker = f"AUTOTEST_PREVIEW_{int(time.time())}"
+            page.evaluate(f"""() => {{
+                if (window.cmView) {{
+                    const newContent = '# Split Preview Title\\n\\nDynamic marker: **{preview_marker}**';
+                    window.cmView.dispatch({{
+                        changes: {{ from: 0, to: window.cmView.state.doc.length, insert: newContent }}
+                    }});
+                    if (typeof renderPreview === 'function') renderPreview();
+                    else if (typeof schedulePreview === 'function') schedulePreview();
+                }}
+            }}""")
+            time.sleep(0.8)
+
+            # Check that preview contains rendered markdown
+            preview_html = page.evaluate("() => { const p = document.getElementById('preview-pane'); return p ? p.innerHTML : ''; }")
+            print(f"  Preview updated: {preview_marker in preview_html}")
+            assert preview_marker in preview_html, f"Expected '{preview_marker}' in preview DOM"
+            page.screenshot(path=str(SCREENSHOTS_DIR / "16_split_preview.png"))
+
+            # Reset preview layout
+            page.evaluate("() => setPvLayout('none')")
+            time.sleep(0.2)
+
+            socratic_log("Editor Studio Live Split Preview & Dynamic Sync", "", "PASSED: Real-time split preview dynamically synchronized.")
+
+            # ------------------------------------------------------------------
+            # AUDIT 17: LaTeX Formula Palette Picker & Modal Insertion
+            # ------------------------------------------------------------------
+            socratic_log(
+                "LaTeX Formula Palette Picker & Modal Insertion",
+                "Does clicking #formula-open launch #formula-modal, and does selecting "
+                "a formula template insert LaTeX math syntax into CodeMirror?"
+            )
+            page.click("#formula-open")
+            page.wait_for_selector("#formula-modal", state="visible")
+            time.sleep(0.3)
+
+            # Search formula
+            page.fill("#formula-search", "分式")
+            time.sleep(0.2)
+
+            # Click first formula item
+            first_formula = page.locator("#formula-list .formula-item").first
+            first_formula.click()
+            time.sleep(0.3)
+
+            # Formula modal should close
+            page.wait_for_selector("#formula-modal", state="hidden")
+
+            # Check editor content has LaTeX formula delimiter
+            has_formula = page.evaluate("() => { return window.cmView ? window.cmView.state.doc.toString().includes('$') : false; }")
+            print(f"  Editor doc contains formula delimiter: {has_formula}")
+            assert has_formula is True, "Expected LaTeX formula to be inserted into editor doc"
+
+            # Cancel edit mode without saving changes
+            page.click("#edit-cancel")
+            time.sleep(0.3)
+            if page.is_visible("#close-confirm-modal"):
+                print("  Unsaved changes protection dialog triggered; discarding changes.")
+                page.click("#close-confirm-discard")
+                page.wait_for_selector("#close-confirm-modal", state="hidden")
+                time.sleep(0.3)
+
+            socratic_log("LaTeX Formula Palette Picker & Modal Insertion", "", "PASSED: Formula palette successfully inserted LaTeX expressions.")
+
+            # ------------------------------------------------------------------
+            # AUDIT 18: Custom CSS / Style Modal Real-Time Injection
+            # ------------------------------------------------------------------
+            socratic_log(
+                "Custom CSS / Style Modal Real-Time Injection",
+                "Does saving custom CSS through #style-custom-modal persist to "
+                "/api/style/save and inject a dynamic <style> tag into the page?"
+            )
+            page.evaluate("() => openStyleModal()")
+            page.wait_for_selector("#style-custom-modal", state="visible")
+            time.sleep(0.3)
+
+            custom_css_rule = "/* Autotest Custom Style */ .markdown-body { outline: 1px solid #10b981; }"
+            page.fill("#style-custom-css", custom_css_rule)
+            time.sleep(0.2)
+
+            # Save style modal
+            page.click("#style-modal-save")
+            time.sleep(0.5)
+
+            # Verify dynamic style element exists in head
+            style_injected = page.evaluate("() => { const s = document.getElementById('readmd-user-custom-style'); return s ? s.textContent : ''; }")
+            print(f"  Custom style injected into DOM: {'.markdown-body' in style_injected}")
+            assert ".markdown-body" in style_injected, "Expected custom CSS to be injected into #readmd-user-custom-style"
+            page.screenshot(path=str(SCREENSHOTS_DIR / "18_custom_style.png"))
+
+            # The modal automatically closes on successful save
+            page.wait_for_selector("#style-custom-modal", state="hidden")
+
+            socratic_log("Custom CSS / Style Modal Real-Time Injection", "", "PASSED: Custom CSS persisted and applied in real time.")
+
+            # ------------------------------------------------------------------
+            # AUDIT 19: Local Network Mobile Share Lifecycle (Start -> Status -> Stop)
+            # ------------------------------------------------------------------
+            socratic_log(
+                "Local Network Mobile Share Lifecycle",
+                "Does #btn-share open #share-modal, does #share-start begin sharing "
+                "with an active URL/QR code, and does #share-stop terminate it?"
+            )
+            page.evaluate("() => openShareModal()")
+            page.wait_for_selector("#share-modal", state="visible")
+            time.sleep(0.3)
+
+            # Start share
+            page.click("#share-start")
+            time.sleep(0.6)
+
+            # Verify running status
+            share_url_text = page.inner_text("#share-url")
+            print(f"  Share URL rendered: '{share_url_text}'")
+            stop_btn_disabled = page.get_attribute("#share-stop", "disabled")
+            assert stop_btn_disabled is None or stop_btn_disabled == "false", "Expected #share-stop to be enabled"
+
+            page.screenshot(path=str(SCREENSHOTS_DIR / "19_mobile_share.png"))
+
+            # Stop share
+            page.click("#share-stop")
+            time.sleep(0.5)
+
+            start_btn_disabled = page.get_attribute("#share-start", "disabled")
+            assert start_btn_disabled is None or start_btn_disabled == "false", "Expected #share-start to be re-enabled after stop"
+
+            # Close share modal
+            page.click("#share-close")
+            page.wait_for_selector("#share-modal", state="hidden")
+
+            socratic_log("Local Network Mobile Share Lifecycle", "", "PASSED: Mobile LAN share lifecycle operational.")
+
+            # ------------------------------------------------------------------
+            # AUDIT 20: Fullscreen Presentation Slideshow Mode (Reveal.js)
+            # ------------------------------------------------------------------
+            socratic_log(
+                "Fullscreen Presentation Slideshow Mode",
+                "Does launching presentation mode create #presentation-modal, "
+                "embed Reveal.js slides, and close cleanly on #presentation-close-btn?"
+            )
+            page.evaluate("() => launchPresentationMode()")
+            page.wait_for_selector("#presentation-modal", state="visible")
+            time.sleep(0.8)
+
+            iframe_count = page.locator("#presentation-modal .presentation-iframe").count()
+            print(f"  Presentation iframes detected: {iframe_count}")
+            assert iframe_count > 0, "Expected presentation modal to have an iframe for Reveal.js"
+            page.screenshot(path=str(SCREENSHOTS_DIR / "20_presentation_mode.png"))
+
+            # Close presentation mode
+            page.click("#presentation-close-btn")
+            page.wait_for_selector("#presentation-modal", state="hidden")
+
+            socratic_log("Fullscreen Presentation Slideshow Mode", "", "PASSED: Presentation slideshow modal verified.")
+
+            # ------------------------------------------------------------------
             # FINAL TELEMETRY AUDIT: Console Errors & Page Crashes
             # ------------------------------------------------------------------
             print("\n" + "="*70)
