@@ -1,6 +1,0 @@
--r requirements-common.txt
-
-pywebview>=5.1
-
-# Linux-native Tesseract OCR
-pytesseract

@@ -2474,21 +2474,23 @@ function protectMath(src) {
   };
   const looksMath = body => /[\\^_{}]/.test(body) || (/[A-Za-z\u0391-\u03C9]/.test(body) && !/\s/.test(body));
 
+  const envNames = 'cases|align\\*?|aligned|matrix|pmatrix|bmatrix|vmatrix|Vmatrix|equation\\*?|gather\\*?|array|split|smallmatrix';
+
   // 0. 优先保护 ```math ... ``` 代码块
   src = src.replace(/```math\b[^\n]*\n([\s\S]+?)```/g, (m, b) => save('$$' + repairLatex(b) + '$$'));
 
   // 1. 优先保护标准多行块级 $$...$$
   src = src.replace(/\$\$([\s\S]+?)\$\$/g, (m, b) => save('$$' + repairLatex(b) + '$$'));
 
-  // 2. 保护未包裹在 $$ 里的裸 LaTeX 多行环境（\begin{cases}...\end{cases}, align, matrix, equation, gather 等）
-  const envPattern = /\\begin\{(cases|align\*?|aligned|matrix|pmatrix|bmatrix|vmatrix|Vmatrix|equation\*?|gather\*?|array|split|smallmatrix)\}([\s\S]*?)\\end\{\1\}/g;
-  src = src.replace(envPattern, (m, env, body) => save('$$\\begin{' + env + '}' + repairLatex(body) + '\\end{' + env + '}$$'));
-
-  // 3. 保护 \(...\) 与 \[...\]
+  // 2. 保护 \(...\) 与 \[...\]
   src = src.replace(/\\\(([\s\S]+?)\\\)/g, (m, b) => save('\\(' + repairLatex(b) + '\\)'));
   src = src.replace(/\\\[([\s\S]+?)\\\]/g, (m, b) => save('\\[' + repairLatex(b) + '\\]'));
 
-  // 4. 保护行内 $...$ 公式
+  // 3. 保护包含 \begin{env} 的 $...$ 公式（可跨行但不可跨段落，优先于裸环境匹配，防止公式拆裂）
+  const envInlineRegex = new RegExp('(^|[^\\\\$A-Za-z0-9])\\$((?:[^$\\n\\r]|\\r?\\n(?!\\r?\\n))*?\\\\begin\\{(?:' + envNames + ')\\}[\\s\\S]*?\\\\end\\{(?:' + envNames + ')\\}(?:[^$\\n\\r]|\\r?\\n(?!\\r?\\n))*?)\\$', 'g');
+  src = src.replace(envInlineRegex, (m, pre, b) => pre + save('$' + repairLatex(b) + '$'));
+
+  // 4. 保护标准行内 $...$ 公式
   src = src.replace(/(^|[^\\$A-Za-z0-9])\$([^$\n]+?)\$/g, (m, pre, b) => {
     if (looksMath(b)) {
       return pre + save('$' + repairLatex(b) + '$');
@@ -2496,11 +2498,21 @@ function protectMath(src) {
     return m;
   });
 
+  // 5. 保护未包裹在 $ 或 $$ 里的独立裸 LaTeX 多行环境
+  const envPattern = new RegExp('\\\\begin\\{(' + envNames + ')\\}([\\s\\S]*?)\\\\end\\{\\1\\}', 'g');
+  src = src.replace(envPattern, (m, env, body) => save('$$\\begin{' + env + '}' + repairLatex(body) + '\\end{' + env + '}$$'));
+
   return { src, saved };
 }
 
 function restoreMath(html, saved) {
-  return html.replace(/\x01M(\d+)\x01/g, (m, i) => saved[+i] || m);
+  if (!html || !saved || saved.length === 0) return html;
+  let prev = '';
+  while (html !== prev && /\x01M(\d+)\x01/.test(html)) {
+    prev = html;
+    html = html.replace(/\x01M(\d+)\x01/g, (m, i) => (saved[+i] !== undefined ? saved[+i] : m));
+  }
+  return html;
 }
 
 let mathObserver = null;
@@ -8323,6 +8335,61 @@ function updateDocStatistics() {
 /* 智能 Excel / CSV 粘贴转 Markdown 表格 */
 function handleSmartExcelPaste(e) {
   if (!e.clipboardData) return;
+
+  // 0. 剪贴板图片粘贴 -> 自动上传并插入 Markdown 语法
+  const items = e.clipboardData.items;
+  let imageFile = null;
+  if (items && items.length > 0) {
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type && items[i].type.startsWith('image/')) {
+        imageFile = items[i].getAsFile();
+        break;
+      }
+    }
+  }
+  if (!imageFile && e.clipboardData.files && e.clipboardData.files.length > 0) {
+    for (let i = 0; i < e.clipboardData.files.length; i++) {
+      const f = e.clipboardData.files[i];
+      if (f.type && f.type.startsWith('image/')) {
+        imageFile = f;
+        break;
+      }
+    }
+  }
+  if (imageFile) {
+    e.preventDefault();
+    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+    showToast(_t('toast.savingImage') || '正在保存剪贴板图片…', 1500);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const b64 = String(reader.result).split(',')[1] || '';
+      try {
+        const resp = await apiFetch('/api/image/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dir: state.dir || '',
+            data: b64,
+            format: 'png',
+            name: 'img_' + Date.now()
+          })
+        });
+        const d = await resp.json();
+        if (d && d.ok) {
+          const insertRel = d.rel || d.relPath || d.path;
+          cmInsertImage(insertRel);
+          showToast(_t('toast.imgInsertedRel', { rel: insertRel }) || ('图片已插入（' + insertRel + '）'));
+        } else {
+          showToast((d && d.error) || '图片保存失败');
+        }
+      } catch (err) {
+        showToast('图片保存失败：' + err.message);
+      }
+    };
+    reader.readAsDataURL(imageFile);
+    return;
+  }
+
   const text = e.clipboardData.getData('text/plain');
   if (!text || !text.includes('\t') || !text.includes('\n')) return;
 
@@ -13246,12 +13313,14 @@ async function savePetSettings() {
 
     if (renderer === 'live2d' && $('pet-runtime')) $('pet-runtime').value = 'desktop';
     const isDesktopChoice = $('pet-runtime')?.value === 'desktop';
+    const activeSlug = (typeof currentActivePetSlug !== 'undefined' && currentActivePetSlug) || $('pet-gallery')?.value || undefined;
     const config = {
       enabled,
       scale,
       opacity,
       renderer,
-      in_app: !isDesktopChoice
+      in_app: !isDesktopChoice,
+      character: activeSlug
     };
 
     const stateChanged = Boolean(activePetSettingsStatus && activePetSettingsStatus.enabled !== enabled);

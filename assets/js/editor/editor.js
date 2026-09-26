@@ -620,6 +620,61 @@ function updateDocStatistics() {
 /* 智能 Excel / CSV 粘贴转 Markdown 表格 */
 function handleSmartExcelPaste(e) {
   if (!e.clipboardData) return;
+
+  // 0. 剪贴板图片粘贴 -> 自动上传并插入 Markdown 语法
+  const items = e.clipboardData.items;
+  let imageFile = null;
+  if (items && items.length > 0) {
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type && items[i].type.startsWith('image/')) {
+        imageFile = items[i].getAsFile();
+        break;
+      }
+    }
+  }
+  if (!imageFile && e.clipboardData.files && e.clipboardData.files.length > 0) {
+    for (let i = 0; i < e.clipboardData.files.length; i++) {
+      const f = e.clipboardData.files[i];
+      if (f.type && f.type.startsWith('image/')) {
+        imageFile = f;
+        break;
+      }
+    }
+  }
+  if (imageFile) {
+    e.preventDefault();
+    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+    showToast(_t('toast.savingImage') || '正在保存剪贴板图片…', 1500);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const b64 = String(reader.result).split(',')[1] || '';
+      try {
+        const resp = await apiFetch('/api/image/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dir: state.dir || '',
+            data: b64,
+            format: 'png',
+            name: 'img_' + Date.now()
+          })
+        });
+        const d = await resp.json();
+        if (d && d.ok) {
+          const insertRel = d.rel || d.relPath || d.path;
+          cmInsertImage(insertRel);
+          showToast(_t('toast.imgInsertedRel', { rel: insertRel }) || ('图片已插入（' + insertRel + '）'));
+        } else {
+          showToast((d && d.error) || '图片保存失败');
+        }
+      } catch (err) {
+        showToast('图片保存失败：' + err.message);
+      }
+    };
+    reader.readAsDataURL(imageFile);
+    return;
+  }
+
   const text = e.clipboardData.getData('text/plain');
   if (!text || !text.includes('\t') || !text.includes('\n')) return;
 

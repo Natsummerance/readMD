@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "পারস্পরিক স্বতন্ত্র",
   "plugin.requiresModel": "মডেল প্রয়োজন",
   "plugin.switchedMutual": "{name} সক্রিয় করা হয়েছে, একই সুবিধার প্লাগইন {other} অপেক্ষমাণ মোডে চলে গেছে",
-  "plugin.category.web": "ওয়েব নিষ্কাশন"
+  "plugin.category.web": "ওয়েব নিষ্কাশন",
+  "toast.savingImage": "Saving clipboard image...",
+  "ai.endpointMode": "Endpoint Mode",
+  "ai.endpointModeTip": "Select whether the URL is a prefix or full endpoint",
+  "ai.endpointPrefix": "Base URL (auto-append endpoint path)",
+  "ai.endpointFull": "Full Endpoint URL (no appended path)"
 }

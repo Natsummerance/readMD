@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "သီးသန့်ဖလှယ်မှု",
   "plugin.requiresModel": "မော်ဒယ်လိုအပ်သည်",
   "plugin.switchedMutual": "{name} ကို ဖွင့်လိုက်ပါပြီ၊ လုပ်ဆောင်ချက်တူ ပလပ်ဂင် {other} သည် အသင့်အနေအထားသို့ အလိုအလျောက် ပြောင်းသွားပါသည်",
-  "plugin.category.web": "ဝဘ်မှ ထုတ်ယူခြင်း"
+  "plugin.category.web": "ဝဘ်မှ ထုတ်ယူခြင်း",
+  "toast.savingImage": "Saving clipboard image...",
+  "ai.endpointMode": "Endpoint Mode",
+  "ai.endpointModeTip": "Select whether the URL is a prefix or full endpoint",
+  "ai.endpointPrefix": "Base URL (auto-append endpoint path)",
+  "ai.endpointFull": "Full Endpoint URL (no appended path)"
 }

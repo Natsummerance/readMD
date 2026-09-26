@@ -37,33 +37,16 @@ git rev-parse --is-inside-work-tree >nul 2>&1
 if errorlevel 1 goto :err
 echo   repository OK
 
-echo [2/7] Preparing venv ...
-if not exist ".venv\Scripts\python.exe" (
-    echo   creating .venv ...
-    python -m venv .venv
-    if errorlevel 1 goto :err
-)
-".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r config/requirements-test.txt
+echo [2/6] Building and running Cargo tests ...
+cargo test -p readmd-kernel --offline
 if errorlevel 1 goto :err
-echo   venv ready
+echo   Rust kernel tests passed
 
 if "%SKIP_TESTS%"=="1" goto :tests_done
-echo [3/7] Running tests ...
-".venv\Scripts\python.exe" tests/test_fix_test.py
+echo [3/6] Running native selftest ...
+ReadMD.exe --selftest
 if errorlevel 1 goto :err
-".venv\Scripts\python.exe" tests/test_convert_test.py
-if errorlevel 1 goto :err
-".venv\Scripts\python.exe" tests/test_export_test.py
-if errorlevel 1 goto :err
-".venv\Scripts\python.exe" tests/test_web_test.py
-if errorlevel 1 goto :err
-".venv\Scripts\python.exe" tests/test_api_test.py
-if errorlevel 1 goto :err
-".venv\Scripts\python.exe" tools\privacy_scan.py
-if errorlevel 1 goto :err
-".venv\Scripts\python.exe" readmd.py --selftest
-if errorlevel 1 goto :err
-echo   all tests passed
+echo   native selftest passed
 :tests_done
 
 

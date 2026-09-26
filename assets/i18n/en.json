@@ -80,6 +80,10 @@
   "ai.promptPlaceholder": "Ask AI or choose a quick prompt... (Enter to send, Shift+Enter for newline)",
   "ai.promptTranslatePlaceholder": "Enter target language (e.g. English, Japanese, French, Spanish...)",
   "ai.protocol": "Protocol",
+  "ai.endpointMode": "Endpoint Mode",
+  "ai.endpointModeTip": "Select whether the URL is a prefix or full endpoint",
+  "ai.endpointPrefix": "Base URL (auto-append endpoint path)",
+  "ai.endpointFull": "Full Endpoint URL (no appended path)",
   "ai.provider": "Provider",
   "ai.providerPrefix": "Provider: ",
   "ai.providerSearchPlaceholder": "Search / filter providers…",
@@ -1594,5 +1598,6 @@
   "plugin.exclusiveNotice": "Exclusive",
   "plugin.requiresModel": "Model Required",
   "plugin.switchedMutual": "Activated {name}, {other} in the same capability switched to standby",
-  "plugin.category.web": "Web Extraction"
+  "plugin.category.web": "Web Extraction",
+  "toast.savingImage": "Saving clipboard image..."
 }

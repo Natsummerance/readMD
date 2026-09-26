@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "Exclusivo",
   "plugin.requiresModel": "Requer modelo",
   "plugin.switchedMutual": "{name} ativado, o plugin {other} da mesma capacidade mudou para espera",
-  "plugin.category.web": "Extração Web"
+  "plugin.category.web": "Extração Web",
+  "toast.savingImage": "Salvando imagem da área de transferência…",
+  "ai.endpointMode": "Modo de endpoint",
+  "ai.endpointModeTip": "Selecione se o URL é um prefixo ou um endpoint completo",
+  "ai.endpointPrefix": "URL base (anexa automaticamente o caminho)",
+  "ai.endpointFull": "URL completa do endpoint (sem caminho anexado)"
 }

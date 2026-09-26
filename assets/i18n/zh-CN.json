@@ -80,6 +80,10 @@
   "ai.promptPlaceholder": "向 AI 提问，或选择上方快捷指令... (Enter 发送, Shift+Enter 换行)",
   "ai.promptTranslatePlaceholder": "请输入目标语言（例如：英语、日语、法语、文言文...）",
   "ai.protocol": "响应方式",
+  "ai.endpointMode": "端点填写方式",
+  "ai.endpointModeTip": "选择 URL 是前缀还是完整端点",
+  "ai.endpointPrefix": "Base URL（自动追加接口路径）",
+  "ai.endpointFull": "完整接口 URL（不追加路径）",
   "ai.provider": "提供商",
   "ai.providerPrefix": "提供商：",
   "ai.providerSearchPlaceholder": "搜索/过滤提供商…",
@@ -1594,5 +1598,6 @@
   "plugin.exclusiveNotice": "同能力互斥",
   "plugin.requiresModel": "需模型权重",
   "plugin.switchedMutual": "已接通 {name}，同能力插件 {other} 已自动切换为休眠",
-  "plugin.category.web": "网页提取"
+  "plugin.category.web": "网页提取",
+  "toast.savingImage": "正在保存剪贴板图片…"
 }

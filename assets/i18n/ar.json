@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "تنافي متبادل",
   "plugin.requiresModel": "يتطلب نموذجاً",
   "plugin.switchedMutual": "تم تفعيل {name}، وتحويل الإضافة {other} ذات القدرة المشتركة إلى وضع الاستعداد",
-  "plugin.category.web": "استخراج الويب"
+  "plugin.category.web": "استخراج الويب",
+  "toast.savingImage": "Saving clipboard image...",
+  "ai.endpointMode": "Endpoint Mode",
+  "ai.endpointModeTip": "Select whether the URL is a prefix or full endpoint",
+  "ai.endpointPrefix": "Base URL (auto-append endpoint path)",
+  "ai.endpointFull": "Full Endpoint URL (no appended path)"
 }

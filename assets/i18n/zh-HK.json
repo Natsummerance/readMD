@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "同能力互斥",
   "plugin.requiresModel": "需模型權重",
   "plugin.switchedMutual": "已接通 {name}，同能力外掛 {other} 已自動切換為休眠",
-  "plugin.category.web": "網頁提取"
+  "plugin.category.web": "網頁提取",
+  "toast.savingImage": "正在儲存剪貼簿圖片…",
+  "ai.endpointMode": "端點填寫方式",
+  "ai.endpointModeTip": "選擇 URL 是前綴還是完整端點",
+  "ai.endpointPrefix": "Base URL（自動附加介面路徑）",
+  "ai.endpointFull": "完整介面 URL（不附加路徑）"
 }

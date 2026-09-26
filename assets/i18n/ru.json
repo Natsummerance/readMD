@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "Взаимоисключение",
   "plugin.requiresModel": "Требуется модель",
   "plugin.switchedMutual": "Подключен {name}, плагин с аналогичной функцией {other} переведен в режим ожидания",
-  "plugin.category.web": "Извлечение веб-страниц"
+  "plugin.category.web": "Извлечение веб-страниц",
+  "toast.savingImage": "Сохранение изображения из буфера обмена…",
+  "ai.endpointMode": "Режим эндпоинта",
+  "ai.endpointModeTip": "Выберите, является ли URL префиксом или полным эндпоинтом",
+  "ai.endpointPrefix": "Базовый URL (путь добавляется автоматически)",
+  "ai.endpointFull": "Полный URL эндпоинта (путь не добавляется)"
 }

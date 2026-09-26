@@ -8,7 +8,7 @@ if [ -z "${READMD_VERSION:-}" ]; then
   elif [ -f "VERSION" ]; then
     READMD_VERSION="$(head -n1 VERSION | tr -d '\r\n')"
   else
-    READMD_VERSION="$(python3 -c 'from src.readmd_core.config import get_version; print(get_version())' 2>/dev/null)"
+    READMD_VERSION="2.4.0"
   fi
 fi
 VERSION="${READMD_BUILD_VERSION:-${READMD_VERSION}}"
@@ -27,29 +27,10 @@ fi
 
 echo "=== Building ReadMD v${VERSION} for Linux (${ARCH} / ${DEB_ARCH}) ==="
 
-# 1. PyInstaller 构建独立二进制
-python3 -m PyInstaller \
-  --noconfirm \
-  --clean \
-  --onedir \
-  --name "ReadMD" \
-  --icon "assets/ReadMD.png" \
-  --add-data "assets:assets" \
-  --add-data "src/readmd_core:src/readmd_core" \
-  --add-data "src/readmd_modules:src/readmd_modules" \
-  --add-data "src/readmd_fix.py:src" \
-  --hidden-import src.readmd_fix \
-  --hidden-import src.readmd_core \
-  --collect-data magika \
-  --collect-data docx \
-  --collect-data reportlab \
-  --collect-data matplotlib \
-  --collect-data trafilatura \
-  --collect-data pip \
-  --collect-submodules pip \
-  --collect-submodules src.readmd_core \
-  --collect-submodules src.readmd_modules \
-  readmd.py
+# 1. Cargo 构建独立二进制
+cargo build --release -p readmd-kernel
+mkdir -p dist/ReadMD
+cp rust/target/release/readmd dist/ReadMD/ReadMD
 
 # 2. 校验构建出的 ELF 二进制架构与目标包架构一致性
 if [ -f "dist/ReadMD/ReadMD" ] && command -v file >/dev/null 2>&1; then

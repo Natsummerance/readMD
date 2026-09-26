@@ -2619,7 +2619,6 @@ body[data-theme="dark"] .diagram-card[data-diagram-engine="vega-lite"] svg line 
 @media (max-width: 1100px) {
   .tb-label { display: none; }
   .tb-btn { padding: 0 7px; }
-  #btn-open .tb-label { display: inline; }
 }
 @media (max-width: 900px) {
   #side { position: fixed; left: 0; top: var(--toolbar-h); bottom: var(--status-h); width: min(280px, 80vw); z-index: 90; box-shadow: var(--shadow-2); }

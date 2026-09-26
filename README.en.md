@@ -106,7 +106,7 @@ Only platforms with release evidence belong in this matrix. Windows 7 is a separ
 
 ### 1. Linux & Chinese Domestic OS (KylinOS / UOS / Deepin)
 - **Direct Installation**: Download [`readmd_2.3.9_amd64.deb`](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd_2.3.9_amd64.deb) to install directly, or run [`ReadMD-linux-x86_64-v2.3.9.AppImage`](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-linux-x86_64-v2.3.9.AppImage).
-- **Environment Detection**: `src/readmd_modules/linux_native.py` detects OS distributions and dynamically adapts Wayland / X11 display backends.
+- **Environment Detection**: 100% pure native Rust kernel (`native_system`) detects OS distributions and dynamically adapts Wayland / X11 display backends.
 - **Desktop Themes**: Probes DDE, UKUI, GNOME, and KDE dark mode settings via `gsettings`.
 - **Desktop Entry**: Includes FreeDesktop launcher and MIME XML declaration.
 - **Support boundary**: openEuler, Linglong and other unevidenced distributions are not claimed as fully supported in this release.

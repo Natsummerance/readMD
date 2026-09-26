@@ -50,7 +50,7 @@ const USAGE: &str = "usage: readmd [options] [FILE]
 positional:
   FILE                markdown file to open at boot (sent as ?file=)
 
-python options (readmd.py:6394-6418):
+standard options:
   --browser                 open the system browser and keep serving
   --port <port>             listen port; 0 (default) = control port 26891
                             with an ephemeral fallback
@@ -68,7 +68,7 @@ python options (readmd.py:6394-6418):
   --check-macos             diagnose macOS and Cocoa WKWebView
   --diagnose, --check-system  unified native environment / graphics diagnosis
 
-kernel-only (no readmd.py equivalent):
+advanced / daemon options:
   --no-window             serve only, open neither window nor browser
   --data-dir <dir>        settings and database location
   --workspace <dir>       markdown root opened by the kernel

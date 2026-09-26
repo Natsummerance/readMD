@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "Харилцан үгүйсгэх",
   "plugin.requiresModel": "Загвар шаардлагатай",
   "plugin.switchedMutual": "{name} холбогдсон тул ижил чадвартай {other} нэмэлт залгаас бэлэн байдалд шилжлээ",
-  "plugin.category.web": "Веб контент задлах"
+  "plugin.category.web": "Веб контент задлах",
+  "toast.savingImage": "Saving clipboard image...",
+  "ai.endpointMode": "Endpoint Mode",
+  "ai.endpointModeTip": "Select whether the URL is a prefix or full endpoint",
+  "ai.endpointPrefix": "Base URL (auto-append endpoint path)",
+  "ai.endpointFull": "Full Endpoint URL (no appended path)"
 }

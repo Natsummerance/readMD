@@ -1,14 +1,15 @@
 #!/bin/bash
 # ============================================================
-#  ReadMD - one-click run (venv python)
+#  ReadMD - one-click run (native Rust binary)
 # ============================================================
 set -e
 cd "$(dirname "$0")/.."
 
-if [ ! -f ".venv/bin/python" ]; then
-    echo "[ReadMD] Please run install.sh or setup.sh first."
-    exit 1
+if [ -f "./ReadMD" ]; then
+    exec "./ReadMD" "$@"
+elif [ -f "./rust/target/release/readmd" ]; then
+    exec "./rust/target/release/readmd" "$@"
 fi
 
-exec ".venv/bin/python" "readmd.py" "$@"
-
+echo "[ReadMD] Native binary not found. Please build with cargo build --release."
+exit 1

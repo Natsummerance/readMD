@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "Exklusiv",
   "plugin.requiresModel": "Modell erforderlich",
   "plugin.switchedMutual": "{name} aktiviert, {other} derselben Funktion wurde automatisch in den Standby versetzt",
-  "plugin.category.web": "Web-Extraktion"
+  "plugin.category.web": "Web-Extraktion",
+  "toast.savingImage": "Zwischenablage-Bild wird gespeichert…",
+  "ai.endpointMode": "Endpunkt-Modus",
+  "ai.endpointModeTip": "Wählen Sie, ob die URL ein Präfix oder ein vollständiger Endpunkt ist",
+  "ai.endpointPrefix": "Basis-URL (Endpunktpfad automatisch anhängen)",
+  "ai.endpointFull": "Vollständige Endpunkt-URL (kein Pfad angehängt)"
 }

@@ -7,7 +7,7 @@ if [ -z "${READMD_VERSION:-}" ]; then
   elif [ -f "VERSION" ]; then
     READMD_VERSION="$(head -n1 VERSION | tr -d '\r\n')"
   else
-    READMD_VERSION="$(python3 -c 'from src.readmd_core.config import get_version; print(get_version())' 2>/dev/null)"
+    READMD_VERSION="2.4.0"
   fi
 fi
 VERSION="${READMD_BUILD_VERSION:-${READMD_VERSION}}"
@@ -34,11 +34,11 @@ mkdir -p "${BUILD_ROOT}/BUILDROOT/readmd-${VERSION}-1.${RPM_ARCH}"
 ROOT_DIR="${BUILD_ROOT}/BUILDROOT/readmd-${VERSION}-1.${RPM_ARCH}"
 mkdir -p "${ROOT_DIR}/opt/readmd" "${ROOT_DIR}/usr/bin" "${ROOT_DIR}/usr/share/applications" "${ROOT_DIR}/usr/share/icons/hicolor/512x512/apps" "${ROOT_DIR}/usr/share/mime/packages"
 
-# 复制 PyInstaller 编译生成的二进制文件
+# 复制编译生成的二进制文件
 if [ -d "dist/ReadMD" ]; then
   cp -r dist/ReadMD/* "${ROOT_DIR}/opt/readmd/"
 else
-  echo "Error: dist/ReadMD does not exist. Please run PyInstaller build first." >&2
+  echo "Error: dist/ReadMD does not exist. Please run cargo build --release first." >&2
   exit 1
 fi
 

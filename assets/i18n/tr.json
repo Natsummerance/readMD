@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "Karşılıklı Dışlayıcı",
   "plugin.requiresModel": "Model Gerekli",
   "plugin.switchedMutual": "{name} etkinleştirildi, aynı yeteneğe sahip {other} eklentisi bekleme moduna alındı",
-  "plugin.category.web": "Web İçeriği Çıkarma"
+  "plugin.category.web": "Web İçeriği Çıkarma",
+  "toast.savingImage": "Saving clipboard image...",
+  "ai.endpointMode": "Endpoint Mode",
+  "ai.endpointModeTip": "Select whether the URL is a prefix or full endpoint",
+  "ai.endpointPrefix": "Base URL (auto-append endpoint path)",
+  "ai.endpointFull": "Full Endpoint URL (no appended path)"
 }

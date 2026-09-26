@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "Gjensidig utelukkende",
   "plugin.requiresModel": "Modell kreves",
   "plugin.switchedMutual": "{name} er aktivert, {other} med samme funksjon er satt i ventemodus",
-  "plugin.category.web": "Nettuttrekk"
+  "plugin.category.web": "Nettuttrekk",
+  "toast.savingImage": "Saving clipboard image...",
+  "ai.endpointMode": "Endpoint Mode",
+  "ai.endpointModeTip": "Select whether the URL is a prefix or full endpoint",
+  "ai.endpointPrefix": "Base URL (auto-append endpoint path)",
+  "ai.endpointFull": "Full Endpoint URL (no appended path)"
 }

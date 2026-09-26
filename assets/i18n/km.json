@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "មិនអាចប្រើរួមគ្នាបាន",
   "plugin.requiresModel": "ទាមទារម៉ូដែល",
   "plugin.switchedMutual": "បានបើកដំណើរការ {name} ហើយកម្មវិធីជំនួយដែលមានមុខងារដូចគ្នា {other} ត្រូវបានប្តូរទៅជារបៀបរង់ចាំដោយស្វ័យប្រវត្តិ",
-  "plugin.category.web": "ការទាញយកពីគេហទំព័រ"
+  "plugin.category.web": "ការទាញយកពីគេហទំព័រ",
+  "toast.savingImage": "Saving clipboard image...",
+  "ai.endpointMode": "Endpoint Mode",
+  "ai.endpointModeTip": "Select whether the URL is a prefix or full endpoint",
+  "ai.endpointPrefix": "Base URL (auto-append endpoint path)",
+  "ai.endpointFull": "Full Endpoint URL (no appended path)"
 }

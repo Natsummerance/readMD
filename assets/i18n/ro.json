@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "Exclusiv reciproc",
   "plugin.requiresModel": "Model necesar",
   "plugin.switchedMutual": "{name} a fost activat, iar modulul {other} cu aceeași funcție a fost trecut în așteptare",
-  "plugin.category.web": "Extragere Web"
+  "plugin.category.web": "Extragere Web",
+  "toast.savingImage": "Saving clipboard image...",
+  "ai.endpointMode": "Endpoint Mode",
+  "ai.endpointModeTip": "Select whether the URL is a prefix or full endpoint",
+  "ai.endpointPrefix": "Base URL (auto-append endpoint path)",
+  "ai.endpointFull": "Full Endpoint URL (no appended path)"
 }

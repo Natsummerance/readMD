@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "ཕན་ཚུན་འགལ་ཟླ།",
   "plugin.requiresModel": "དཔེ་གཞི་མཁོ་བ།",
   "plugin.switchedMutual": "{name} སྦྲེལ་མཐུད་བྱས་ཟིན་པས། འདྲ་བའི་ལྷུ་ལག་ {other} ངལ་གསོའི་ངང་དུ་བསྒྱུར་ཟིན།",
-  "plugin.category.web": "དྲ་དོན་འདེམ་སྒྲུག"
+  "plugin.category.web": "དྲ་དོན་འདེམ་སྒྲུག",
+  "toast.savingImage": "Saving clipboard image...",
+  "ai.endpointMode": "Endpoint Mode",
+  "ai.endpointModeTip": "Select whether the URL is a prefix or full endpoint",
+  "ai.endpointPrefix": "Base URL (auto-append endpoint path)",
+  "ai.endpointFull": "Full Endpoint URL (no appended path)"
 }

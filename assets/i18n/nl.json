@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "Wederzijds uitsluitend",
   "plugin.requiresModel": "Model vereist",
   "plugin.switchedMutual": "{name} geactiveerd, de plug-in {other} met dezelfde functie is op stand-by gezet",
-  "plugin.category.web": "Webextractie"
+  "plugin.category.web": "Webextractie",
+  "toast.savingImage": "Klembordafbeelding opslaan…",
+  "ai.endpointMode": "Eindpuntmodus",
+  "ai.endpointModeTip": "Kies of de URL een voorvoegsel of volledig eindpunt is",
+  "ai.endpointPrefix": "Basis-URL (voegt automatisch pad toe)",
+  "ai.endpointFull": "Volledige eindpunt-URL (geen pad toegevoegd)"
 }

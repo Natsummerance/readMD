@@ -38,6 +38,7 @@ test('test_reproduce_bug_006: first fullscreen snapshot stays hidden', async () 
     app: {
       commandLine: { getSwitchValue: () => '' },
       isReady: () => true, whenReady: () => Promise.resolve(),
+      requestSingleInstanceLock: () => true,
       getAppPath: () => root, on() {}, exit() {},
     },
     BrowserWindow: Window, clipboard: {}, ipcMain: { on() {} },
@@ -59,6 +60,15 @@ test('test_reproduce_bug_006: first fullscreen snapshot stays hidden', async () 
       if (name === 'node:fs') return fakeFs;
       if (name === 'node:path') return path;
       if (name.includes('pet-overlay-ipc')) return { registerPetOverlayIpc() {} };
+      if (name.includes('bridge-transport')) {
+        return {
+          publishCommand() {},
+          SnapshotReader: class {
+            constructor() {}
+            async read() { return snapshot; }
+          },
+        };
+      }
       throw new Error('Unexpected import: ' + name);
     },
     process: { argv: [], env: { READMD_PET_BRIDGE_FILE: '/bridge.json' } },
@@ -70,8 +80,10 @@ test('test_reproduce_bug_006: first fullscreen snapshot stays hidden', async () 
   assert.equal(windows.length, 1);
   assert.equal(windows[0].visible, false);
   poll(); // Identical bridge bytes must not expose the window.
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(windows[0].visible, false);
   snapshot = { ...snapshot, fullscreen: false };
   poll();
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(windows[0].visible, true);
 });

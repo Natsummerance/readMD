@@ -8,6 +8,7 @@
 <meta name="readmd-app-token" content="">
 <meta name="readmd-startup-probe" content="0">
 <title>ReadMD</title>
+<link rel="icon" type="image/x-icon" href="/assets/readmd.ico">
 <link rel="stylesheet" href="/assets/style.css?v=2.3.9">
 <link rel="stylesheet" href="/assets/workspace-ui.css?v=2.3.9">
 <link rel="stylesheet" href="/assets/skill-workbench.css?v=2.3.9">
@@ -18,9 +19,8 @@
     <button id="btn-toc" class="tb-btn icon" title="目录 (Ctrl+Shift+F)" aria-label="目录" data-i18n-title="sidebar.toc" data-i18n-aria="sidebar.toc">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
     </button>
-    <button id="btn-open" class="tb-btn" title="打开 Markdown 文件 (Ctrl+O)" aria-label="打开文件" data-i18n-title="toolbar.open" data-i18n-aria="toolbar.open">
+    <button id="btn-open" class="tb-btn icon" title="打开 Markdown 文件 (Ctrl+O)" aria-label="打开文件" data-i18n-title="toolbar.open" data-i18n-aria="toolbar.open">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6"/></svg>
-      <span class="tb-label" data-i18n="app.open">打开</span>
     </button>
     <button id="btn-folder" class="tb-btn icon" title="打开文件夹" aria-label="打开文件夹" data-i18n-title="toolbar.openFolder" data-i18n-aria="toolbar.openFolder">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z"/></svg>
@@ -575,10 +575,10 @@
           </select>
         </div>
         <div class="conn-field">
-          <label for="ai-endpoint-mode" data-i18n="ai.protocol">端点填写方式</label>
-          <select id="ai-endpoint-mode" title="选择 URL 是前缀还是完整端点" data-i18n-title="ai.protocol">
-            <option value="prefix" data-i18n="ai.modeAuto">Base URL（自动追加接口路径）</option>
-            <option value="full_url" data-i18n="ai.baseUrl">完整接口 URL（不追加路径）</option>
+          <label for="ai-endpoint-mode" data-i18n="ai.endpointMode">端点填写方式</label>
+          <select id="ai-endpoint-mode" title="选择 URL 是前缀还是完整端点" data-i18n-title="ai.endpointModeTip">
+            <option value="prefix" data-i18n="ai.endpointPrefix">Base URL（自动追加接口路径）</option>
+            <option value="full_url" data-i18n="ai.endpointFull">完整接口 URL（不追加路径）</option>
           </select>
         </div>
         <details class="conn-advanced"><summary data-i18n="ai.advanced">高级参数</summary><div class="conn-advanced-grid">

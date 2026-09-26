@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "Reciproke ekskluziva",
   "plugin.requiresModel": "Modelo bezonata",
   "plugin.switchedMutual": "{name} estas aktivigita, la kromaĵo {other} kun la sama kapablo ŝanĝiĝis al atendo",
-  "plugin.category.web": "Reta Eltirado"
+  "plugin.category.web": "Reta Eltirado",
+  "toast.savingImage": "Saving clipboard image...",
+  "ai.endpointMode": "Endpoint Mode",
+  "ai.endpointModeTip": "Select whether the URL is a prefix or full endpoint",
+  "ai.endpointPrefix": "Base URL (auto-append endpoint path)",
+  "ai.endpointFull": "Full Endpoint URL (no appended path)"
 }

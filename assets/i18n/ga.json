@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "Eisiach go Frithpháirteach",
   "plugin.requiresModel": "Múnla ag Teastáil",
   "plugin.switchedMutual": "Gníomhachtaíodh {name}, aistríodh an breiseán {other} leis an gcumas céanna go fuireachas",
-  "plugin.category.web": "Eastóscadh Gréasáin"
+  "plugin.category.web": "Eastóscadh Gréasáin",
+  "toast.savingImage": "Saving clipboard image...",
+  "ai.endpointMode": "Endpoint Mode",
+  "ai.endpointModeTip": "Select whether the URL is a prefix or full endpoint",
+  "ai.endpointPrefix": "Base URL (auto-append endpoint path)",
+  "ai.endpointFull": "Full Endpoint URL (no appended path)"
 }

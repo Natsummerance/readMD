@@ -90,7 +90,7 @@ ReadMD 解决的是长期资料库里的实际问题：大文件能继续读，�
 ### 1. Linux 与国产操作系统适配（统信 UOS / 银河麒麟 / 深度）
 - **直接安装使用**：下载 [`readmd_2.3.9_amd64.deb`](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd_2.3.9_amd64.deb) 双击安装，或直接运行 [`ReadMD-linux-x86_64-v2.3.9.AppImage`](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-linux-x86_64-v2.3.9.AppImage)。银河麒麟 V10 + 飞腾 ARM64 设备使用 [`readmd_2.3.9_arm64.deb`](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd_2.3.9_arm64.deb)。
 - **飞腾安全回退**：自动识别 Phytium D2000/E2000/FT 系列；WebKitGTK 启动时优先选择 UKUI/X11、禁用 DMABUF 合成并回退 llvmpipe，避免旧 GPU 驱动白屏或崩溃。
-- **系统与环境识别**：`src/readmd_modules/linux_native.py` 自动识别系统发行版，自适应配置 Wayland / X11 显示后端。
+- **系统与环境识别**：100% 纯原生 Rust 内核（`native_system`）自动识别系统发行版，自适应配置 Wayland / X11 显示后端。
 - **桌面与深色模式**：自动侦测 DDE（统信/Deepin）、UKUI（银河麒麟）与 GNOME/KDE 的外观主题，实时同步深色/浅色配色。
 - **桌面集成与关联**：内置 FreeDesktop 桌面入口与 MIME 类型声明，支持双击 `.md` 默认打开。
 - **支持边界**：本版本不宣称 openEuler、玲珑或其他未列出的发行版具备完整原生支持。
@@ -230,25 +230,25 @@ ReadMD 提供 46 个 locale；每次发布均校验键、占位符与方向一�
 
 ```
 readmd/
-├─ readmd.py # 主程序入口（本地 Web 服务 + 视窗 + 托盘常驻）
-├─ src/ # 核心算法与原生适配层
-│ ├─ readmd_fix.py # Markdown 自动修正引擎
-│ └─ readmd_modules/ # 原生平台适配 (linux_native.py) / OCR / 转换 / AI
+├─ rust/readmd-kernel/ # 100% 纯原生 Rust 高性能内核（HTTP 服务 + 自动修正 + 格式转换 + 矢量 PDF + 伴读桌宠）
+│ └─ src/ # 原生平台适配 / OCR / 转换 / AI / 插件引擎
+├─ ReadMD.exe # 原生高性能单文件可执行文件 (100% Pure Rust)
 ├─ packages/ # 多端生态分包
 │ ├─ vscode-extension/ # VSCode 官方扩展
 │ ├─ mcp-server/ # FastMCP (stdio) 服务端
 │ ├─ harmonyos-app/ # HarmonyOS/OpenHarmony 实验性源码预览（未支持）
 │ └─ linglong/ # 统信 UOS 玲珑容器打包配置
-├─ scripts/ # 打包与构建脚本 (windows / linux / unix)
+├─ scripts/ # 构建与打包脚本 (windows / linux / unix)
 ├─ assets/ # 前端渲染、主题 token 与 46 语种 i18n 资源
-├─ docs/ # 语言对照清单与开发文档
-└─ tests/ # 单元测试与回归套件 (151 项全通过)
+├─ docs/ # 架构规范、语言对照清单与开发文档
+└─ tests/ # 自动化测试套件 (Rust 1,784 项单元测试 + 前端验收全通过)
 ```
 
 **本地构建与运行**：
-- Windows：运行 `scripts\windows\install.bat` 安装依赖，`scripts\windows\run.bat` 运行；`scripts\windows\package.bat` 打包。
-- Linux：运行 `bash scripts/linux/build_linux.sh` 打包 AppImage 与 Deb 安装包。
-- macOS：运行 `./install.sh` 安装依赖，`./setup.sh` 构建 ReadMD.app。
+- 使用 Cargo 编译：`cargo build --release -p readmd-kernel`，构建产物位于 `rust/target/release/readmd.exe`（根目录 `ReadMD.exe` 即为此纯原生二进制）。
+- Windows：运行 `scripts\run.bat` 直接启动原生内核；或直接双击 `ReadMD.exe`。
+- Linux：运行 `cargo build --release -p readmd-kernel` 后运行 `bash scripts/linux/build_linux.sh` 打包 AppImage 与 Deb 安装包。
+- macOS：运行 `cargo build --release -p readmd-kernel` 构建原生二进制。
 - HarmonyOS/OpenHarmony：本版本不支持，目录仅保留实验性源码预览。
 
 ---
@@ -256,7 +256,7 @@ readmd/
 ## 更新日志 (v2.3.8-preview.1)
 
 - **46 语种全量母语化与机翻清洗**：深入审核 42 个非中英文语言字典，消除波兰语混淆、西部之塔、农作物裁剪等全部系统性翻译错误，实现 100% 完整覆盖。
-- **Linux 与信创国产系统适配**：新增 `linux_native.py` 原生模块；正式支持只覆盖矩阵中有实机证据的 Ubuntu、Debian、UOS、银河麒麟和 Deepin 架构。
+- **Linux 与信创国产系统适配**：原生 Rust `native_system` 模块；正式支持只覆盖矩阵中有实机证据的 Ubuntu、Debian、UOS、银河麒麟和 Deepin 架构。
 - **离线来源与 Skills**：上游原文、许可证和适配元数据随包提供，AI 指令统一从 Skills 加载。
 - **LaTeX PRO 学术论文套件**：零配置 `.bib` 参考文献浮动卡片、学术 Callout 盒子与 LaTeX 导出。
 - **Editor Studio PRO 体验重塑**：Zen 禅模式全屏专注、10×10 表格设计器、Excel 智能转换。

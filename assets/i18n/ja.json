@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "排他有効",
   "plugin.requiresModel": "モデル必要",
   "plugin.switchedMutual": "{name} を有効化しました。同機能の {other} はスタンバイに切り替わりました",
-  "plugin.category.web": "Web 抽出"
+  "plugin.category.web": "Web 抽出",
+  "toast.savingImage": "クリップボード画像を保存中…",
+  "ai.endpointMode": "エンドポイント入力方式",
+  "ai.endpointModeTip": "URLがプレフィックスか完全なエンドポイントかを選択",
+  "ai.endpointPrefix": "ベースURL（エンドポイントパスを自動追加）",
+  "ai.endpointFull": "完全なエンドポイントURL（パスを追加しない）"
 }

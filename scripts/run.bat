@@ -1,13 +1,17 @@
 @echo off
 rem ============================================================
-rem  ReadMD - one-click run (venv pythonw)
+rem  ReadMD - one-click run (native Rust ReadMD.exe)
 rem ============================================================
 setlocal
 cd /d "%~dp0.."
-if not exist ".venv\Scripts\pythonw.exe" (
-    echo [ReadMD] Please run install.bat or setup.bat first.
-    pause
-    exit /b 1
+if exist "ReadMD.exe" (
+    start "" "ReadMD.exe" %*
+    exit /b 0
 )
-start "" ".venv\Scripts\pythonw.exe" readmd.py %*
-exit /b 0
+if exist "rust\target\release\readmd.exe" (
+    start "" "rust\target\release\readmd.exe" %*
+    exit /b 0
+)
+echo [ReadMD] ReadMD.exe not found. Please build with cargo build --release.
+pause
+exit /b 1

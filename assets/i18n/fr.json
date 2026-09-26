@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "Exclusivité mutuelle",
   "plugin.requiresModel": "Modèle requis",
   "plugin.switchedMutual": "{name} activé, le plugin {other} avec la même capacité est passé en veille",
-  "plugin.category.web": "Extraction Web"
+  "plugin.category.web": "Extraction Web",
+  "toast.savingImage": "Enregistrement de l'image du presse-papiers…",
+  "ai.endpointMode": "Mode du point de terminaison",
+  "ai.endpointModeTip": "Choisir si l'URL est un préfixe ou un point complet",
+  "ai.endpointPrefix": "URL de base (ajoute automatiquement le chemin)",
+  "ai.endpointFull": "URL complète (aucun chemin ajouté)"
 }

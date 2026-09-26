@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "Međusobno isključivo",
   "plugin.requiresModel": "Potreban model",
   "plugin.switchedMutual": "Uključen je {name}, a dodatak iste namjene {other} automatski je prebačen u stanje pripravnosti",
-  "plugin.category.web": "Izdvajanje s weba"
+  "plugin.category.web": "Izdvajanje s weba",
+  "toast.savingImage": "Saving clipboard image...",
+  "ai.endpointMode": "Endpoint Mode",
+  "ai.endpointModeTip": "Select whether the URL is a prefix or full endpoint",
+  "ai.endpointPrefix": "Base URL (auto-append endpoint path)",
+  "ai.endpointFull": "Full Endpoint URL (no appended path)"
 }

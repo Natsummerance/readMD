@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "Toisensa poissulkeva",
   "plugin.requiresModel": "Malli vaaditaan",
   "plugin.switchedMutual": "{name} kytketty käyttöön, vastaavan ominaisuuden lisäosa {other} siirretty valmiustilaan",
-  "plugin.category.web": "Verkkosisällön poiminta"
+  "plugin.category.web": "Verkkosisällön poiminta",
+  "toast.savingImage": "Saving clipboard image...",
+  "ai.endpointMode": "Endpoint Mode",
+  "ai.endpointModeTip": "Select whether the URL is a prefix or full endpoint",
+  "ai.endpointPrefix": "Base URL (auto-append endpoint path)",
+  "ai.endpointFull": "Full Endpoint URL (no appended path)"
 }

@@ -1594,5 +1594,10 @@
   "plugin.exclusiveNotice": "Mutuamente excluyente",
   "plugin.requiresModel": "Requiere modelo",
   "plugin.switchedMutual": "{name} activado, el complemento {other} de la misma capacidad pasó a modo de espera",
-  "plugin.category.web": "Extracción web"
+  "plugin.category.web": "Extracción web",
+  "toast.savingImage": "Guardando imagen del portapapeles…",
+  "ai.endpointMode": "Modo de endpoint",
+  "ai.endpointModeTip": "Seleccione si la URL es un prefijo o un endpoint completo",
+  "ai.endpointPrefix": "URL base (añade automáticamente la ruta)",
+  "ai.endpointFull": "URL completa del endpoint (sin ruta añadida)"
 }

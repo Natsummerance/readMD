@@ -1017,12 +1017,14 @@ async function savePetSettings() {
 
     if (renderer === 'live2d' && $('pet-runtime')) $('pet-runtime').value = 'desktop';
     const isDesktopChoice = $('pet-runtime')?.value === 'desktop';
+    const activeSlug = (typeof currentActivePetSlug !== 'undefined' && currentActivePetSlug) || $('pet-gallery')?.value || undefined;
     const config = {
       enabled,
       scale,
       opacity,
       renderer,
-      in_app: !isDesktopChoice
+      in_app: !isDesktopChoice,
+      character: activeSlug
     };
 
     const stateChanged = Boolean(activePetSettingsStatus && activePetSettingsStatus.enabled !== enabled);
