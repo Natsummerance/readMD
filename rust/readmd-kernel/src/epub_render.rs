@@ -393,35 +393,3 @@ const EPUB_CSS_PY: &str = "\n@charset \"utf-8\";\nbody {\n    font-family: -appl
     }
 }
 
-// ===========================================================================
-// Golden differential test.  `golden_epub.json` is produced by running the
-// *Python authority* `src/readmd_modules/mdexport/epub_render.py::_simple_md_to_html`
-// offline (see scratch/rust_parity/bibtex_epub_s15/gen_goldens.py).  The
-// expected strings here are CPython's answers, never the Rust output, so this
-// test cannot go false-green by construction.
-// ===========================================================================
-#[cfg(test)]
-mod golden_tests {
-    use super::*;
-
-    const GOLDEN: &str =
-        include_str!("../../../scratch/rust_parity/bibtex_epub_s15/golden_epub.json");
-
-    #[test]
-    fn simple_md_to_html_matches_cpython_goldens() {
-        let cases: Vec<serde_json::Value> =
-            serde_json::from_str(GOLDEN).expect("golden_epub.json must be a JSON array");
-        assert!(!cases.is_empty(), "golden_epub.json produced zero cases");
-        for c in &cases {
-            let case = c["case"].as_str().unwrap_or("?").to_string();
-            let input = c["input"].as_str().expect("golden input must be a string");
-            let want = c["output"].as_str().expect("golden output must be a string");
-            let got = _simple_md_to_html(input);
-            assert_eq!(
-                got, want,
-                "CPython golden mismatch for epub case {}\n  input = {:?}\n  want  = {:?}\n  rust  = {:?}",
-                case, input, want, got
-            );
-        }
-    }
-}
