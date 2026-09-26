@@ -306,7 +306,25 @@ window.i18n = {
   translateDOM(root = document) {
     root.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.getAttribute('data-i18n');
-      if (key) el.textContent = this.t(key);
+      if (!key) return;
+      if (el.children.length === 0) {
+        el.textContent = this.t(key);
+      } else {
+        const span = el.querySelector(':scope > span[data-i18n="' + key + '"]');
+        if (!span) {
+          let updatedText = false;
+          for (let i = 0; i < el.childNodes.length; i++) {
+            if (el.childNodes[i].nodeType === Node.TEXT_NODE && el.childNodes[i].textContent.trim()) {
+              el.childNodes[i].textContent = this.t(key);
+              updatedText = true;
+              break;
+            }
+          }
+          if (!updatedText) {
+            el.textContent = this.t(key);
+          }
+        }
+      }
     });
 
     root.querySelectorAll('[data-i18n-html]').forEach(el => {

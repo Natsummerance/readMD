@@ -537,7 +537,25 @@ window.i18n = {
   translateDOM(root = document) {
     root.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.getAttribute('data-i18n');
-      if (key) el.textContent = this.t(key);
+      if (!key) return;
+      if (el.children.length === 0) {
+        el.textContent = this.t(key);
+      } else {
+        const span = el.querySelector(':scope > span[data-i18n="' + key + '"]');
+        if (!span) {
+          let updatedText = false;
+          for (let i = 0; i < el.childNodes.length; i++) {
+            if (el.childNodes[i].nodeType === Node.TEXT_NODE && el.childNodes[i].textContent.trim()) {
+              el.childNodes[i].textContent = this.t(key);
+              updatedText = true;
+              break;
+            }
+          }
+          if (!updatedText) {
+            el.textContent = this.t(key);
+          }
+        }
+      }
     });
 
     root.querySelectorAll('[data-i18n-html]').forEach(el => {
@@ -1913,12 +1931,12 @@ function updateStatus() {
   $('btn-saveas').disabled = !canSaveas;
   setUnavailableReason($('btn-saveas'), _t('toast.openDocumentToUse'));
   if ($('btn-print')) {
-    const browserOnly = !hasPy;
-    $('btn-print').disabled = isWelcome || browserOnly;
+    const canExport = hasPy || window.READMD_ENGINE === 'rust';
+    $('btn-print').disabled = isWelcome || !canExport;
     const exportHint = _t('toolbar.export') + ' (Ctrl+P)';
     $('btn-print').title = exportHint;
     $('btn-print').setAttribute('aria-label', exportHint);
-    if (browserOnly) setUnavailableReason($('btn-print'), _t('toast.exportBrowserNotice'));
+    if (!canExport) setUnavailableReason($('btn-print'), _t('toast.exportBrowserNotice'));
   }
   if ($('btn-a')) $('btn-a').disabled = isWelcome;
   if ($('btn-A')) $('btn-A').disabled = isWelcome;
@@ -2621,22 +2639,26 @@ function renderMath(body) {
 function showFixModal() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const list = $('fix-list');
-  list.innerHTML = '';
+  if (list) list.innerHTML = '';
   const fixes = state.fixes || [];
-  $('fix-count').textContent = fixes.length ? (_t('fixes.countTotal', { count: fixes.length }) || ('（共 ' + fixes.length + ' 处）')) : '';
+  const fixCount = $('fix-count');
+  if (fixCount) {
+    fixCount.textContent = fixes.length ? (_t('fixes.countTotal', { count: fixes.length }) || ('（共 ' + fixes.length + ' 处）')) : '';
+  }
   if (!fixes.length) {
     const li = document.createElement('li');
     li.className = 'empty';
     li.textContent = _t('fixes.noFixes') || '本篇文档未发现需要修正的内容';
-    list.appendChild(li);
+    if (list) list.appendChild(li);
   } else {
     fixes.forEach(f => {
       const li = document.createElement('li');
       li.textContent = f;
-      list.appendChild(li);
+      if (list) list.appendChild(li);
     });
   }
-  $('fix-modal').classList.remove('hidden');
+  const modal = $('fix-modal');
+  if (modal) modal.classList.remove('hidden');
 }
 
 async function handleAiDocumentFix() {
@@ -7792,6 +7814,7 @@ function createEditor(doc) {
     ],
   });
   cmView = new CM.EditorView({ state: st, parent: $('edit-cm') });
+  window.cmView = cmView;
   cmView.dom.addEventListener('mouseup', () => setTimeout(updateCmSelectionToolbar, 10));
   cmView.dom.addEventListener('keyup', () => setTimeout(updateCmSelectionToolbar, 10));
   cmView.dom.addEventListener('paste', handleSmartExcelPaste);
@@ -7930,6 +7953,7 @@ function destroyEditor() {
     try { cmView.destroy(); } catch (e) { /* ignore */ }
     cmView = null;
   }
+  window.cmView = null;
   const c = $('edit-cm');
   if (c) c.innerHTML = '';
   cmThemeCompartment = null;
@@ -14961,10 +14985,11 @@ function expDeepMerge(base, over) {
 
 async function loadExportPresets() {
   if (state.export.defaults) return true;
-  if (!bindPy()) return false;
+  if (!bindPy() && window.READMD_ENGINE !== 'rust') return false;
   try {
-    const d = await py.get_export_presets();
-    if (!d || d.error) throw new Error((d && d.error) || 'no data');
+    const d = (hasPy && py && typeof py.get_export_presets === 'function')
+      ? await py.get_export_presets()
+      : {};
     state.export.defaults = d.defaults || {};
     state.export.presets = d.presets || {};
     state.export.custom = d.custom || {};
@@ -14989,7 +15014,7 @@ function openExportModal() {
     showToast(_t('toast.openDocumentToUse') || '');
     return;
   }
-  if (!bindPy()) { showToast(_t('toast.exportBrowserNotice') || ''); return; }
+  if (!bindPy() && window.READMD_ENGINE !== 'rust') { showToast(_t('toast.exportBrowserNotice') || ''); return; }
   if (!state.export.ready) {
     loadExportPresets().then(ok => {
       if (ok) { state.export.ready = true; renderExportModal(); }
@@ -15878,7 +15903,16 @@ async function runExport() {
         suggestedName: suggestedName,
         options: options,
       };
-      r = await py.export_doc(fmt, payload);
+      if (hasPy && py && typeof py.export_doc === 'function') {
+        r = await py.export_doc(fmt, payload);
+      } else {
+        const resp = await apiFetch('/api/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.assign({ format: fmt }, payload))
+        });
+        r = await resp.json();
+      }
     }
   } catch (e) {
     showToast((_t('toast.exportFailed') || '') + e.message);

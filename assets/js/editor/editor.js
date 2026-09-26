@@ -77,6 +77,7 @@ function createEditor(doc) {
     ],
   });
   cmView = new CM.EditorView({ state: st, parent: $('edit-cm') });
+  window.cmView = cmView;
   cmView.dom.addEventListener('mouseup', () => setTimeout(updateCmSelectionToolbar, 10));
   cmView.dom.addEventListener('keyup', () => setTimeout(updateCmSelectionToolbar, 10));
   cmView.dom.addEventListener('paste', handleSmartExcelPaste);
@@ -215,6 +216,7 @@ function destroyEditor() {
     try { cmView.destroy(); } catch (e) { /* ignore */ }
     cmView = null;
   }
+  window.cmView = null;
   const c = $('edit-cm');
   if (c) c.innerHTML = '';
   cmThemeCompartment = null;

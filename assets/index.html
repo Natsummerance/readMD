@@ -502,7 +502,7 @@
 
     <!-- 底部操作按钮 -->
     <div class="pet-sheet-foot">
-      <button id="pet-reset-pos" class="tb-btn secondary" type="button" data-i18n="pet.resetPos">
+      <button id="pet-reset-pos" class="tb-btn secondary" type="button">
         <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
         <span data-i18n="pet.resetPos">重置桌宠位置</span>
       </button>
@@ -699,7 +699,7 @@
       <button id="img-insert" class="tb-btn accent" data-i18n="dialog.imgInsert" disabled>&#11015; 插入到文档</button>
       <button id="img-close" class="tb-btn" data-i18n="toolbar.close">关闭</button>
     </div>
-    <p class="fix-note" data-i18n="img.saveNote">图片将保存到文档同目录的 <code>images/</code> 子文件夹，并以相对路径插入 Markdown（仅在编辑本地 .md 时可用）。</p>
+    <p class="fix-note" data-i18n-html="img.saveNote">图片将保存到文档同目录的 <code>images/</code> 子文件夹，并以相对路径插入 Markdown（仅在编辑本地 .md 时可用）。</p>
   </div>
 </div>
 
@@ -716,7 +716,7 @@
     </div>
     <div class="tpl-toolbar-actions">
       <input id="tpl-search" type="search" placeholder="搜索模板..." aria-label="搜索模板" data-i18n-placeholder="tpl.searchPlaceholder" data-i18n-aria="tpl.searchPlaceholder">
-      <button id="tpl-import-btn" class="tb-btn" title="支持导入 .md / .json 格式的提示词模板文件" data-i18n="tpl.importMd" data-i18n-title="tpl.importHint" aria-expanded="false" aria-controls="tpl-import-menu">
+      <button id="tpl-import-btn" class="tb-btn" title="支持导入 .md / .json 格式的提示词模板文件" data-i18n-title="tpl.importHint" aria-expanded="false" aria-controls="tpl-import-menu">
         <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         <span data-i18n="tpl.importMd">导入模板 (.md)</span>
       </button>
@@ -746,7 +746,7 @@
           <div id="tpl-github-preview" class="tpl-github-preview" role="list" aria-live="polite"></div>
         </div>
       </div>
-      <button id="tpl-export-btn" class="tb-btn" title="将全部模板导出为 .json 备份" data-i18n="tpl.exportJson" data-i18n-title="tpl.exportHint">
+      <button id="tpl-export-btn" class="tb-btn" title="将全部模板导出为 .json 备份" data-i18n-title="tpl.exportHint">
         <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <span data-i18n="tpl.exportJson">导出模板</span>
       </button>
@@ -989,7 +989,7 @@
 
 <div id="fix-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="fix-title">
   <div id="fix-box">
-    <h3 id="fix-title" data-i18n="dialog.fixTitle">本次自动修正详情 <span id="fix-count"></span></h3>
+    <h3 id="fix-title"><span data-i18n="dialog.fixTitle">本次自动修正详情</span> <span id="fix-count"></span></h3>
     <ul id="fix-list"></ul>
     <div class="fix-actions">
       <button id="fix-ai-btn" class="tb-btn primary" data-i18n="fixes.aiFix">AI 深度修复</button>

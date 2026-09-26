@@ -295,12 +295,12 @@ function updateStatus() {
   $('btn-saveas').disabled = !canSaveas;
   setUnavailableReason($('btn-saveas'), _t('toast.openDocumentToUse'));
   if ($('btn-print')) {
-    const browserOnly = !hasPy;
-    $('btn-print').disabled = isWelcome || browserOnly;
+    const canExport = hasPy || window.READMD_ENGINE === 'rust';
+    $('btn-print').disabled = isWelcome || !canExport;
     const exportHint = _t('toolbar.export') + ' (Ctrl+P)';
     $('btn-print').title = exportHint;
     $('btn-print').setAttribute('aria-label', exportHint);
-    if (browserOnly) setUnavailableReason($('btn-print'), _t('toast.exportBrowserNotice'));
+    if (!canExport) setUnavailableReason($('btn-print'), _t('toast.exportBrowserNotice'));
   }
   if ($('btn-a')) $('btn-a').disabled = isWelcome;
   if ($('btn-A')) $('btn-A').disabled = isWelcome;

@@ -175,10 +175,11 @@ function expDeepMerge(base, over) {
 
 async function loadExportPresets() {
   if (state.export.defaults) return true;
-  if (!bindPy()) return false;
+  if (!bindPy() && window.READMD_ENGINE !== 'rust') return false;
   try {
-    const d = await py.get_export_presets();
-    if (!d || d.error) throw new Error((d && d.error) || 'no data');
+    const d = (hasPy && py && typeof py.get_export_presets === 'function')
+      ? await py.get_export_presets()
+      : {};
     state.export.defaults = d.defaults || {};
     state.export.presets = d.presets || {};
     state.export.custom = d.custom || {};
@@ -203,7 +204,7 @@ function openExportModal() {
     showToast(_t('toast.openDocumentToUse') || '');
     return;
   }
-  if (!bindPy()) { showToast(_t('toast.exportBrowserNotice') || ''); return; }
+  if (!bindPy() && window.READMD_ENGINE !== 'rust') { showToast(_t('toast.exportBrowserNotice') || ''); return; }
   if (!state.export.ready) {
     loadExportPresets().then(ok => {
       if (ok) { state.export.ready = true; renderExportModal(); }
@@ -1092,7 +1093,16 @@ async function runExport() {
         suggestedName: suggestedName,
         options: options,
       };
-      r = await py.export_doc(fmt, payload);
+      if (hasPy && py && typeof py.export_doc === 'function') {
+        r = await py.export_doc(fmt, payload);
+      } else {
+        const resp = await apiFetch('/api/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.assign({ format: fmt }, payload))
+        });
+        r = await resp.json();
+      }
     }
   } catch (e) {
     showToast((_t('toast.exportFailed') || '') + e.message);
