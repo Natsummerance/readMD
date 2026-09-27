@@ -61,6 +61,10 @@ jobs:
       - name: Build release binary with Cargo
         run: cargo build --manifest-path rust/Cargo.toml --release -p readmd-kernel --target ${{ matrix.platform.target }}
 
+      - name: Install Windows Installer Tools (NSIS)
+        if: runner.os == 'Windows'
+        run: choco install nsis -y
+
       - name: Package Windows Artifacts
         if: runner.os == 'Windows'
         run: |
@@ -71,6 +75,7 @@ jobs:
           Copy-Item "LICENSE" -Destination "$pkgDir\LICENSE"
           Copy-Item "README.md" -Destination "$pkgDir\README.md"
           Compress-Archive -Path "$pkgDir\*" -DestinationPath "dist\${{ matrix.platform.asset_name }}.zip"
+          & "C:\Program Files (x86)\NSIS\makensis.exe" installer\ReadMD.nsi
 
       - name: Package Linux Artifacts
         if: runner.os == 'Linux'
@@ -81,6 +86,46 @@ jobs:
           cp -r assets "$PKG_DIR/assets"
           cp LICENSE README.md "$PKG_DIR/"
           tar -czvf "dist/${{ matrix.platform.asset_name }}.tar.gz" -C dist/ReadMD-linux-x86_64 .
+
+          # Build Debian / Ubuntu / UOS / Kylin .deb package
+          DEB_DIR="dist/readmd_deb"
+          mkdir -p "$DEB_DIR/DEBIAN"
+          mkdir -p "$DEB_DIR/usr/bin"
+          mkdir -p "$DEB_DIR/usr/share/readmd"
+          mkdir -p "$DEB_DIR/usr/share/applications"
+          mkdir -p "$DEB_DIR/usr/share/icons/hicolor/512x512/apps"
+
+          cp "rust/target/${{ matrix.platform.target }}/release/readmd" "$DEB_DIR/usr/bin/readmd"
+          chmod +x "$DEB_DIR/usr/bin/readmd"
+          cp -r assets "$DEB_DIR/usr/share/readmd/"
+          if [ -f "assets/icon-256.png" ]; then
+            cp "assets/icon-256.png" "$DEB_DIR/usr/share/icons/hicolor/512x512/apps/readmd.png"
+          fi
+
+          cat <<'EOF' > "$DEB_DIR/DEBIAN/control"
+          Package: readmd
+          Version: 0.0.1
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Natsummerance <https://github.com/Natsummerance/rust-ReadMD>
+          Description: 100% Pure Rust Native Markdown Reader and Editor
+           ReadMD is a local-first cross-platform Markdown reader and editor.
+          EOF
+
+          cat <<'EOF' > "$DEB_DIR/usr/share/applications/readmd.desktop"
+          [Desktop Entry]
+          Name=ReadMD
+          Comment=Pure Rust Native Markdown Reader and Editor
+          Exec=/usr/bin/readmd
+          Icon=readmd
+          Terminal=false
+          Type=Application
+          Categories=Office;TextEditor;Utility;
+          MimeType=text/markdown;text/x-markdown;
+          EOF
+
+          dpkg-deb --build "$DEB_DIR" "dist/${{ matrix.platform.asset_name }}.deb"
 
       - name: Package macOS Artifacts
         if: runner.os == 'macOS'
@@ -126,12 +171,18 @@ jobs:
           PLIST
           cd dist
           zip -r "${{ matrix.platform.asset_name }}.zip" ReadMD.app
+          hdiutil create -volname "ReadMD" -srcfolder ReadMD.app -ov -format UDZO "${{ matrix.platform.asset_name }}.dmg"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform.asset_name }}
-          path: dist/*.${{ matrix.platform.archive_ext }}
+          path: |
+            dist/*.zip
+            dist/*.tar.gz
+            dist/*.deb
+            dist/*.dmg
+            dist/*Setup*.exe
 
   release:
     name: Publish GitHub Release

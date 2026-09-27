@@ -41,15 +41,19 @@
 
 ---
 
-## 📦 发布资产下载 (Release Assets)
+## 📦 全平台发布资产下载 (Release Assets & Installers)
 
-| 资产文件名 | 操作系统 / 架构 | 格式 | 说明 |
+| 资产文件名 | 操作系统 / 架构 | 类型 | 格式说明 |
 | :--- | :--- | :--- | :--- |
-| **`ReadMD-windows-x64.zip`** | Windows 10/11 (x64) | ZIP 便携包 | 包含 `ReadMD.exe` 与全量静态资源，解压即用 |
-| **`ReadMD-linux-x86_64.tar.gz`** | Linux / UOS / Kylin (x64) | TAR.GZ 归档 | 原生 WebKitGTK Linux 二进制与静态资源包 |
-| **`ReadMD-macos-arm64.zip`** | macOS 11+ (Apple Silicon M 系列) | ZIP 压缩包 | 原生 `ReadMD.app` 应用程序包 |
-| **`ReadMD-macos-x64.zip`** | macOS 10.15+ (Intel x64) | ZIP 压缩包 | 原生 `ReadMD.app` 应用程序包 |
-| **`SHA256SUMS.txt`** | 全平台通用 | 文本 | 全量发行包 SHA-256 完整性校验哈希值清单 |
+| **`ReadMDSetup-windows-x64.exe`** | Windows 10/11 (x64) | 🎯 **安装包** | 官方安装向导，自动配置开始菜单、桌面图标与 .md 文件关联 |
+| **`ReadMD-windows-x64.zip`** | Windows 10/11 (x64) | 便携版 | 免安装便携 ZIP，解压即用 |
+| **`ReadMD-macos-arm64.dmg`** | macOS 11+ (Apple Silicon) | 🎯 **安装包** | 原生 macOS 磁盘映象（DMG 拖拽安装） |
+| **`ReadMD-macos-arm64.zip`** | macOS 11+ (Apple Silicon) | 便携版 | 原生 `ReadMD.app` 压缩归档 |
+| **`ReadMD-macos-x64.dmg`** | macOS 10.15+ (Intel x64) | 🎯 **安装包** | 原生 macOS 磁盘映象（DMG 拖拽安装） |
+| **`ReadMD-macos-x64.zip`** | macOS 10.15+ (Intel x64) | 便携版 | 原生 `ReadMD.app` 压缩归档 |
+| **`ReadMD-linux-x86_64.deb`** | Linux (Ubuntu/Debian/UOS/麒麟) | 🎯 **安装包** | 原生 Debian/Ubuntu/统信UOS/银河麒麟 安装包（带桌面图标与菜单） |
+| **`ReadMD-linux-x86_64.tar.gz`** | Linux x64 全发行版 | 便携版 | 原生 WebKitGTK Linux 二进制与静态资源便携包 |
+| **`SHA256SUMS.txt`** | 全平台通用 | 校验单 | 全量发行包 SHA-256 完整性校验哈希值清单 |
 
 ### 校验清单 (SHA-256 Checksums)
 ```text

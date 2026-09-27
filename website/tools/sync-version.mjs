@@ -60,8 +60,8 @@ async function main() {
     version: pureVersion,
     releaseTag: releaseTag,
     updatedAt: new Date().toISOString(),
-    assetsBaseUrl: `https://github.com/Natsummerance/readMD/releases/download/${releaseTag}/`,
-    checksumUrl: `https://github.com/Natsummerance/readMD/releases/download/${releaseTag}/SHA256SUMS.txt`
+    assetsBaseUrl: `https://github.com/Natsummerance/rust-ReadMD/releases/download/${releaseTag}/`,
+    checksumUrl: `https://github.com/Natsummerance/rust-ReadMD/releases/download/${releaseTag}/SHA256SUMS.txt`
   };
 
   await mkdir(distDir, { recursive: true });
