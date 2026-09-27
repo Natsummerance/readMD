@@ -1,47 +1,30 @@
 #!/bin/bash
 # ============================================================
-#  ReadMD Installer (macOS / Linux)
-#  - create venv, install deps, generate icon, print instructions
+#  ReadMD Installer (macOS / Linux) - 100% Pure Rust Native Edition
+#  - Build native binary with Cargo and install
 # ============================================================
 set -e
 cd "$(dirname "$0")/../.."
 
-echo "[1/4] Checking Python ..."
-if ! command -v python3 &>/dev/null; then
+echo "[1/3] Checking build environment ..."
+if ! command -v cargo &>/dev/null; then
     echo
-    echo "Python 3 not found. Please install Python 3.9+ first:"
-    echo "  brew install python3    # macOS (Homebrew)"
-    echo "  https://www.python.org/downloads/"
+    echo "Rust toolchain (cargo) not found. Please install Rust:"
+    echo "  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
     echo
     exit 1
 fi
 
-PY3=$(command -v python3)
-echo "  Using: $PY3 ($($PY3 --version 2>&1))"
+echo "[2/3] Compiling native release binary with Cargo ..."
+cargo build --release -p readmd-kernel
 
-echo "[2/4] Creating virtual environment and installing dependencies ..."
-if [ ! -f ".venv/bin/python" ]; then
-    $PY3 -m venv .venv
-fi
-REQ_FILE="config/requirements-common.txt"
-if [ "$(uname -s)" = "Darwin" ]; then
-    REQ_FILE="config/requirements-macos.txt"
-fi
-".venv/bin/python" -m pip install --disable-pip-version-check -q -r "$REQ_FILE"
+echo "[3/3] Setting up executable ..."
+mkdir -p dist
+cp rust/target/release/readmd ./ReadMD
+chmod +x ./ReadMD scripts/run.sh 2>/dev/null || true
 
-echo "[3/4] Generating icon ..."
-if [ -f "tools/make_icon.py" ]; then
-    ".venv/bin/python" "tools/make_icon.py" 2>/dev/null || true
-fi
-
-echo "[4/4] Done!"
 echo
-echo "  To run ReadMD:"
-echo "    ./scripts/run.sh [file.md]"
-echo "    or: .venv/bin/python readmd.py [file.md]"
+echo "Done! Native binary built at: ./ReadMD"
+echo "To run ReadMD:"
+echo "  ./scripts/run.sh [file.md]  or  ./ReadMD [file.md]"
 echo
-echo "  macOS: To set ReadMD as default .md opener,"
-echo "    right-click any .md file → Get Info → Open with → Change All..."
-echo
-chmod +x scripts/run.sh 2>/dev/null || true
-

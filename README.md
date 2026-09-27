@@ -15,11 +15,14 @@
 
  ReadMD 是本地优先的 Markdown 阅读器和编辑器：双击即读，超长文档不假死，常见语法错误只在显示层修复；支持 Office / PDF / 网页转 MD、离线 OCR、LaTeX 学术增强和 MCP 接入。
 
+> [!IMPORTANT]
+> **100% Pure Rust 原生架构版 (`rust-ReadMD`)**：本项目由全新纯 Rust 内核（`readmd-kernel`）独立驱动，彻底移除了所有历史 Python 运行时与虚拟环境依赖。体积仅约 11.8MB，冷启动毫秒级秒开，支持 Windows (WebView2 + Win32 FFI)、Linux (WebKitGTK + XDG) 与 macOS (WKWebView + Cocoa) 全平台原生运行，零外部依赖，安全纯粹。
+
  [![platform](https://img.shields.io/badge/Windows%2010%2F11%20%7C%20macOS%2013%2B%20%7C%20Linux%20%7C%20UOS%20%7C%20Kylin-blue)](#正式下载矩阵-release-assets)
  [![i18n](https://img.shields.io/badge/languages-46-orange)](#全球-46-语种-i18n-全量母语化)
  [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
- [![release](https://img.shields.io/github/v/release/Natsummerance/readMD)](https://github.com/Natsummerance/readMD/releases/latest)
- [![website](https://img.shields.io/badge/site-readmd.asia-black)](https://readmd.asia)
+ [![release](https://img.shields.io/github/v/release/Natsummerance/rust-ReadMD)](https://github.com/Natsummerance/rust-ReadMD/releases/latest)
+ [![website](https://img.shields.io/badge/site-rust.readmd.asia-black)](https://rust.readmd.asia)
 </div>
 
 ## 30 秒判断它适不适合你
@@ -38,15 +41,15 @@
 
 ## 直接下载
 
-[Windows 安装包](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMDSetup-v2.3.9.exe) ·
-[Windows 便携版](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-portable-v2.3.9.exe) ·
-[macOS Apple Silicon](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-macos-arm64-v2.3.9.zip) ·
-[macOS Intel](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-macos-x64-v2.3.9.zip) ·
-[Linux AppImage](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-linux-x86_64-v2.3.9.AppImage) ·
-[Linux ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-linux-aarch64-v2.3.9.AppImage) ·
-[UOS / 麒麟 Deb](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd_2.3.9_amd64.deb) ·
-[麒麟 V10 ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd_2.3.9_arm64.deb) ·
-[SHA-256](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/SHA256SUMS.txt)
+[Windows 安装包](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMDSetup-v0.0.1.exe) ·
+[Windows 便携版](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-portable-v0.0.1.exe) ·
+[macOS Apple Silicon](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-macos-arm64-v0.0.1.zip) ·
+[macOS Intel](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-macos-x64-v0.0.1.zip) ·
+[Linux AppImage](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-linux-x86_64-v0.0.1.AppImage) ·
+[Linux ARM64](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-linux-aarch64-v0.0.1.AppImage) ·
+[UOS / 麒麟 Deb](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/readmd_0.0.1_amd64.deb) ·
+[麒麟 V10 ARM64](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/readmd_0.0.1_arm64.deb) ·
+[SHA-256](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/SHA256SUMS.txt)
 
 ## 三步开始
 
@@ -56,39 +59,39 @@
 
 ## AI 助手引用入口
 
-- [简明产品索引](https://readmd.asia/llms.txt)：版本、平台、隐私边界和关键事实。
-- [完整引用语料](https://readmd.asia/llms-full.txt)：长文档分页、非破坏修正、转换范围和常见问题的直接答案。
+- [简明产品索引](https://rust.readmd.asia/llms.txt)：版本、平台、隐私边界和关键事实。
+- [完整引用语料](https://rust.readmd.asia/llms-full.txt)：长文档分页、非破坏修正、转换范围和常见问题的直接答案。
 
 ## 为什么值得 Star
 
 ReadMD 解决的是长期资料库里的实际问题：大文件能继续读，导入稿不用重排，敏感内容可以留在本机，原文始终保留最终决定权。如果你在 Windows、macOS、Linux 或信创环境之间切换，它提供一致的工作流。
 
-如果它帮你省下一次整理时间，请 [点 Star](https://github.com/Natsummerance/readMD)，让更多写作者找到这个项目。
+如果它帮你省下一次整理时间，请 [点 Star](https://github.com/Natsummerance/rust-ReadMD)，让更多写作者找到这个项目。
 
 ## 候选下载矩阵 (Preview Release Assets)
 
-本矩阵只列当前候选的交付目标，不等同于正式支持承诺。Windows 7 仅提供单独的遗留运行时构建，不与 Windows 10/11 安装包混装；HarmonyOS/OpenHarmony 及未完成实机验收的架构不属于 V2.3.9 支持范围。
+本矩阵只列当前候选的交付目标，不等同于正式支持承诺。Windows 7 仅提供单独的遗留运行时构建，不与 Windows 10/11 安装包混装；HarmonyOS/OpenHarmony 及未完成实机验收的架构不属于 V0.0.1 支持范围。
 
 | 操作系统 / 平台 | 架构 / 格式 | 直接下载链接 (GitHub Release) | 说明 |
 | :--- | :--- | :--- | :--- |
-| **Windows** | x64 (安装版) | [⬇️ **ReadMDSetup-v2.3.9.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMDSetup-v2.3.9.exe) | 动画安装向导，自动关联 `.md` 文件为默认打开方式 |
-| **Windows** | x64 (绿色便携版) | [⬇️ **ReadMD-portable-v2.3.9.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-portable-v2.3.9.exe) | 单文件绿色版，免安装解压即用 |
-| **macOS** | Apple Silicon (M系列) | [⬇️ **ReadMD-macos-arm64-v2.3.9.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-macos-arm64-v2.3.9.zip) | M1 / M2 / M3 / M4 原生构建（含 Vision 离线 OCR） |
-| **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.9.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-macos-x64-v2.3.9.zip) | Intel 芯片 Mac 原生构建（含 Vision 离线 OCR） |
-| **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.9.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-linux-x86_64-v2.3.9.AppImage) | 通用 Linux 免安装 AppImage，赋予执行权限后直接运行 |
-| **Linux** | ARM64 (AppImage) | [⬇️ **ReadMD-linux-aarch64-v2.3.9.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-linux-aarch64-v2.3.9.AppImage) | 飞腾 / 鲲鹏等 ARM64 设备免安装运行 |
-| **国产信创系统** | 统信 UOS / 银河麒麟 / Deepin / Ubuntu | [⬇️ **readmd_2.3.9_amd64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd_2.3.9_amd64.deb) | Deb 原生安装包；需以对应系统的实机验收记录为准 |
-| ️ **麒麟 V10 / 飞腾** | ARM64 (aarch64) | [⬇️ **readmd_2.3.9_arm64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd_2.3.9_arm64.deb) | 飞腾 D2000/E2000 原生构建，内置 UKUI/X11 与软件渲染安全回退 |
-| **VSCode 插件** | 通用 VSIX 扩展包 | [⬇️ **readmd-vscode-2.3.9.vsix**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd-vscode-2.3.9.vsix) | VSCode 离线安装包，支持双向同步预览与格式自愈 |
-| **MCP Server** | FastMCP stdio 独立包 | [⬇️ **readmd-mcp-server-2.3.9.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd-mcp-server-2.3.9.zip) | 独立 FastMCP 服务端，供 Claude Desktop / Cursor 一键接入 |
-| **SHA-256 校验** | 完整性清单 | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/SHA256SUMS.txt) | 全量资产 SHA-256 哈希校验清单 |
+| **Windows** | x64 (安装版) | [⬇️ **ReadMDSetup-v0.0.1.exe**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMDSetup-v0.0.1.exe) | 动画安装向导，自动关联 `.md` 文件为默认打开方式 |
+| **Windows** | x64 (绿色便携版) | [⬇️ **ReadMD-portable-v0.0.1.exe**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-portable-v0.0.1.exe) | 单文件绿色版，免安装解压即用 |
+| **macOS** | Apple Silicon (M系列) | [⬇️ **ReadMD-macos-arm64-v0.0.1.zip**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-macos-arm64-v0.0.1.zip) | M1 / M2 / M3 / M4 原生构建（含 Vision 离线 OCR） |
+| **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v0.0.1.zip**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-macos-x64-v0.0.1.zip) | Intel 芯片 Mac 原生构建（含 Vision 离线 OCR） |
+| **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v0.0.1.AppImage**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-linux-x86_64-v0.0.1.AppImage) | 通用 Linux 免安装 AppImage，赋予执行权限后直接运行 |
+| **Linux** | ARM64 (AppImage) | [⬇️ **ReadMD-linux-aarch64-v0.0.1.AppImage**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-linux-aarch64-v0.0.1.AppImage) | 飞腾 / 鲲鹏等 ARM64 设备免安装运行 |
+| **国产信创系统** | 统信 UOS / 银河麒麟 / Deepin / Ubuntu | [⬇️ **readmd_0.0.1_amd64.deb**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/readmd_0.0.1_amd64.deb) | Deb 原生安装包；需以对应系统的实机验收记录为准 |
+| ️ **麒麟 V10 / 飞腾** | ARM64 (aarch64) | [⬇️ **readmd_0.0.1_arm64.deb**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/readmd_0.0.1_arm64.deb) | 飞腾 D2000/E2000 原生构建，内置 UKUI/X11 与软件渲染安全回退 |
+| **VSCode 插件** | 通用 VSIX 扩展包 | [⬇️ **readmd-vscode-0.0.1.vsix**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/readmd-vscode-0.0.1.vsix) | VSCode 离线安装包，支持双向同步预览与格式自愈 |
+| **MCP Server** | FastMCP stdio 独立包 | [⬇️ **readmd-mcp-server-0.0.1.zip**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/readmd-mcp-server-0.0.1.zip) | 独立 FastMCP 服务端，供 Claude Desktop / Cursor 一键接入 |
+| **SHA-256 校验** | 完整性清单 | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/SHA256SUMS.txt) | 全量资产 SHA-256 哈希校验清单 |
 
 ---
 
 ## 多系统与信创国产适配
 
 ### 1. Linux 与国产操作系统适配（统信 UOS / 银河麒麟 / 深度）
-- **直接安装使用**：下载 [`readmd_2.3.9_amd64.deb`](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd_2.3.9_amd64.deb) 双击安装，或直接运行 [`ReadMD-linux-x86_64-v2.3.9.AppImage`](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-linux-x86_64-v2.3.9.AppImage)。银河麒麟 V10 + 飞腾 ARM64 设备使用 [`readmd_2.3.9_arm64.deb`](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd_2.3.9_arm64.deb)。
+- **直接安装使用**：下载 [`readmd_0.0.1_amd64.deb`](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/readmd_0.0.1_amd64.deb) 双击安装，或直接运行 [`ReadMD-linux-x86_64-v0.0.1.AppImage`](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-linux-x86_64-v0.0.1.AppImage)。银河麒麟 V10 + 飞腾 ARM64 设备使用 [`readmd_0.0.1_arm64.deb`](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/readmd_0.0.1_arm64.deb)。
 - **飞腾安全回退**：自动识别 Phytium D2000/E2000/FT 系列；WebKitGTK 启动时优先选择 UKUI/X11、禁用 DMABUF 合成并回退 llvmpipe，避免旧 GPU 驱动白屏或崩溃。
 - **系统与环境识别**：100% 纯原生 Rust 内核（`native_system`）自动识别系统发行版，自适应配置 Wayland / X11 显示后端。
 - **桌面与深色模式**：自动侦测 DDE（统信/Deepin）、UKUI（银河麒麟）与 GNOME/KDE 的外观主题，实时同步深色/浅色配色。
@@ -122,15 +125,15 @@ ReadMD 解决的是长期资料库里的实际问题：大文件能继续读，�
 ## VSCode 扩展与 MCP Server 生态
 
 ### 1. VSCode 插件安装与使用
-- **界面安装**：下载 [`readmd-vscode-2.3.9.vsix`](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd-vscode-2.3.9.vsix) -> 在 VSCode 扩展面板选择 `... -> 从 VSIX 安装...`。
+- **界面安装**：下载 [`readmd-vscode-0.0.1.vsix`](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/readmd-vscode-0.0.1.vsix) -> 在 VSCode 扩展面板选择 `... -> 从 VSIX 安装...`。
 - **命令行安装**：
  ```bash
- code --install-extension readmd-vscode-2.3.9.vsix
+ code --install-extension readmd-vscode-0.0.1.vsix
  ```
 - **核心功能**：打开 Markdown 文件点击右上角书本图标开启同步预览；右键菜单支持一键自动修复语法错误与转换为 LaTeX 源码。
 
 ### 2. MCP (Model Context Protocol) Server 配置
-直接下载解压 [`readmd-mcp-server-2.3.9.zip`](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd-mcp-server-2.3.9.zip)，在 Claude Desktop、Cursor、Antigravity 与 Cline 中配置（请将 `args` 中的路径替换为本机解压的**绝对路径**）：
+直接下载解压 [`readmd-mcp-server-0.0.1.zip`](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/readmd-mcp-server-0.0.1.zip)，在 Claude Desktop、Cursor、Antigravity 与 Cline 中配置（请将 `args` 中的路径替换为本机解压的**绝对路径**）：
 
 **Windows**:
 ```json
@@ -253,14 +256,14 @@ readmd/
 
 ---
 
-## 更新日志 (v2.3.8-preview.1)
+## 更新日志 (v0.0.1-preview.1)
 
 - **46 语种全量母语化与机翻清洗**：深入审核 42 个非中英文语言字典，消除波兰语混淆、西部之塔、农作物裁剪等全部系统性翻译错误，实现 100% 完整覆盖。
 - **Linux 与信创国产系统适配**：原生 Rust `native_system` 模块；正式支持只覆盖矩阵中有实机证据的 Ubuntu、Debian、UOS、银河麒麟和 Deepin 架构。
 - **离线来源与 Skills**：上游原文、许可证和适配元数据随包提供，AI 指令统一从 Skills 加载。
 - **LaTeX PRO 学术论文套件**：零配置 `.bib` 参考文献浮动卡片、学术 Callout 盒子与 LaTeX 导出。
 - **Editor Studio PRO 体验重塑**：Zen 禅模式全屏专注、10×10 表格设计器、Excel 智能转换。
-- **VSCode 插件与 MCP Server 生态完善**：升级至 v2.3.8，提供多端 AI 写作协作流。
+- **VSCode 插件与 MCP Server 生态完善**：升级至 v0.0.1，提供多端 AI 写作协作流。
 
 ---
 

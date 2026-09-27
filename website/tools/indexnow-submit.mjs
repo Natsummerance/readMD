@@ -1,6 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 
-const origin = process.argv[2] || "https://readmd.asia";
+const origin = process.argv[2] || "https://rust.readmd.asia";
 const endpoint = process.argv[3] || "https://api.indexnow.org/IndexNow";
 const publicRoot = new URL("../public/", import.meta.url);
 
@@ -17,7 +17,7 @@ const urlList = [...new Set([...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map(matc
 if (!urlList.length) throw new Error("Sitemap contains no URLs");
 
 const payload = {
-  host: "readmd.asia",
+  host: "rust.readmd.asia",
   key,
   keyLocation: new URL(keyFile, origin).href,
   urlList,

@@ -18,8 +18,8 @@
  [![platform](https://img.shields.io/badge/Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20KylinOS%20%7C%20UOS-blue)](#プラットフォーム別ダウンロード-release-assets)
  [![i18n](https://img.shields.io/badge/languages-46-orange)](docs/i18n-language-reference.md)
  [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
- [![release](https://img.shields.io/github/v/release/Natsummerance/readMD)](https://github.com/Natsummerance/readMD/releases/latest)
- [![website](https://img.shields.io/badge/site-readmd.asia-black)](https://readmd.asia)
+ [![release](https://img.shields.io/github/v/release/Natsummerance/rust-ReadMD)](https://github.com/Natsummerance/rust-ReadMD/releases/latest)
+ [![website](https://img.shields.io/badge/site-rust.readmd.asia-black)](https://rust.readmd.asia)
 </div>
 
 ## こんな用途に向いています
@@ -38,15 +38,15 @@
 
 ## 直接ダウンロード
 
-[Windows インストーラー](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMDSetup-v2.3.9.exe) ·
-[Windows ポータブル版](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-portable-v2.3.9.exe) ·
-[macOS Apple Silicon](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-macos-arm64-v2.3.9.zip) ·
-[macOS Intel](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-macos-x64-v2.3.9.zip) ·
-[Linux AppImage](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-linux-x86_64-v2.3.9.AppImage) ·
-[Linux ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-linux-aarch64-v2.3.9.AppImage) ·
-[UOS / 麒麟 Deb](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd_2.3.9_amd64.deb) ·
-[麒麟 V10 ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd_2.3.9_arm64.deb) ·
-[SHA-256](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/SHA256SUMS.txt)
+[Windows インストーラー](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMDSetup-v0.0.1.exe) ·
+[Windows ポータブル版](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-portable-v0.0.1.exe) ·
+[macOS Apple Silicon](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-macos-arm64-v0.0.1.zip) ·
+[macOS Intel](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-macos-x64-v0.0.1.zip) ·
+[Linux AppImage](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-linux-x86_64-v0.0.1.AppImage) ·
+[Linux ARM64](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-linux-aarch64-v0.0.1.AppImage) ·
+[UOS / 麒麟 Deb](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/readmd_0.0.1_amd64.deb) ·
+[麒麟 V10 ARM64](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/readmd_0.0.1_arm64.deb) ·
+[SHA-256](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/SHA256SUMS.txt)
 
 ## 3 ステップで開始
 
@@ -74,31 +74,31 @@
 
 ## AI アシスタント引用リソース
 
-- [製品インデックス](https://readmd.asia/llms.txt): バージョン、対応環境、プライバシー境界、主要な事実。
-- [完全引用コーパス](https://readmd.asia/llms-full.txt): 長文の改ページ、非破壊修復、変換、よくある質問への直接回答。
+- [製品インデックス](https://rust.readmd.asia/llms.txt): バージョン、対応環境、プライバシー境界、主要な事実。
+- [完全引用コーパス](https://rust.readmd.asia/llms-full.txt): 長文の改ページ、非破壊修復、変換、よくある質問への直接回答。
 
 ## Star が役に立つ理由
 
 ReadMD は、長期間保管する資料で起こりやすい問題に取り組みます。大きなファイルも読み続けられ、取り込んだ資料の整理作業が減り、機密性の高い草稿はローカルに残せます。Windows、macOS、Linux、中国 OS の間でも同じ操作感を維持できます。
 
-もし整理時間の短縮に役立ったら、[リポジトリに Star](https://github.com/Natsummerance/readMD) を付けて他の執筆者にも見つけてもらいましょう。
+もし整理時間の短縮に役立ったら、[リポジトリに Star](https://github.com/Natsummerance/rust-ReadMD) を付けて他の執筆者にも見つけてもらいましょう。
 
 
 ## プラットフォーム別ダウンロード (Release Assets)
 
 | プラットフォーム | アーキテクチャ / 形式 | 直接ダウンロードリンク (GitHub Release) | 概要 |
 | :--- | :--- | :--- | :--- |
-| **Windows** | x64 (インストーラー) | [⬇️ **ReadMDSetup-v2.3.9.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMDSetup-v2.3.9.exe) | `.md` 関連付けを自動登録するセットアップ版 |
-| **Windows** | x64 (ポータブル版) | [⬇️ **ReadMD-portable-v2.3.9.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-portable-v2.3.9.exe) | インストール不要の単一実行ファイル |
-| **macOS** | Apple Silicon (M1〜M4) | [⬇️ **ReadMD-macos-arm64-v2.3.9.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-macos-arm64-v2.3.9.zip) | Apple Silicon Mac 向けネイティブビルド (Vision OCR 内蔵) |
-| **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.9.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-macos-x64-v2.3.9.zip) | Intel Mac 向けネイティブビルド (Vision OCR 内蔵) |
-| **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.9.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-linux-x86_64-v2.3.9.AppImage) | インストール不要の Linux AppImage パッケージ |
-| **Linux** | ARM64 (AppImage) | [⬇️ **ReadMD-linux-aarch64-v2.3.9.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/ReadMD-linux-aarch64-v2.3.9.AppImage) | Phytium / Kunpeng など ARM64 端末向けパッケージ |
-| **Linux / 国産 OS** | Debian / Ubuntu / UOS / 麒麟 | [⬇️ **readmd_2.3.9_amd64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd_2.3.9_amd64.deb) | Deb ネイティブインストールパッケージ |
-| ️ **麒麟 V10 / 飛騰** | ARM64 (aarch64) | [⬇️ **readmd_2.3.9_arm64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd_2.3.9_arm64.deb) | ARM64 ネイティブ Deb パッケージ |
-| **VSCode 拡張** | VSIX パッケージ | [⬇️ **readmd-vscode-2.3.9.vsix**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd-vscode-2.3.9.vsix) | オフラインインストール用 VSIX 拡張機能 |
-| **MCP Server** | FastMCP stdio パッケージ | [⬇️ **readmd-mcp-server-2.3.9.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd-mcp-server-2.3.9.zip) | Claude Desktop / Cursor 連携用 FastMCP パッケージ |
-| **チェックサム** | SHA-256 リスト | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/SHA256SUMS.txt) | 配布ファイルの整合性検証用チェックサム |
+| **Windows** | x64 (インストーラー) | [⬇️ **ReadMDSetup-v0.0.1.exe**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMDSetup-v0.0.1.exe) | `.md` 関連付けを自動登録するセットアップ版 |
+| **Windows** | x64 (ポータブル版) | [⬇️ **ReadMD-portable-v0.0.1.exe**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-portable-v0.0.1.exe) | インストール不要の単一実行ファイル |
+| **macOS** | Apple Silicon (M1〜M4) | [⬇️ **ReadMD-macos-arm64-v0.0.1.zip**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-macos-arm64-v0.0.1.zip) | Apple Silicon Mac 向けネイティブビルド (Vision OCR 内蔵) |
+| **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v0.0.1.zip**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-macos-x64-v0.0.1.zip) | Intel Mac 向けネイティブビルド (Vision OCR 内蔵) |
+| **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v0.0.1.AppImage**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-linux-x86_64-v0.0.1.AppImage) | インストール不要の Linux AppImage パッケージ |
+| **Linux** | ARM64 (AppImage) | [⬇️ **ReadMD-linux-aarch64-v0.0.1.AppImage**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-linux-aarch64-v0.0.1.AppImage) | Phytium / Kunpeng など ARM64 端末向けパッケージ |
+| **Linux / 国産 OS** | Debian / Ubuntu / UOS / 麒麟 | [⬇️ **readmd_0.0.1_amd64.deb**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/readmd_0.0.1_amd64.deb) | Deb ネイティブインストールパッケージ |
+| ️ **麒麟 V10 / 飛騰** | ARM64 (aarch64) | [⬇️ **readmd_0.0.1_arm64.deb**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/readmd_0.0.1_arm64.deb) | ARM64 ネイティブ Deb パッケージ |
+| **VSCode 拡張** | VSIX パッケージ | [⬇️ **readmd-vscode-0.0.1.vsix**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/readmd-vscode-0.0.1.vsix) | オフラインインストール用 VSIX 拡張機能 |
+| **MCP Server** | FastMCP stdio パッケージ | [⬇️ **readmd-mcp-server-0.0.1.zip**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/readmd-mcp-server-0.0.1.zip) | Claude Desktop / Cursor 連携用 FastMCP パッケージ |
+| **チェックサム** | SHA-256 リスト | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/SHA256SUMS.txt) | 配布ファイルの整合性検証用チェックサム |
 
 ---
 

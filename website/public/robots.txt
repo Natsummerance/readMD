@@ -45,6 +45,6 @@ Allow: /
 User-agent: Bingbot
 Allow: /
 
-Sitemap: https://readmd.asia/sitemap.xml
+Sitemap: https://rust.readmd.asia/sitemap.xml
 
 # Clean parameter handling protects crawl budget; canonical URLs contain no query strings.
