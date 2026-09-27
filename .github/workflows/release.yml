@@ -75,7 +75,7 @@ jobs:
           Copy-Item "LICENSE" -Destination "$pkgDir\LICENSE"
           Copy-Item "README.md" -Destination "$pkgDir\README.md"
           Compress-Archive -Path "$pkgDir\*" -DestinationPath "dist\${{ matrix.platform.asset_name }}.zip"
-          & "C:\Program Files (x86)\NSIS\makensis.exe" installer\ReadMD.nsi
+          & "C:\Program Files (x86)\NSIS\makensis.exe" ReadMD.nsi
 
       - name: Package Linux Artifacts
         if: runner.os == 'Linux'

@@ -1,5 +1,5 @@
 ; ReadMD Windows NSIS Installer Script
-; Generates ReadMDSetup-windows-x64.exe
+; Generates dist\ReadMDSetup-windows-x64.exe
 
 !include "MUI2.nsh"
 !include "FileFunc.nsh"

@@ -55,13 +55,7 @@
 | **`ReadMD-linux-x86_64.tar.gz`** | Linux x64 全发行版 | 便携版 | 原生 WebKitGTK Linux 二进制与静态资源便携包 |
 | **`SHA256SUMS.txt`** | 全平台通用 | 校验单 | 全量发行包 SHA-256 完整性校验哈希值清单 |
 
-### 校验清单 (SHA-256 Checksums)
-```text
-ab44003824e7d196ceb6e74873594bc10ee283efbc06522413ef8e1df0c389c7  ReadMD-windows-x64.zip
-321faefd5b5dfa6656860f2de6b4120a5d3a7594692aa19dc89819afc7f8a64b  ReadMD-linux-x86_64.tar.gz
-7525a4a7615aa2e31ec3dce5b0fee8ed784a889f7ce6abc295d71270d3ac7936  ReadMD-macos-arm64.zip
-15c305f866c576e4d29ea8a7a332d52df012430a9685751c9543123a7629e302  ReadMD-macos-x64.zip
-```
+> **完整性校验**：所有安装包与便携包的 SHA-256 校验哈希清单请直接参阅随附发行的 `SHA256SUMS.txt`。
 
 ---
 
