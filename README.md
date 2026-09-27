@@ -9,14 +9,16 @@
 <div align="center">
  <img src="assets/icon-256.png" width="88" alt="ReadMD logo">
 
- # ReadMD
+ # ReadMD (Pure Rust Edition)
 
- **Open huge Markdown files locally. Keep the original untouched.**
+ **100% 纯 Rust 原生全平台 Markdown 阅读器与编辑器**
 
- ReadMD 是本地优先的 Markdown 阅读器和编辑器：双击即读，超长文档不假死，常见语法错误只在显示层修复；支持 Office / PDF / 网页转 MD、离线 OCR、LaTeX 学术增强和 MCP 接入。
+ 长文档语义分页 · 显示层非破坏纠错 · Office/PDF/网页转 MD · 离线 OCR · LaTeX 学术增强 · MCP 接入 · 零 Python 依赖
+
+ 官网地址：[https://rust.readmd.asia](https://rust.readmd.asia) ｜ 赞助支持（爱发电）：[https://ifdian.net/a/natsummerance](https://ifdian.net/a/natsummerance)
 
 > [!IMPORTANT]
-> **100% Pure Rust 原生架构版 (`rust-ReadMD`)**：本项目由全新纯 Rust 内核（`readmd-kernel`）独立驱动，彻底移除了所有历史 Python 运行时与虚拟环境依赖。体积仅约 11.8MB，冷启动毫秒级秒开，支持 Windows (WebView2 + Win32 FFI)、Linux (WebKitGTK + XDG) 与 macOS (WKWebView + Cocoa) 全平台原生运行，零外部依赖，安全纯粹。
+> **100% Pure Rust 原生架构版 (`rust-ReadMD`)**：本项目由全新纯 Rust 内核（`readmd-kernel`）独立驱动，彻底移除了所有历史 Python 运行时与虚拟环境依赖。体积仅约 11.8MB，冷启动毫秒级秒开，常驻内存下降 80%+。支持 Windows (WebView2 + Win32)、macOS (WKWebView + Cocoa) 与 Linux (WebKitGTK + XDG) 全平台原生运行，零外部依赖，安全纯粹。
 
  [![platform](https://img.shields.io/badge/Windows%2010%2F11%20%7C%20macOS%2013%2B%20%7C%20Linux%20%7C%20UOS%20%7C%20Kylin-blue)](#正式下载矩阵-release-assets)
  [![i18n](https://img.shields.io/badge/languages-46-orange)](#全球-46-语种-i18n-全量母语化)

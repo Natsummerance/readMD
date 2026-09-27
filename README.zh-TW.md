@@ -9,11 +9,16 @@
 <div align="center">
  <img src="assets/icon-256.png" width="88" alt="ReadMD logo">
 
- # ReadMD
+ # ReadMD (Pure Rust Edition)
 
- **超大 Markdown 檔案本機開啟，原始檔保持不動。**
+ **100% 純 Rust 原生全平台 Markdown 閱讀器與編輯器**
 
- ReadMD 是本地優先的 Markdown 閱讀器與編輯器。連按兩下即可閱讀，超大文件也能維持目錄和搜尋；常見語法問題只在顯示層修復，並支援 Office / PDF / 網頁轉 Markdown、離線 OCR、LaTeX 學術增強與 MCP 整合。
+ 長文件語意分頁 · 顯示層非破壞修正 · Office/PDF/網頁轉 MD · 離线 OCR · LaTeX 學術增強 · MCP 整合 · 零 Python 相依
+
+ 官網地址：[https://rust.readmd.asia](https://rust.readmd.asia) ｜ 贊助支持（愛發電）：[https://ifdian.net/a/natsummerance](https://ifdian.net/a/natsummerance)
+
+> [!IMPORTANT]
+> **100% Pure Rust 原生架構版 (`rust-ReadMD`)**：由全新純 Rust 核心（`readmd-kernel`）驅動，徹底移除歷史 Python 執行階段與虛擬環境相依。體積約 11.8MB，冷啟動毫秒級秒開，常駐記憶體降低 80%+。支援 Windows (WebView2 + Win32)、macOS (WKWebView + Cocoa) 與 Linux (WebKitGTK + XDG) 全平台原生執行，零外部相依，安全純粹。
 
  [![platform](https://img.shields.io/badge/Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20KylinOS%20%7C%20UOS-blue)](#全平台直接下載矩陣-release-assets)
  [![i18n](https://img.shields.io/badge/languages-46-orange)](docs/i18n-language-reference.md)

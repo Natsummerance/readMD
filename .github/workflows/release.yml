@@ -3,7 +3,7 @@ name: Multi-Platform Rust Build and Release
 on:
   push:
     branches: [main]
-    tags: ['v*']
+    tags: ['v*', 'V*']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -59,7 +59,7 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
 
       - name: Build release binary with Cargo
-        run: cargo build --release -p readmd-kernel --target ${{ matrix.platform.target }}
+        run: cargo build --manifest-path rust/Cargo.toml --release -p readmd-kernel --target ${{ matrix.platform.target }}
 
       - name: Package Windows Artifacts
         if: runner.os == 'Windows'
@@ -90,8 +90,10 @@ jobs:
           mkdir -p "$APP_DIR/Contents/Resources"
           cp "rust/target/${{ matrix.platform.target }}/release/readmd" "$APP_DIR/Contents/MacOS/ReadMD"
           chmod +x "$APP_DIR/Contents/MacOS/ReadMD"
-          if [ -f "assets/readmd.icns" ]; then
-            cp "assets/readmd.icns" "$APP_DIR/Contents/Resources/"
+          if [ -f "assets/ReadMD.icns" ]; then
+            cp "assets/ReadMD.icns" "$APP_DIR/Contents/Resources/readmd.icns"
+          elif [ -f "assets/readmd.icns" ]; then
+            cp "assets/readmd.icns" "$APP_DIR/Contents/Resources/readmd.icns"
           fi
           cp -r assets "$APP_DIR/Contents/Resources/"
           cat <<'PLIST' > "$APP_DIR/Contents/Info.plist"
@@ -133,7 +135,7 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/V') || github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -154,6 +156,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.0.1' }}
           files: |
             release-assets/*
-          generate_release_notes: true
+          generate_release_notes: false

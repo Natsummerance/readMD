@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ReadMD | 纯本地 Markdown 阅读、编辑、转换与放映</title>
-  <meta name="description" content="ReadMD 是面向 Windows 10/11、macOS 13+ 与 Linux x86_64/ARM64 的本地 Markdown 工作台，可快速打开超长文档、修正显示问题、转换 Office 与 PDF，并直接用 Markdown 放映。v2.3.9 正式版已发布。">
+  <title>ReadMD 纯 Rust 原生版 | 100% 纯本地 Markdown 阅读、编辑、转换与放映</title>
+  <meta name="description" content="100% 纯 Rust 原生全平台 Markdown 阅读器与编辑器：长文档语义分页、显示层非破坏纠错、Office/PDF/网页转 MD、离线 OCR、LaTeX 学术增强与 MCP 接入。官网地址：https://rust.readmd.asia ； 爱发电：https://ifdian.net/a/natsummerance">
   <meta name="author" content="ReadMD">
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
@@ -26,7 +26,7 @@
   <meta name="twitter:description" content="面向 Windows 10/11、macOS 13+ 与 Linux x86_64/ARM64 的本地 Markdown 工作台；v2.3.9 正式版已发布。">
   <meta name="twitter:image" content="https://rust.readmd.asia/media/overview-reader.png">
   <meta name="twitter:image:alt" content="ReadMD product interface with formatted Markdown and its outline.">
-  <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/rust-ReadMD/releases.atom">
   <link rel="icon" href="/assets/icon-256.png" sizes="256x256" type="image/png">
   <link rel="apple-touch-icon" href="/assets/icon-256.png">
   <link rel="manifest" href="/site.webmanifest">
@@ -36,7 +36,7 @@
   <link rel="alternate" hreflang="zh-TW" href="https://rust.readmd.asia/zh-tw/">
   <link rel="alternate" hreflang="ja" href="https://rust.readmd.asia/ja/">
   <link rel="alternate" hreflang="x-default" href="https://rust.readmd.asia/">
-  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="license" href="https://github.com/Natsummerance/rust-ReadMD/blob/main/LICENSE">
   <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
   <link rel="stylesheet" href="/assets/site.css">
   <link rel="preload" as="image" href="/media/overview-reader.webp" fetchpriority="high">
@@ -59,7 +59,7 @@
         "@id": "https://rust.readmd.asia/#organization"
       },
       "copyrightYear": "2026",
-      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE"
+      "license": "https://github.com/Natsummerance/rust-ReadMD/blob/main/LICENSE"
     },
     {
       "@type": "WebPage",
@@ -96,11 +96,11 @@
       "name": "ReadMD",
       "operatingSystem": "Windows 10/11, macOS 13+, Linux x86_64/ARM64",
       "applicationCategory": "UtilitiesApplication",
-      "softwareVersion": "2.3.9",
+      "softwareVersion": "0.0.1",
       "dateModified": "2026-09-10",
       "isAccessibleForFree": true,
-      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
-      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "license": "https://github.com/Natsummerance/rust-ReadMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/rust-ReadMD/releases/latest",
       "featureList": "超长文档分页、内存语法容错、本地格式转换、离线 OCR、BibTeX 引用、放映模式、局域网共享。",
       "author": {
         "@id": "https://rust.readmd.asia/#organization"
@@ -113,7 +113,7 @@
         "price": "0",
         "priceCurrency": "USD",
         "availability": "https://schema.org/InStock",
-        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+        "url": "https://github.com/Natsummerance/rust-ReadMD/releases/latest"
       }
     }
   ]
@@ -169,7 +169,7 @@
       "name": "采用什么许可证？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "ReadMD 使用 MIT 许可证发布。源码、发行包、校验清单和平台资产都在公开仓库 Natsummerance/readMD 中。"
+        "text": "ReadMD 使用 MIT 许可证发布。源码、发行包、校验清单和平台资产都在公开仓库 Natsummerance/rust-ReadMD 中。"
       }
     }
   ]
@@ -192,15 +192,17 @@
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
     <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
       <a class="text-lg font-semibold tracking-tight" href="/zh-cn/">ReadMD</a>
-      <nav class="hidden items-center gap-7 text-sm md:flex"><a href="#capabilities">能力</a><a href="/zh-cn/download/#mcp-guide">MCP 智能体</a><a href="#answers">AI 回答</a><a href="https://github.com/Natsummerance/readMD">源码</a></nav>
+      <nav class="hidden items-center gap-7 text-sm md:flex"><a href="#capabilities">能力</a><a href="/zh-cn/download/#mcp-guide">MCP 智能体</a><a href="#answers">AI 回答</a><a href="https://github.com/Natsummerance/rust-ReadMD">源码</a></nav>
       <div class="flex items-center gap-3"><a class="text-sm link-action" href="/">English</a><a class="button-primary text-sm" href="/zh-cn/download/">下载</a></div>
     </div>
   </header>
   <main>
     <section class="hero hero--poster mx-auto max-w-6xl px-5 pb-12 pt-16 text-center md:pt-24">
-      <h1 class="hero-title mx-auto max-w-4xl">文件留在本地。</h1>
-      <p class="section-copy mx-auto mt-6">ReadMD 让同一份 Markdown 从流畅阅读走向分栏编辑、原生格式转换和上台放映。超 8,000 行长文秒级语义分页，表格公式在内存渲染层容错修复且原始文件零漂移。v2.3.9 带来 Live2D 桌面伴读桌宠、原生高保真 PDF 编辑与 MCP 工具链、纯原生 Rust Word .doc 二进制解析与全方位内核安全审计加固，全程离线安全运行。</p>
-      <div class="mt-8 flex flex-wrap justify-center gap-3"><a class="button-primary" href="/zh-cn/download/">免费下载</a><a class="button-secondary" href="#answers">查看答案</a></div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 text-orange-600 text-xs font-semibold mb-4 border border-orange-500/20">🦀 100% 纯 Rust 原生重构版 · 零 Python 依赖 · 毫秒级极速响应</div>
+      <h1 class="hero-title mx-auto max-w-4xl">ReadMD 纯 Rust 原生版</h1>
+      <p class="text-xl font-medium text-muted mt-2">本地优先的全平台 Markdown 阅读器与编辑器</p>
+      <p class="section-copy mx-auto mt-6">长文档语义分页 · 显示层非破坏纠错 · Office/PDF/网页转 MD · 离线 OCR · LaTeX 学术增强 · MCP 接入。彻底移除了所有历史 Python 运行时与虚拟环境依赖，体积仅约 11.8MB，冷启动毫秒级秒开，常驻内存下降 80%+。v0.0.1 纯 Rust 首发版本已正式发布。</p>
+      <div class="mt-8 flex flex-wrap justify-center gap-3"><a class="button-primary" href="https://github.com/Natsummerance/rust-ReadMD/releases/download/v0.0.1/ReadMD-v0.0.1-windows-x64.zip">下载 v0.0.1 便携版</a><a class="button-secondary" href="https://github.com/Natsummerance/rust-ReadMD">GitHub 源码 (rust-ReadMD)</a><a class="button-secondary" href="https://ifdian.net/a/natsummerance">爱发电支持</a></div>
       <figure class="product-frame mx-auto mt-14 max-w-5xl"><picture><source srcset="/media/overview-reader.webp" type="image/webp"><img src="/media/overview-reader.png" width="2880" height="1620" alt="ReadMD 阅读界面展示排版后的 Markdown 文档和目录。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="capabilities" class="bg-[var(--color-surface)] py-20">
@@ -216,15 +218,15 @@
           <article class="answer-card"><h3>ReadMD 怎么打开超长 Markdown？</h3><p>当文档超过约 8,000 行或 500 KB，ReadMD 会启动语义分页。目录、全文搜索、公式和页面控件仍然联动，因此读者可以继续滚动和跳转，不必等整个文件一次性渲染。</p></article>
           <article class="answer-card"><h3>自动修正会改原文件吗？</h3><p>不会。语法恢复只作用于内存中的显示层。缺失表格分隔行、未闭合符号和公式排版问题会被视觉修正，原始 Markdown 字节保持不变，直到你主动保存编辑。</p></article>
           <article class="answer-card"><h3>能替代幻灯片软件吗？</h3><p>对技术分享和课程材料可以。ReadMD 的放映模式直接使用写作和评审用的同一条 Markdown，标题、数学、图表和代码保留在原处，临时修改后不用再复制到另一个演示文稿。</p></article>
-          <article class="answer-card"><h3>支持哪些系统？</h3><p>ReadMD v2.3.9 正式版面向 Windows 10/11、macOS 13+ 与 Linux x86_64/ARM64。统信 UOS、银河麒麟等国产系统的安装包仍缺原生证据，不构成正式支持承诺；VSCode 插件和 MCP Server 可连接编辑器与 AI 工具。</p></article>
+          <article class="answer-card"><h3>支持哪些系统？</h3><p>ReadMD v0.0.1 纯 Rust 原生版面向 Windows 10/11 (WebView2)、macOS 13+ (WKWebView, Apple Silicon & Intel) 与 Linux x86_64/ARM64 (WebKitGTK) 提供原生支持。统信 UOS、银河麒麟等国产系统可通过原生二进制一键运行；VSCode 插件和 MCP Server 可连接编辑器与 AI 工具。</p></article>
           <article class="answer-card"><h3>数据私密吗？</h3><p>核心阅读、编辑、分页、OCR 和转换设计为本地运行，文档不需要云账号。网页抓取和共享都是显式操作；局域网共享面向同一 Wi-Fi 内的设备。</p></article>
-          <article class="answer-card"><h3>采用什么许可证？</h3><p>ReadMD 使用 MIT 许可证发布。源码、发行包、校验清单和平台资产都在公开仓库 Natsummerance/readMD 中。</p></article>
+          <article class="answer-card"><h3>采用什么许可证？</h3><p>ReadMD 使用 MIT 许可证发布。源码、发行包、校验清单和平台资产都在公开仓库 Natsummerance/rust-ReadMD 中。</p></article>
           <div class="col-span-full mt-2 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/zh-cn/large-markdown-files/">打开超大 Markdown 文件</a><a class="link-action" href="/zh-cn/markdown-to-slides/">不用 PowerPoint 放映 Markdown</a><a class="link-action" href="/zh-cn/convert-to-markdown/">文档转 Markdown</a><a class="link-action" href="/zh-cn/markdown-tables/">构建 Markdown 表格</a><a class="link-action" href="/zh-cn/pdf-to-markdown/">PDF 转 Markdown</a><a class="link-action" href="/zh-cn/scan-to-markdown/">扫描件提取文字</a><a class="link-action" href="/zh-cn/bibtex-citations/">管理 BibTeX 引用</a><a class="link-action" href="/zh-cn/release-notes/">发布说明</a></div>
         </div>
       </div>
     </section>
     <section id="share" class="border-t border-[var(--color-line)] py-14"><div class="mx-auto max-w-4xl px-5 text-center"><h2 class="display-title">分享 ReadMD</h2><p class="section-copy mx-auto mt-5">身边有被超长 Markdown、格式转换或上台讲稿困住的人？把这个工作流发给他们。</p><div class="mt-6 flex flex-wrap justify-center gap-3"><a class="button-secondary" href="https://service.weibo.com/share/share.php?url=https%3A%2F%2Frust.readmd.asia%2Fzh-cn%2F&title=ReadMD%EF%BC%9A%E7%BA%AF%E6%9C%AC%E5%9C%B0%20Markdown%20%E9%98%85%E8%AF%BB%E3%80%81%E8%BD%AC%E6%8D%A2%E4%B8%8E%E6%94%BE%E6%98%A0" rel="noopener">微博</a><a class="button-secondary" href="https://twitter.com/intent/tweet?text=ReadMD%EF%BC%9A%E7%BA%AF%E6%9C%AC%E5%9C%B0%20Markdown%20%E9%98%85%E8%AF%BB%E3%80%81%E8%BD%AC%E6%8D%A2%E4%B8%8E%E6%94%BE%E6%98%A0&url=https%3A%2F%2Frust.readmd.asia%2Fzh-cn%2F" rel="noopener">X</a><a class="button-secondary" href="https://t.me/share/url?url=https%3A%2F%2Frust.readmd.asia%2Fzh-cn%2F&text=ReadMD%EF%BC%9A%E7%BA%AF%E6%9C%AC%E5%9C%B0%20Markdown%20%E9%98%85%E8%AF%BB%E3%80%81%E8%BD%AC%E6%8D%A2%E4%B8%8E%E6%94%BE%E6%98%A0" rel="noopener">Telegram</a><a class="button-secondary" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Frust.readmd.asia%2Fzh-cn%2F" rel="noopener">LinkedIn</a></div></div></section>
-    <footer class="border-t border-[var(--color-line)] py-10 text-sm text-muted"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 md:flex-row md:items-center md:justify-between"><p>© 2026 ReadMD。MIT 许可证。</p><nav class="flex flex-wrap gap-5"><a href="/zh-cn/llms.txt">llms.txt</a><a href="/zh-cn/llms-full.txt">AI 完整文本</a><a href="https://github.com/Natsummerance/readMD/stargazers">在 GitHub 点 Star</a></nav></div></footer>
+    <footer class="border-t border-[var(--color-line)] py-10 text-sm text-muted"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 md:flex-row md:items-center md:justify-between"><p>© 2026 ReadMD。MIT 许可证。</p><nav class="flex flex-wrap gap-5"><a href="/zh-cn/llms.txt">llms.txt</a><a href="/zh-cn/llms-full.txt">AI 完整文本</a><a href="https://github.com/Natsummerance/rust-ReadMD/stargazers">在 GitHub 点 Star</a></nav></div></footer>
   </main>
   <script src="/assets/site.js" defer></script>
 </body>

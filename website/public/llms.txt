@@ -32,7 +32,7 @@
 - [Japanese full text](https://rust.readmd.asia/ja/llms-full.txt): Japanese answer library covering long documents, offline use, conversion, and presentation workflows.
 
 ## Source
-- [GitHub repository](https://github.com/Natsummerance/readMD): MIT-licensed source code, releases, checksums, issues, and platform download assets.
+- [GitHub repository](https://github.com/Natsummerance/rust-ReadMD): MIT-licensed source code, releases, checksums, issues, and platform download assets.
 
 ## Key Facts
 - Current candidate version: 2.3.7 (formal release pending evidence)

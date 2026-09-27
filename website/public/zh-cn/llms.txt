@@ -24,4 +24,4 @@
 - 可转换来源：DOCX、PPTX、XLSX、PDF、HTML、LaTeX
 
 ## Source
-- [GitHub 仓库](https://github.com/Natsummerance/readMD): MIT 源码、发行包、校验清单和问题反馈。
+- [GitHub 仓库](https://github.com/Natsummerance/rust-ReadMD): MIT 源码、发行包、校验清单和问题反馈。

@@ -24,4 +24,4 @@
 - 変換元: DOCX、PPTX、XLSX、PDF、HTML、LaTeX
 
 ## Source
-- [GitHub リポジトリ](https://github.com/Natsummerance/readMD): MIT ソースコード、リリースファイル、チェックサム、Issue。
+- [GitHub リポジトリ](https://github.com/Natsummerance/rust-ReadMD): MIT ソースコード、リリースファイル、チェックサム、Issue。

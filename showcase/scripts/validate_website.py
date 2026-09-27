@@ -19,59 +19,59 @@ PUBLIC = SITE / "public"
 SITE_TIMEZONE = datetime.timezone(datetime.timedelta(hours=8), name="Asia/Shanghai")
 
 LANGUAGES = {
-    "en": {"path": PUBLIC / "index.html", "canonical": "https://readmd.asia/", "full": PUBLIC / "llms-full.txt"},
-    "zh-CN": {"path": PUBLIC / "zh-cn" / "index.html", "canonical": "https://readmd.asia/zh-cn/", "full": PUBLIC / "zh-cn" / "llms-full.txt"},
-    "zh-TW": {"path": PUBLIC / "zh-tw" / "index.html", "canonical": "https://readmd.asia/zh-tw/", "full": PUBLIC / "zh-tw" / "llms-full.txt"},
-    "ja": {"path": PUBLIC / "ja" / "index.html", "canonical": "https://readmd.asia/ja/", "full": PUBLIC / "ja" / "llms-full.txt"},
+    "en": {"path": PUBLIC / "index.html", "canonical": "https://rust.readmd.asia/", "full": PUBLIC / "llms-full.txt"},
+    "zh-CN": {"path": PUBLIC / "zh-cn" / "index.html", "canonical": "https://rust.readmd.asia/zh-cn/", "full": PUBLIC / "zh-cn" / "llms-full.txt"},
+    "zh-TW": {"path": PUBLIC / "zh-tw" / "index.html", "canonical": "https://rust.readmd.asia/zh-tw/", "full": PUBLIC / "zh-tw" / "llms-full.txt"},
+    "ja": {"path": PUBLIC / "ja" / "index.html", "canonical": "https://rust.readmd.asia/ja/", "full": PUBLIC / "ja" / "llms-full.txt"},
 }
 
 INTENT_PAGES = {
-    "en": {"path": PUBLIC / "workflows" / "index.html", "canonical": "https://readmd.asia/workflows/"},
-    "zh-CN": {"path": PUBLIC / "zh-cn" / "workflows" / "index.html", "canonical": "https://readmd.asia/zh-cn/workflows/"},
-    "zh-TW": {"path": PUBLIC / "zh-tw" / "workflows" / "index.html", "canonical": "https://readmd.asia/zh-tw/workflows/"},
-    "ja": {"path": PUBLIC / "ja" / "workflows" / "index.html", "canonical": "https://readmd.asia/ja/workflows/"},
+    "en": {"path": PUBLIC / "workflows" / "index.html", "canonical": "https://rust.readmd.asia/workflows/"},
+    "zh-CN": {"path": PUBLIC / "zh-cn" / "workflows" / "index.html", "canonical": "https://rust.readmd.asia/zh-cn/workflows/"},
+    "zh-TW": {"path": PUBLIC / "zh-tw" / "workflows" / "index.html", "canonical": "https://rust.readmd.asia/zh-tw/workflows/"},
+    "ja": {"path": PUBLIC / "ja" / "workflows" / "index.html", "canonical": "https://rust.readmd.asia/ja/workflows/"},
 }
 
 DOWNLOAD_PAGES = {
-    "en": {"path": PUBLIC / "download" / "index.html", "canonical": "https://readmd.asia/download/"},
-    "zh-CN": {"path": PUBLIC / "zh-cn" / "download" / "index.html", "canonical": "https://readmd.asia/zh-cn/download/"},
-    "zh-TW": {"path": PUBLIC / "zh-tw" / "download" / "index.html", "canonical": "https://readmd.asia/zh-tw/download/"},
-    "ja": {"path": PUBLIC / "ja" / "download" / "index.html", "canonical": "https://readmd.asia/ja/download/"},
+    "en": {"path": PUBLIC / "download" / "index.html", "canonical": "https://rust.readmd.asia/download/"},
+    "zh-CN": {"path": PUBLIC / "zh-cn" / "download" / "index.html", "canonical": "https://rust.readmd.asia/zh-cn/download/"},
+    "zh-TW": {"path": PUBLIC / "zh-tw" / "download" / "index.html", "canonical": "https://rust.readmd.asia/zh-tw/download/"},
+    "ja": {"path": PUBLIC / "ja" / "download" / "index.html", "canonical": "https://rust.readmd.asia/ja/download/"},
 }
 
 ANSWER_PAGES = {
-    "en-large-files": {"path": PUBLIC / "large-markdown-files" / "index.html", "canonical": "https://readmd.asia/large-markdown-files/"},
-    "zh-CN-large-files": {"path": PUBLIC / "zh-cn" / "large-markdown-files" / "index.html", "canonical": "https://readmd.asia/zh-cn/large-markdown-files/"},
-    "zh-TW-large-files": {"path": PUBLIC / "zh-tw" / "large-markdown-files" / "index.html", "canonical": "https://readmd.asia/zh-tw/large-markdown-files/"},
-    "ja-large-files": {"path": PUBLIC / "ja" / "large-markdown-files" / "index.html", "canonical": "https://readmd.asia/ja/large-markdown-files/"},
-    "en-slides": {"path": PUBLIC / "markdown-to-slides" / "index.html", "canonical": "https://readmd.asia/markdown-to-slides/"},
-    "zh-CN-slides": {"path": PUBLIC / "zh-cn" / "markdown-to-slides" / "index.html", "canonical": "https://readmd.asia/zh-cn/markdown-to-slides/"},
-    "zh-TW-slides": {"path": PUBLIC / "zh-tw" / "markdown-to-slides" / "index.html", "canonical": "https://readmd.asia/zh-tw/markdown-to-slides/"},
-    "ja-slides": {"path": PUBLIC / "ja" / "markdown-to-slides" / "index.html", "canonical": "https://readmd.asia/ja/markdown-to-slides/"},
-    "en-conversion": {"path": PUBLIC / "convert-to-markdown" / "index.html", "canonical": "https://readmd.asia/convert-to-markdown/"},
-    "zh-CN-conversion": {"path": PUBLIC / "zh-cn" / "convert-to-markdown" / "index.html", "canonical": "https://readmd.asia/zh-cn/convert-to-markdown/"},
-    "zh-TW-conversion": {"path": PUBLIC / "zh-tw" / "convert-to-markdown" / "index.html", "canonical": "https://readmd.asia/zh-tw/convert-to-markdown/"},
-    "ja-conversion": {"path": PUBLIC / "ja" / "convert-to-markdown" / "index.html", "canonical": "https://readmd.asia/ja/convert-to-markdown/"},
-    "en-pdf": {"path": PUBLIC / "pdf-to-markdown" / "index.html", "canonical": "https://readmd.asia/pdf-to-markdown/"},
-    "zh-CN-pdf": {"path": PUBLIC / "zh-cn" / "pdf-to-markdown" / "index.html", "canonical": "https://readmd.asia/zh-cn/pdf-to-markdown/"},
-    "zh-TW-pdf": {"path": PUBLIC / "zh-tw" / "pdf-to-markdown" / "index.html", "canonical": "https://readmd.asia/zh-tw/pdf-to-markdown/"},
-    "ja-pdf": {"path": PUBLIC / "ja" / "pdf-to-markdown" / "index.html", "canonical": "https://readmd.asia/ja/pdf-to-markdown/"},
-    "en-tables": {"path": PUBLIC / "markdown-tables" / "index.html", "canonical": "https://readmd.asia/markdown-tables/"},
-    "zh-CN-tables": {"path": PUBLIC / "zh-cn" / "markdown-tables" / "index.html", "canonical": "https://readmd.asia/zh-cn/markdown-tables/"},
-    "zh-TW-tables": {"path": PUBLIC / "zh-tw" / "markdown-tables" / "index.html", "canonical": "https://readmd.asia/zh-tw/markdown-tables/"},
-    "ja-tables": {"path": PUBLIC / "ja" / "markdown-tables" / "index.html", "canonical": "https://readmd.asia/ja/markdown-tables/"},
-    "en-release-notes": {"path": PUBLIC / "release-notes" / "index.html", "canonical": "https://readmd.asia/release-notes/"},
-    "zh-CN-release-notes": {"path": PUBLIC / "zh-cn" / "release-notes" / "index.html", "canonical": "https://readmd.asia/zh-cn/release-notes/"},
-    "zh-TW-release-notes": {"path": PUBLIC / "zh-tw" / "release-notes" / "index.html", "canonical": "https://readmd.asia/zh-tw/release-notes/"},
-    "ja-release-notes": {"path": PUBLIC / "ja" / "release-notes" / "index.html", "canonical": "https://readmd.asia/ja/release-notes/"},
-    "en-ocr": {"path": PUBLIC / "scan-to-markdown" / "index.html", "canonical": "https://readmd.asia/scan-to-markdown/"},
-    "zh-CN-ocr": {"path": PUBLIC / "zh-cn" / "scan-to-markdown" / "index.html", "canonical": "https://readmd.asia/zh-cn/scan-to-markdown/"},
-    "zh-TW-ocr": {"path": PUBLIC / "zh-tw" / "scan-to-markdown" / "index.html", "canonical": "https://readmd.asia/zh-tw/scan-to-markdown/"},
-    "ja-ocr": {"path": PUBLIC / "ja" / "scan-to-markdown" / "index.html", "canonical": "https://readmd.asia/ja/scan-to-markdown/"},
-    "en-bibtex": {"path": PUBLIC / "bibtex-citations" / "index.html", "canonical": "https://readmd.asia/bibtex-citations/"},
-    "zh-CN-bibtex": {"path": PUBLIC / "zh-cn" / "bibtex-citations" / "index.html", "canonical": "https://readmd.asia/zh-cn/bibtex-citations/"},
-    "zh-TW-bibtex": {"path": PUBLIC / "zh-tw" / "bibtex-citations" / "index.html", "canonical": "https://readmd.asia/zh-tw/bibtex-citations/"},
-    "ja-bibtex": {"path": PUBLIC / "ja" / "bibtex-citations" / "index.html", "canonical": "https://readmd.asia/ja/bibtex-citations/"},
+    "en-large-files": {"path": PUBLIC / "large-markdown-files" / "index.html", "canonical": "https://rust.readmd.asia/large-markdown-files/"},
+    "zh-CN-large-files": {"path": PUBLIC / "zh-cn" / "large-markdown-files" / "index.html", "canonical": "https://rust.readmd.asia/zh-cn/large-markdown-files/"},
+    "zh-TW-large-files": {"path": PUBLIC / "zh-tw" / "large-markdown-files" / "index.html", "canonical": "https://rust.readmd.asia/zh-tw/large-markdown-files/"},
+    "ja-large-files": {"path": PUBLIC / "ja" / "large-markdown-files" / "index.html", "canonical": "https://rust.readmd.asia/ja/large-markdown-files/"},
+    "en-slides": {"path": PUBLIC / "markdown-to-slides" / "index.html", "canonical": "https://rust.readmd.asia/markdown-to-slides/"},
+    "zh-CN-slides": {"path": PUBLIC / "zh-cn" / "markdown-to-slides" / "index.html", "canonical": "https://rust.readmd.asia/zh-cn/markdown-to-slides/"},
+    "zh-TW-slides": {"path": PUBLIC / "zh-tw" / "markdown-to-slides" / "index.html", "canonical": "https://rust.readmd.asia/zh-tw/markdown-to-slides/"},
+    "ja-slides": {"path": PUBLIC / "ja" / "markdown-to-slides" / "index.html", "canonical": "https://rust.readmd.asia/ja/markdown-to-slides/"},
+    "en-conversion": {"path": PUBLIC / "convert-to-markdown" / "index.html", "canonical": "https://rust.readmd.asia/convert-to-markdown/"},
+    "zh-CN-conversion": {"path": PUBLIC / "zh-cn" / "convert-to-markdown" / "index.html", "canonical": "https://rust.readmd.asia/zh-cn/convert-to-markdown/"},
+    "zh-TW-conversion": {"path": PUBLIC / "zh-tw" / "convert-to-markdown" / "index.html", "canonical": "https://rust.readmd.asia/zh-tw/convert-to-markdown/"},
+    "ja-conversion": {"path": PUBLIC / "ja" / "convert-to-markdown" / "index.html", "canonical": "https://rust.readmd.asia/ja/convert-to-markdown/"},
+    "en-pdf": {"path": PUBLIC / "pdf-to-markdown" / "index.html", "canonical": "https://rust.readmd.asia/pdf-to-markdown/"},
+    "zh-CN-pdf": {"path": PUBLIC / "zh-cn" / "pdf-to-markdown" / "index.html", "canonical": "https://rust.readmd.asia/zh-cn/pdf-to-markdown/"},
+    "zh-TW-pdf": {"path": PUBLIC / "zh-tw" / "pdf-to-markdown" / "index.html", "canonical": "https://rust.readmd.asia/zh-tw/pdf-to-markdown/"},
+    "ja-pdf": {"path": PUBLIC / "ja" / "pdf-to-markdown" / "index.html", "canonical": "https://rust.readmd.asia/ja/pdf-to-markdown/"},
+    "en-tables": {"path": PUBLIC / "markdown-tables" / "index.html", "canonical": "https://rust.readmd.asia/markdown-tables/"},
+    "zh-CN-tables": {"path": PUBLIC / "zh-cn" / "markdown-tables" / "index.html", "canonical": "https://rust.readmd.asia/zh-cn/markdown-tables/"},
+    "zh-TW-tables": {"path": PUBLIC / "zh-tw" / "markdown-tables" / "index.html", "canonical": "https://rust.readmd.asia/zh-tw/markdown-tables/"},
+    "ja-tables": {"path": PUBLIC / "ja" / "markdown-tables" / "index.html", "canonical": "https://rust.readmd.asia/ja/markdown-tables/"},
+    "en-release-notes": {"path": PUBLIC / "release-notes" / "index.html", "canonical": "https://rust.readmd.asia/release-notes/"},
+    "zh-CN-release-notes": {"path": PUBLIC / "zh-cn" / "release-notes" / "index.html", "canonical": "https://rust.readmd.asia/zh-cn/release-notes/"},
+    "zh-TW-release-notes": {"path": PUBLIC / "zh-tw" / "release-notes" / "index.html", "canonical": "https://rust.readmd.asia/zh-tw/release-notes/"},
+    "ja-release-notes": {"path": PUBLIC / "ja" / "release-notes" / "index.html", "canonical": "https://rust.readmd.asia/ja/release-notes/"},
+    "en-ocr": {"path": PUBLIC / "scan-to-markdown" / "index.html", "canonical": "https://rust.readmd.asia/scan-to-markdown/"},
+    "zh-CN-ocr": {"path": PUBLIC / "zh-cn" / "scan-to-markdown" / "index.html", "canonical": "https://rust.readmd.asia/zh-cn/scan-to-markdown/"},
+    "zh-TW-ocr": {"path": PUBLIC / "zh-tw" / "scan-to-markdown" / "index.html", "canonical": "https://rust.readmd.asia/zh-tw/scan-to-markdown/"},
+    "ja-ocr": {"path": PUBLIC / "ja" / "scan-to-markdown" / "index.html", "canonical": "https://rust.readmd.asia/ja/scan-to-markdown/"},
+    "en-bibtex": {"path": PUBLIC / "bibtex-citations" / "index.html", "canonical": "https://rust.readmd.asia/bibtex-citations/"},
+    "zh-CN-bibtex": {"path": PUBLIC / "zh-cn" / "bibtex-citations" / "index.html", "canonical": "https://rust.readmd.asia/zh-cn/bibtex-citations/"},
+    "zh-TW-bibtex": {"path": PUBLIC / "zh-tw" / "bibtex-citations" / "index.html", "canonical": "https://rust.readmd.asia/zh-tw/bibtex-citations/"},
+    "ja-bibtex": {"path": PUBLIC / "ja" / "bibtex-citations" / "index.html", "canonical": "https://rust.readmd.asia/ja/bibtex-citations/"},
 }
 
 VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
@@ -225,7 +225,7 @@ def audit_page(path: Path, canonical: str) -> list[str]:
         errors.append(f"{path}: every product image must have a WebP picture fallback")
     if audit.images and ".webp" not in content:
         errors.append(f"{path}: optimized WebP source is missing")
-    if "https://github.com/Natsummerance/readMD/stargazers" not in content:
+    if not re.search(r"https://github\.com/Natsummerance/(?:rust-)?readMD/stargazers", content, re.IGNORECASE):
         errors.append(f"{path}: star call to action is missing")
     jsonld_match = re.search(r'(?s)<script type="application/ld\+json">(.*?)</script>', content)
     if not jsonld_match:
@@ -248,15 +248,15 @@ def audit_page(path: Path, canonical: str) -> list[str]:
             offers = application.get("offers", {})
             if not isinstance(offers, dict) or offers.get("price") != "0" or offers.get("priceCurrency") != "USD":
                 errors.append(f"{path}: SoftwareApplication lacks free-offer structured data")
-            if application.get("releaseNotes") != f"https://readmd.asia{'' if language == 'en' else '/' + language.lower()}/release-notes/":
+            if application.get("releaseNotes") != f"https://rust.readmd.asia{'' if language == 'en' else '/' + language.lower()}/release-notes/":
                 errors.append(f"{path}: SoftwareApplication lacks localized releaseNotes")
             if not application.get("screenshot") or not application.get("featureList"):
                 errors.append(f"{path}: SoftwareApplication lacks screenshot/features")
             home_canonicals = {
-                "https://readmd.asia/",
-                "https://readmd.asia/zh-cn/",
-                "https://readmd.asia/zh-tw/",
-                "https://readmd.asia/ja/",
+                "https://rust.readmd.asia/",
+                "https://rust.readmd.asia/zh-cn/",
+                "https://rust.readmd.asia/zh-tw/",
+                "https://rust.readmd.asia/ja/",
             }
             if canonical not in home_canonicals:
                 all_json_blocks = [json.loads(block) for block in re.findall(r'(?s)<script type="application/ld\+json">(.*?)</script>', content)]
@@ -312,7 +312,7 @@ def validate_llms(path: Path, *, minimum_absolute_links: int = 5) -> list[str]:
         errors.append(f"{path}: second line must be a blockquote description")
     if len(lines[1]) > 220:
         errors.append(f"{path}: description exceeds the compact llms.txt contract")
-    absolute_links = re.findall(r"https://readmd\.asia(?:/[\w.-]+)*", path.read_text(encoding="utf-8"))
+    absolute_links = re.findall(r"https://(?:rust\.)?readmd\.asia(?:/[\w.-]+)*", path.read_text(encoding="utf-8"))
     if len(absolute_links) < minimum_absolute_links:
         errors.append(f"{path}: fewer than {minimum_absolute_links} absolute canonical entries")
     return errors
@@ -329,7 +329,7 @@ def validate_robots_and_sitemap() -> list[str]:
         errors.append("robots.txt does not exclude parameter URLs from crawl budget")
     if "Disallow: /*.json$" not in robots:
         errors.append("robots.txt does not exclude raw JSON endpoints from crawl budget")
-    if "Sitemap: https://readmd.asia/sitemap.xml" not in robots:
+    if "Sitemap: https://rust.readmd.asia/sitemap.xml" not in robots:
         errors.append("robots.txt omits canonical sitemap")
     sitemap = (PUBLIC / "sitemap.xml").read_text(encoding="utf-8")
     if 'xmlns:xhtml="http://www.w3.org/1999/xhtml"' not in sitemap:
@@ -358,10 +358,10 @@ def validate_robots_and_sitemap() -> list[str]:
                 break
         section = path
         language_bases = {
-            "en": "https://readmd.asia",
-            "zh-CN": "https://readmd.asia/zh-cn",
-            "zh-TW": "https://readmd.asia/zh-tw",
-            "ja": "https://readmd.asia/ja",
+            "en": "https://rust.readmd.asia",
+            "zh-CN": "https://rust.readmd.asia/zh-cn",
+            "zh-TW": "https://rust.readmd.asia/zh-tw",
+            "ja": "https://rust.readmd.asia/ja",
         }
         language_bases["x-default"] = language_bases["en"]
         for lang, base in language_bases.items():
@@ -560,7 +560,7 @@ def validate_answer_internal_links() -> list[str]:
     for language in LANGUAGES:
         for slug, contracts in topics.items():
             prefix = "" if language == "en" else f"/{language.lower()}"
-            target = f"https://readmd.asia{prefix}/{slug}/"
+            target = f"https://rust.readmd.asia{prefix}/{slug}/"
             target_path = urlparse(target).path
             for surface in ("home", "workflow", "download"):
                 if surface == "home":
@@ -583,8 +583,9 @@ def validate_release_asset_links() -> list[str]:
         linked = {
             name
             for name in re.findall(
-                rf'href="https://github\.com/Natsummerance/readMD/releases/{tag_pattern}/([^"]+)"',
+                rf'href="https://github\.com/Natsummerance/(?:rust-)?ReadMD/releases/{tag_pattern}/([^"]+)"',
                 content,
+                re.IGNORECASE,
             )
         }
         if linked != RELEASE_ASSETS:
@@ -634,16 +635,16 @@ def validate_feed() -> list[str]:
     ns = {"atom": "http://www.w3.org/2005/Atom"}
     feed_links = [child for child in root if child.tag.endswith("link")]
     self_links = [child.get("href") for child in feed_links if child.get("rel") == "self"]
-    alternate_links = [child.get("href") for child in feed_links if child.get("rel") == "alternate" and child.get("href") != "https://readmd.asia/feed.xml"]
+    alternate_links = [child.get("href") for child in feed_links if child.get("rel") == "alternate" and child.get("href") != "https://rust.readmd.asia/feed.xml"]
     entries = root.findall("atom:entry", ns)
     ids = {item.findtext("atom:id", default="", namespaces=ns) for item in entries}
     sitemap = (PUBLIC / "sitemap.xml").read_text(encoding="utf-8")
     canonical_ids = set(re.findall(r"<loc>(.*?)</loc>", sitemap))
     if len(entries) != 44 or ids != canonical_ids:
         errors.append(f"Atom feed must contain exactly 44 canonical entries, found {len(entries)}")
-    if self_links != ["https://readmd.asia/feed.xml"]:
+    if self_links != ["https://rust.readmd.asia/feed.xml"]:
         errors.append("Atom feed lacks its canonical self link")
-    if alternate_links != ["https://readmd.asia/"]:
+    if alternate_links != ["https://rust.readmd.asia/"]:
         errors.append("Atom feed lacks the homepage alternate link")
     if not root.findtext("atom:updated", default="", namespaces=ns):
         errors.append("Atom feed lacks an updated timestamp")
@@ -665,7 +666,7 @@ def validate_security_txt() -> list[str]:
         "Contact: https://github.com/Natsummerance/readMD/security/advisories/new",
         "Expires: 2027-08-26T00:00:00Z",
         "Preferred-Languages: en, zh-CN, zh-TW, ja",
-        "Canonical: https://readmd.asia/.well-known/security.txt",
+        "Canonical: https://rust.readmd.asia/.well-known/security.txt",
     )
     return [] if all(item in text for item in required) else ["security.txt omits required trust fields"]
 

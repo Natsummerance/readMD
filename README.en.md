@@ -9,14 +9,16 @@
 <div align="center">
  <img src="assets/icon-256.png" width="88" alt="ReadMD logo">
 
- # ReadMD
+ # ReadMD (Pure Rust Edition)
 
- **Open huge Markdown files locally. Keep the original untouched.**
+ **100% Pure Rust Native Cross-Platform Markdown Reader & Editor**
 
- ReadMD is a local-first Markdown reader and editor for desktop. Double-click to read, navigate oversized documents without freezing, repair display-only syntax issues, convert Office/PDF/web files, extract image text offline, and connect AI agents through MCP.
+ Semantic pagination for massive files · Non-destructive display repair · Office/PDF/Web to MD · Offline OCR · LaTeX academic suite · MCP agent integration · Zero Python dependencies
+
+ Official Site: [https://rust.readmd.asia](https://rust.readmd.asia) ｜ Sponsor via Afdian: [https://ifdian.net/a/natsummerance](https://ifdian.net/a/natsummerance)
 
 > [!IMPORTANT]
-> **100% Pure Rust Native Edition (`rust-ReadMD`)**: ReadMD is powered by a high-performance native Rust core (`readmd-kernel`), completely detached from Python runtimes or virtual environments. Tiny binary (~11.8MB), sub-second cold starts, native desktop integration on Windows (WebView2 + Win32 FFI), Linux (WebKitGTK + XDG), and macOS (WKWebView + Cocoa).
+> **100% Pure Rust Native Edition (`rust-ReadMD`)**: Powered by an ultra-fast native Rust kernel (`readmd-kernel`), completely free from Python runtimes or virtual environments. Compact binary (~11.8MB), sub-50ms cold boots, and 80%+ memory reduction. Native windowing on Windows (WebView2 + Win32), Linux (WebKitGTK + XDG), and macOS (WKWebView + Cocoa).
 
  [![platform](https://img.shields.io/badge/Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20KylinOS%20%7C%20UOS-blue)](#direct-downloads-platforms-matrix-release-assets)
  [![i18n](https://img.shields.io/badge/languages-46-orange)](docs/i18n-language-reference.md)

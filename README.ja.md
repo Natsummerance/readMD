@@ -9,11 +9,16 @@
 <div align="center">
  <img src="assets/icon-256.png" width="88" alt="ReadMD logo">
 
- # ReadMD
+ # ReadMD (Pure Rust Edition)
 
- **巨大な Markdown ファイルもローカルのまま。元ファイルは書き換えません。**
+ **100% ピュア Rust ネイティブ・クロスプラットフォーム Markdown リーダー＆エディター**
 
- ReadMD はローカルファーストの Markdown リーダーおよびエディターです。ダブルクリックで即時表示し、巨大ドキュメントもストレスなく閲覧できます。一般的な構文エラーは表示時にのみ修復し、Office/PDF/Web からの変換、オフライン OCR、LaTeX 学術支援、MCP 連携に対応します。
+ 長大文書の意味的ページネーション · 表示層での非破壊修復 · Office/PDF/Web から MD への変換 · オフライン OCR · LaTeX 学术支援 · MCP 連携 · Python 依存性ゼロ
+
+ 公式サイト：[https://rust.readmd.asia](https://rust.readmd.asia) ｜ 開発支援（Afdian）：[https://ifdian.net/a/natsummerance](https://ifdian.net/a/natsummerance)
+
+> [!IMPORTANT]
+> **100% Pure Rust ネイティブ版 (`rust-ReadMD`)**：高速な新 Rust コア（`readmd-kernel`）を搭載し、従来の Python 実行環境への依存を完全排除。約 11.8MB の軽量バイナリ、50ms 未満の超高速起動、メモリ消費を 80% 以上削減。Windows、macOS、Linux で完全ネイティブ動作します。
 
  [![platform](https://img.shields.io/badge/Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20KylinOS%20%7C%20UOS-blue)](#プラットフォーム別ダウンロード-release-assets)
  [![i18n](https://img.shields.io/badge/languages-46-orange)](docs/i18n-language-reference.md)
