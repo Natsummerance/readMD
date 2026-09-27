@@ -1001,7 +1001,6 @@ pub fn machine_win32_from(arch6432: Option<&str>, arch: Option<&str>) -> String 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 fn uname_machine() -> String {
     #[repr(C)]
-    #[derive(Default)]
     struct Utsname {
         fields: [u8; 6 * 256],
     }
@@ -1011,7 +1010,9 @@ fn uname_machine() -> String {
     // SAFETY: `Utsname` is six fixed 256-byte arrays, exactly the layout
     // uname(2) writes, and it is owned by this frame for the whole call.
     unsafe {
-        let mut buf = Utsname::default();
+        let mut buf = Utsname {
+            fields: [0u8; 6 * 256],
+        };
         if uname(&mut buf) != 0 {
             return String::new();
         }

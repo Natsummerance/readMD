@@ -38,7 +38,7 @@ jobs:
             asset_name: ReadMD-macos-arm64
             archive_ext: zip
           - name: macOS Intel
-            os: macos-13
+            os: macos-latest
             target: x86_64-apple-darwin
             bin_name: readmd
             asset_name: ReadMD-macos-x64
@@ -156,7 +156,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.0.1' }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'V0.0.1' }}
+          name: ReadMD ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'V0.0.1' }} - 纯 Rust 原生全平台架构版 (Pure Rust Edition)
+          body_path: RELEASE_NOTES.md
           files: |
             release-assets/*
           generate_release_notes: false
