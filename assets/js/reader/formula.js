@@ -61,6 +61,13 @@ function protectMath(src) {
   // 0. 优先保护 ```math ... ``` 代码块
   src = src.replace(/```math\b[^\n]*\n([\s\S]+?)```/g, (m, b) => save('$$' + repairLatex(b) + '$$'));
 
+  // 暂时屏蔽非 math 代码块与行内代码，防止代码（如 tikz、python、bash 等）中的 $、\begin 等被误当数学公式提取并损坏
+  const codeBlocks = [];
+  src = src.replace(/(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]+`)/g, m => {
+    codeBlocks.push(m);
+    return '\x02C' + (codeBlocks.length - 1) + '\x02';
+  });
+
   // 1. 优先保护标准多行块级 $$...$$
   src = src.replace(/\$\$([\s\S]+?)\$\$/g, (m, b) => save('$$' + repairLatex(b) + '$$'));
 
@@ -84,15 +91,21 @@ function protectMath(src) {
   const envPattern = new RegExp('\\\\begin\\{(' + envNames + ')\\}([\\s\\S]*?)\\\\end\\{\\1\\}', 'g');
   src = src.replace(envPattern, (m, env, body) => save('$$\\begin{' + env + '}' + repairLatex(body) + '\\end{' + env + '}$$'));
 
+  // 还原被屏蔽的非 math 代码块与行内代码
+  if (codeBlocks.length > 0) {
+    src = src.replace(/\x02C(\d+)\x02/g, (m, i) => (codeBlocks[+i] !== undefined ? codeBlocks[+i] : m));
+  }
+
   return { src, saved };
 }
 
 function restoreMath(html, saved) {
   if (!html || !saved || saved.length === 0) return html;
   let prev = '';
-  while (html !== prev && /\x01M(\d+)\x01/.test(html)) {
+  while (html !== prev && (/\x01M(\d+)\x01/.test(html) || /%01M(\d+)%01/.test(html))) {
     prev = html;
     html = html.replace(/\x01M(\d+)\x01/g, (m, i) => (saved[+i] !== undefined ? saved[+i] : m));
+    html = html.replace(/%01M(\d+)%01/g, (m, i) => (saved[+i] !== undefined ? encodeURIComponent(saved[+i]) : m));
   }
   return html;
 }

@@ -2497,6 +2497,13 @@ function protectMath(src) {
   // 0. 优先保护 ```math ... ``` 代码块
   src = src.replace(/```math\b[^\n]*\n([\s\S]+?)```/g, (m, b) => save('$$' + repairLatex(b) + '$$'));
 
+  // 暂时屏蔽非 math 代码块与行内代码，防止代码（如 tikz、python、bash 等）中的 $、\begin 等被误当数学公式提取并损坏
+  const codeBlocks = [];
+  src = src.replace(/(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]+`)/g, m => {
+    codeBlocks.push(m);
+    return '\x02C' + (codeBlocks.length - 1) + '\x02';
+  });
+
   // 1. 优先保护标准多行块级 $$...$$
   src = src.replace(/\$\$([\s\S]+?)\$\$/g, (m, b) => save('$$' + repairLatex(b) + '$$'));
 
@@ -2520,15 +2527,21 @@ function protectMath(src) {
   const envPattern = new RegExp('\\\\begin\\{(' + envNames + ')\\}([\\s\\S]*?)\\\\end\\{\\1\\}', 'g');
   src = src.replace(envPattern, (m, env, body) => save('$$\\begin{' + env + '}' + repairLatex(body) + '\\end{' + env + '}$$'));
 
+  // 还原被屏蔽的非 math 代码块与行内代码
+  if (codeBlocks.length > 0) {
+    src = src.replace(/\x02C(\d+)\x02/g, (m, i) => (codeBlocks[+i] !== undefined ? codeBlocks[+i] : m));
+  }
+
   return { src, saved };
 }
 
 function restoreMath(html, saved) {
   if (!html || !saved || saved.length === 0) return html;
   let prev = '';
-  while (html !== prev && /\x01M(\d+)\x01/.test(html)) {
+  while (html !== prev && (/\x01M(\d+)\x01/.test(html) || /%01M(\d+)%01/.test(html))) {
     prev = html;
     html = html.replace(/\x01M(\d+)\x01/g, (m, i) => (saved[+i] !== undefined ? saved[+i] : m));
+    html = html.replace(/%01M(\d+)%01/g, (m, i) => (saved[+i] !== undefined ? encodeURIComponent(saved[+i]) : m));
   }
   return html;
 }
@@ -5797,7 +5810,7 @@ async function renderLocalDiagram(engine, code, previewEl) {
       new Promise((_, reject) => setTimeout(() => reject(new Error('diagram_engine_timeout')), 8000)),
     ]);
     return diagramOutputMarkup(await instance.renderString(code, {
-      engine: normalized === 'viz' ? 'dot' : normalized,
+      engine: (normalized === 'viz' || normalized === 'graphviz') ? 'dot' : normalized,
       format: 'svg',
     }));
   }
@@ -5995,9 +6008,9 @@ function renderAllDiagrams(container) {
             throw new Error('diagram_engine_unavailable');
           }
           if (res.requires_network) {
-            const badge = card.querySelector('.diagram-type');
+            const badge = card.querySelector('.diagram-badge') || card.querySelector('.diagram-type');
             if (badge && !badge.querySelector('.diagram-network-indicator')) {
-              const isZh = window.i18n && window.i18n.locale && window.i18n.locale.startsWith('zh');
+              const isZh = window.i18n ? ((window.i18n.currentLang || window.i18n.locale || '').startsWith('zh')) : true;
               const netSpan = document.createElement('span');
               netSpan.className = 'diagram-network-indicator';
               netSpan.textContent = isZh ? ' · 在线代理' : ' · Online Proxy';
@@ -6011,7 +6024,7 @@ function renderAllDiagrams(container) {
           // rendered document; the locale owns the user-facing wording.
           console.warn('diagram render failed:', engine, res && res.error_code);
           if (res && res.error_code === 'diagram_dependency_missing' && res.remote_available) {
-            const isZh = window.i18n && window.i18n.locale && window.i18n.locale.startsWith('zh');
+            const isZh = window.i18n ? ((window.i18n.currentLang || window.i18n.locale || '').startsWith('zh')) : true;
             const confirmText = isZh ? '本机未就绪 PlantUML 环境。点击允许连接 plantuml.com 在线渲染（将上传图表源码）' : 'PlantUML local engine not found. Click to render via plantuml.com (diagram source will be sent)';
             const btnText = isZh ? '允许在线渲染' : 'Allow Online Render';
             const safeCode = window.escapeHtml ? escapeHtml(String(code || '')) : String(code || '');

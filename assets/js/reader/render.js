@@ -2225,7 +2225,7 @@ async function renderLocalDiagram(engine, code, previewEl) {
       new Promise((_, reject) => setTimeout(() => reject(new Error('diagram_engine_timeout')), 8000)),
     ]);
     return diagramOutputMarkup(await instance.renderString(code, {
-      engine: normalized === 'viz' ? 'dot' : normalized,
+      engine: (normalized === 'viz' || normalized === 'graphviz') ? 'dot' : normalized,
       format: 'svg',
     }));
   }
@@ -2423,9 +2423,9 @@ function renderAllDiagrams(container) {
             throw new Error('diagram_engine_unavailable');
           }
           if (res.requires_network) {
-            const badge = card.querySelector('.diagram-type');
+            const badge = card.querySelector('.diagram-badge') || card.querySelector('.diagram-type');
             if (badge && !badge.querySelector('.diagram-network-indicator')) {
-              const isZh = window.i18n && window.i18n.locale && window.i18n.locale.startsWith('zh');
+              const isZh = window.i18n ? ((window.i18n.currentLang || window.i18n.locale || '').startsWith('zh')) : true;
               const netSpan = document.createElement('span');
               netSpan.className = 'diagram-network-indicator';
               netSpan.textContent = isZh ? ' · 在线代理' : ' · Online Proxy';
@@ -2439,7 +2439,7 @@ function renderAllDiagrams(container) {
           // rendered document; the locale owns the user-facing wording.
           console.warn('diagram render failed:', engine, res && res.error_code);
           if (res && res.error_code === 'diagram_dependency_missing' && res.remote_available) {
-            const isZh = window.i18n && window.i18n.locale && window.i18n.locale.startsWith('zh');
+            const isZh = window.i18n ? ((window.i18n.currentLang || window.i18n.locale || '').startsWith('zh')) : true;
             const confirmText = isZh ? '本机未就绪 PlantUML 环境。点击允许连接 plantuml.com 在线渲染（将上传图表源码）' : 'PlantUML local engine not found. Click to render via plantuml.com (diagram source will be sent)';
             const btnText = isZh ? '允许在线渲染' : 'Allow Online Render';
             const safeCode = window.escapeHtml ? escapeHtml(String(code || '')) : String(code || '');
