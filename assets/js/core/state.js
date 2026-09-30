@@ -64,6 +64,9 @@ const state = {
   theme: 'auto',
   fontSize: 100,
   lineWidth: 860,
+  readingFont: 'sans',      // reader lane: sans | serif
+  readingWidth: 'normal',   // narrow | normal | wide
+  readingLeading: 'normal', // compact | normal | relaxed
   aiPanelWidth: 432,
   autoReload: true,
   history: [],

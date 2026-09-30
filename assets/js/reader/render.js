@@ -350,6 +350,11 @@ function transformAcademicCallouts(src) {
   });
 }
 
+/* Reader source pre-pass (footnote definitions); see reader/enhance.js. */
+function readerPrepare(src) {
+  return window.ReadMDReader && window.ReadMDReader.prepare ? window.ReadMDReader.prepare(src) : src;
+}
+
 function transformWikilinks(src) {
   if (!src || !src.includes('[[')) return src;
 
@@ -702,11 +707,11 @@ function renderPage(pageIndex, targetHeadingId, preserveScroll) {
   const el = $('content');
   if (!el) return;
 
-  const transformed = transformAcademicCallouts(transformWikilinks(page.content));
+  const transformed = transformAcademicCallouts(transformWikilinks(readerPrepare(page.content)));
   const prot = protectMath(transformed);
   const html = marked.parse(prot.src, { gfm: true, breaks: false });
   const finalHtml = restoreMath(html, prot.saved);
-  el.innerHTML = '<article class="markdown-body">' + sanitizeRenderedHtml(finalHtml) + '</article>';
+  el.innerHTML = '<article class="markdown-body rd-article">' + sanitizeRenderedHtml(finalHtml) + '</article>';
 
   if (state.pagination.allHeadings?.length) {
     const pageOutline = state.pagination.allHeadings.filter(heading => heading.pageIndex === pageIndex);
@@ -1007,8 +1012,9 @@ function parseMarkdownWithSourceMap(content, options = {}) {
         </div>\n`;
       }
 
-      // 3. Standard Code Block
-      return `<pre ${lineAttr}><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre>\n`;
+      // 3. Standard Code Block (`linenos` / `showLineNumbers` adds a gutter in the reader)
+      const lineNumbers = boolAttribute('linenos') || boolAttribute('showlinenumbers') || boolAttribute('line-numbers') || boolAttribute('numberlines');
+      return `<pre ${lineAttr}${lineNumbers ? ' data-line-numbers="true"' : ''}><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre>\n`;
     };
 
     return marked.parser(tokens, { renderer: renderer, gfm: true, breaks: breaks });
@@ -1182,6 +1188,11 @@ function sanitizeRenderedHtml(html, { allowInteractive = true } = {}) {
         if (name === 'type' && value.toLowerCase() !== 'checkbox') node.removeAttribute(attribute.name);
         return;
       }
+      // GFM column alignment is presentation-only; keep the three legal values.
+      if ((tag === 'th' || tag === 'td') && name === 'align') {
+        if (!['left', 'center', 'right'].includes(value.toLowerCase())) node.removeAttribute(attribute.name);
+        return;
+      }
       if ((tag === 'ol' && ['start', 'type'].includes(name)) ||
           (tag === 'details' && name === 'open') || (tag === 'a' && name === 'target')) return;
       node.removeAttribute(attribute.name);
@@ -1276,7 +1287,7 @@ async function renderContent(content, name) {
     const html = parseMarkdownWithSourceMap(prot.src);
     const finalHtml = restoreMath(html, prot.saved);
     if (!isReaderRenderCurrent(render)) return;
-    $('content').innerHTML = '<article class="markdown-body">' + headerHtml + sanitizeRenderedHtml(finalHtml) + '</article>';
+    $('content').innerHTML = '<article class="markdown-body rd-article">' + headerHtml + sanitizeRenderedHtml(finalHtml) + '</article>';
     postProcess();
     bindCodeDocActions(content, name, lang);
     if (saved) requestAnimationFrame(() => {
@@ -1290,12 +1301,12 @@ async function renderContent(content, name) {
     await renderContentIncremental(content, saved, render);
     return;
   }
-  const transformed = transformAcademicCallouts(transformWikilinks(content));
+  const transformed = transformAcademicCallouts(transformWikilinks(readerPrepare(content)));
   const prot = protectMath(transformed);
   const html = parseMarkdownWithSourceMap(prot.src);
   const finalHtml = restoreMath(html, prot.saved);
   if (!isReaderRenderCurrent(render)) return;
-  $('content').innerHTML = '<article class="markdown-body">' + sanitizeRenderedHtml(finalHtml) + '</article>';
+  $('content').innerHTML = '<article class="markdown-body rd-article">' + sanitizeRenderedHtml(finalHtml) + '</article>';
   postProcess();
   if (saved) requestAnimationFrame(() => {
     if (isReaderRenderCurrent(render)) $('content').scrollTop = saved;
@@ -1389,14 +1400,14 @@ async function renderContentIncremental(content, savedTop, render = null) {
   const task = render || beginReaderRender();
   if (!isReaderRenderCurrent(task)) return;
   const el = $('content');
-  el.innerHTML = '<article class="markdown-body"></article>';
+  el.innerHTML = '<article class="markdown-body rd-article"></article>';
   const body = el.querySelector('.markdown-body');
   const blocks = splitMdBlocks(content);
   const total = blocks.length;
   let prog = null;
   try {
     if (total <= 1) {
-      const transformed = transformAcademicCallouts(transformWikilinks(content));
+      const transformed = transformAcademicCallouts(transformWikilinks(readerPrepare(content)));
       const prot = protectMath(transformed);
       body.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
       postProcess();
@@ -1416,7 +1427,7 @@ async function renderContentIncremental(content, savedTop, render = null) {
       const end = Math.min(i + CHUNK, total);
       for (let k = i; k < end; k++) {
         const div = document.createElement('div');
-        const transformed = transformAcademicCallouts(transformWikilinks(blocks[k]));
+        const transformed = transformAcademicCallouts(transformWikilinks(readerPrepare(blocks[k])));
         const prot = protectMath(transformed);
         div.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
         frag.appendChild(div);
@@ -1675,10 +1686,67 @@ function hideBibHoverCard() {
 }
 
 
+/* Reader enhancements (callouts, code headers, figures, reading prefs) live
+   in a separately loaded module + stylesheet so the welcome screen stays
+   within its startup budget.  They load on the first rendered document, or
+   during idle time after startup, like the diagram engines and MathJax. */
+let readerAssetsPromise = null;
+function loadReaderAssets() {
+  if (window.ReadMDReader) return Promise.resolve(window.ReadMDReader);
+  if (readerAssetsPromise) return readerAssetsPromise;
+  const version = (document.querySelector('script[src*="readmd.boot.js"]')?.getAttribute('src') || '').split('?')[1] || '';
+  const suffix = version ? '?' + version : '';
+  const css = new Promise(resolve => {
+    if (document.getElementById('readmd-reader-article-css')) { resolve(); return; }
+    const link = document.createElement('link');
+    link.id = 'readmd-reader-article-css';
+    link.rel = 'stylesheet';
+    link.href = '/assets/css/reader-article.css' + suffix;
+    link.onload = link.onerror = () => resolve();
+    const anchor = document.querySelector('link[href*="/assets/css/reader.css"]');
+    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(link, anchor.nextSibling);
+    else document.head.appendChild(link);
+  });
+  const js = loadDiagramScript('/assets/js/reader/enhance.js' + suffix, 'ReadMDReader').catch(() => null);
+  readerAssetsPromise = Promise.all([css, js]).then(() => window.ReadMDReader || null);
+  return readerAssetsPromise;
+}
+window.loadReaderAssets = loadReaderAssets;
+if (typeof window !== 'undefined' && !(window.__STARTUP_PROBE__)) {
+  // Warm the cache a few seconds after startup settles, off the critical path.
+  const idle = window.requestIdleCallback || (fn => setTimeout(fn, 0));
+  window.addEventListener('load', () => setTimeout(() => idle(() => loadReaderAssets(), { timeout: 4000 }), 3000), { once: true });
+}
+
+function readerEnhance(body) {
+  if (!body || !body.classList || !body.classList.contains('rd-article')) {
+    if (window.ReadMDReader) window.ReadMDReader.enhance(body);
+    return;
+  }
+  if (window.ReadMDReader) { window.ReadMDReader.enhance(body); return; }
+  // First document before the module arrived: keep the article hidden for
+  // the few milliseconds it takes, then upgrade and run the link fix-ups the
+  // new anchors (footnotes, heading links) need.
+  body.classList.add('rd-pending');
+  const reveal = setTimeout(() => body.classList.remove('rd-pending'), 1200);
+  loadReaderAssets().then(reader => {
+    clearTimeout(reveal);
+    if (reader && body.isConnected) {
+      reader.enhance(body);
+      fixLinks(body, 'a.rd-anchor, sup.rd-fnref a, a.rd-fnback');
+      fixImages(body);
+      buildToc();
+      reader.afterRender(body);
+    }
+    body.classList.remove('rd-pending');
+  });
+}
+
 function postProcess(container) {
   const body = container || document.querySelector('#content .markdown-body') || $('content');
   if (!body) return;
   ensureHeadingIds(body);
+  readerEnhance(body);
   fixLinks(body);
   fixImages(body);
   processBibCitations(body);
@@ -1686,6 +1754,7 @@ function postProcess(container) {
   renderMath(body);
   renderAllCodeChunks(body);
   renderAllDiagrams(body);
+  if (window.ReadMDReader) window.ReadMDReader.afterRender(body);
 }
 
 function renderAllCodeChunks(container) {
@@ -2857,9 +2926,9 @@ function rewritePresentationAssets(md) {
   return out;
 }
 
-function fixLinks(body) {
+function fixLinks(body, selector = 'a') {
   const allHeadings = Array.from(body.querySelectorAll('h1, h2, h3, h4, h5, h6'));
-  body.querySelectorAll('a').forEach(a => {
+  body.querySelectorAll(selector).forEach(a => {
     if (a.classList.contains('wikilink')) {
       const target = a.dataset.target || '';
       a.addEventListener('click', async e => {

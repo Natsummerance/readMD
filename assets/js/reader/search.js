@@ -23,6 +23,7 @@ function clearMarks() {
   state.searchIndex = 0;
   globalSearchState = { query: '', matches: [], globalIndex: 0 };
   updateSearchCount();
+  if (window.ReadMDReader) window.ReadMDReader.flushPendingHighlight();
 }
 
 function pageSearchText(page) {
@@ -32,7 +33,11 @@ function pageSearchText(page) {
   const html = marked.parse(prot.src, { gfm: true, breaks: false });
   const probe = document.createElement('div');
   probe.innerHTML = restoreMath(html, prot.saved);
-  page.searchText = (probe.textContent || '').toLowerCase();
+  // Mirror the reader's DOM: callout markers such as "[!NOTE]" become
+  // non-searchable chrome labels, so they must not count as matches here.
+  page.searchText = (probe.textContent || '')
+    .replace(/\[![A-Za-z][\w-]*\][+-]?/g, '')
+    .toLowerCase();
   return page.searchText;
 }
 
@@ -42,6 +47,8 @@ function highlightTextMatches(body, query) {
       const parent = node.parentNode;
       if (!parent || parent.nodeName === 'SCRIPT' || parent.nodeName === 'STYLE') return NodeFilter.FILTER_REJECT;
       if (parent.nodeName === 'MARK' && parent.classList.contains('hl')) return NodeFilter.FILTER_REJECT;
+      // Reader chrome (code headers, line numbers, reading time) is not document text.
+      if (parent.closest && parent.closest('[data-rd-chrome]')) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     },
   });
@@ -219,6 +226,11 @@ function revealSearchMark(mark) {
 
 function updateSearchCount() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const bar = $('search-bar');
+  if (bar) {
+    const hasHits = state.currentMarks.length > 0 || globalSearchState.matches.length > 0;
+    bar.classList.toggle('rd-search-empty', !!state.lastQuery && !hasHits);
+  }
   const isPaged = state.pagination && state.pagination.enabled && state.pagination.mode === 'paged' && globalSearchState.matches.length > 0;
 
   if (isPaged) {

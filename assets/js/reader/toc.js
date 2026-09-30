@@ -50,6 +50,7 @@ function buildToc() {
       list.childElementCount;
     if (canReuseOutline) {
       refreshCurrentTocPage(list);
+      if (window.ReadMDReader && !list.querySelector(':scope > .rd-toc-head')) window.ReadMDReader.decorateToc(list, null);
       if (typeof updateActiveTocHeading === 'function') updateActiveTocHeading();
       return;
     }
@@ -108,6 +109,7 @@ function buildToc() {
       list.innerHTML = `<div class="side-empty">${_t('sidebar.emptyToc') || '（当前文档暂无标题大纲）'}</div>`;
       return;
     }
+    if (window.ReadMDReader) window.ReadMDReader.decorateToc(list, null);
 
     const headingGroups = new Map();
     globalHeadings.forEach(h => {
@@ -211,14 +213,19 @@ function buildToc() {
     return;
   }
 
+  const fragment = document.createDocumentFragment();
+  const items = [];
   headings.forEach((h, i) => {
     if (!h.id) h.id = 'toc-h-' + i;
+    const lv = +h.tagName[1];
+    const item = document.createElement('div');
+    item.className = 'rd-toc-item';
+    item.dataset.level = String(lv);
     const a = document.createElement('a');
     a.href = '#' + h.id;
-    a.textContent = h.textContent.trim() || ((_t('toc.sectionDefault') || '章节') + ' ' + (i + 1));
-    const lv = +h.tagName[1];
-
+    a.textContent = tocHeadingText(h) || ((_t('toc.sectionDefault') || '章节') + ' ' + (i + 1));
     a.className = 'lv' + lv;
+    a.dataset.headingId = h.id;
     a.addEventListener('click', e => {
       e.preventDefault();
       const el = document.getElementById(h.id);
@@ -230,29 +237,112 @@ function buildToc() {
         void el.offsetWidth;
         el.classList.add('heading-target-highlight');
         setTimeout(() => el.classList.remove('heading-target-highlight'), 1500);
+        setActiveTocLink(list, h.id);
       }
     });
-    list.appendChild(a);
+    item.appendChild(a);
+    items.push(item);
+    fragment.appendChild(item);
   });
+  list.appendChild(fragment);
+  if (window.ReadMDReader) window.ReadMDReader.decorateToc(list, items);
+  if (typeof window.invalidateTocSpy === 'function') window.invalidateTocSpy();
+  updateActiveTocHeading();
+}
+
+function tocHeadingText(h) {
+  const clone = h.cloneNode(true);
+  clone.querySelectorAll('[data-rd-chrome]').forEach(node => node.remove());
+  return clone.textContent.trim();
+}
+
+/* ---------------- 滚动同步（scroll-spy） ---------------- */
+
+let tocSpy = { headings: null, tops: null, scrollHeight: 0, width: 0 };
+window.invalidateTocSpy = function invalidateTocSpy() {
+  tocSpy = { headings: null, tops: null, scrollHeight: 0, width: 0 };
+};
+
+function tocSpyPositions(content) {
+  if (!content.__rdFocusBound) {
+    content.__rdFocusBound = true;
+    content.addEventListener('focusin', () => { content.__rdFocusAt = Date.now(); });
+  }
+  const body = content.querySelector(':scope > .markdown-body');
+  if (!body) return null;
+  if (tocSpy.headings && tocSpy.scrollHeight === content.scrollHeight && tocSpy.width === content.clientWidth &&
+      tocSpy.headings.length && tocSpy.headings[0].isConnected) return tocSpy;
+  const headings = Array.from(body.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]'));
+  const base = content.getBoundingClientRect().top - content.scrollTop;
+  tocSpy = {
+    headings,
+    tops: headings.map(h => h.getBoundingClientRect().top - base),
+    scrollHeight: content.scrollHeight,
+    width: content.clientWidth,
+  };
+  return tocSpy;
+}
+
+function setActiveTocLink(list, id) {
+  const current = list.querySelector('.toc-heading-active');
+  const link = id ? list.querySelector(`[data-heading-id="${CSS.escape(id)}"]`) : null;
+  if (current === link) return;
+  list.querySelectorAll('.toc-heading-active').forEach(el => el.classList.remove('toc-heading-active'));
+  list.querySelectorAll('.rd-toc-item.is-trail').forEach(el => el.classList.remove('is-trail'));
+  if (!link) return;
+  link.classList.add('toc-heading-active');
+  const item = link.closest('.rd-toc-item');
+  if (item) {
+    let level = +item.dataset.level;
+    for (let prev = item.previousElementSibling; prev && level > 1; prev = prev.previousElementSibling) {
+      if (!prev.classList.contains('rd-toc-item')) continue;
+      const prevLevel = +prev.dataset.level;
+      if (prevLevel < level) { prev.classList.add('is-trail'); level = prevLevel; }
+    }
+  }
+  // Keep the active entry in view inside the outline without moving the page.
+  const visible = link.offsetParent ? link : list.querySelector('.rd-toc-item.is-trail:not(.is-hidden) > a');
+  if (!visible || list.classList.contains('hidden')) return;
+  const lr = list.getBoundingClientRect();
+  const r = visible.getBoundingClientRect();
+  if (r.top < lr.top + 48 || r.bottom > lr.bottom - 16) {
+    list.scrollTop += r.top - lr.top - lr.height / 3;
+  }
 }
 
 function updateActiveTocHeading() {
-  const p = state.pagination;
-  if (!p || !p.enabled || p.mode !== 'paged' || !p.pages?.length) return;
   const content = $('content');
   const list = $('toc-list');
-  if (!content || !list) return;
-  const headings = Array.from(content.querySelectorAll('.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6'));
-  const focusedHeading = content.contains(document.activeElement) && document.activeElement?.id ? document.activeElement : null;
-  const visibleTop = content.scrollTop + 72;
-  let active = focusedHeading || headings[0];
-  if (!focusedHeading) {
-    headings.forEach(heading => {
-      if (heading.offsetTop <= visibleTop) active = heading;
-    });
+  if (!content || !list || state.editing) return;
+  const spy = tocSpyPositions(content);
+  if (!spy || !spy.headings.length) return;
+  const top = content.scrollTop;
+  const threshold = top + Math.min(96, content.clientHeight * 0.25);
+  const focused = content.contains(document.activeElement) && document.activeElement?.id ? document.activeElement : null;
+  let active = null;
+  if (focused) {
+    // A heading reached through the outline or a link wins while its jump is
+    // in flight and while it stays on screen; manual scrolling takes over after.
+    const index = spy.headings.indexOf(focused);
+    const recent = Date.now() - (content.__rdFocusAt || 0) < 1200;
+    if (index >= 0 && (recent || (spy.tops[index] >= top - 8 && spy.tops[index] < top + content.clientHeight))) active = focused;
   }
-  list.querySelectorAll('.toc-heading-active').forEach(link => link.classList.remove('toc-heading-active'));
-  if (!active?.id) return;
-  const link = list.querySelector(`[data-heading-id="${CSS.escape(active.id)}"]`);
-  if (link) link.classList.add('toc-heading-active');
+  if (!active) {
+    // Binary search: last heading whose top is above the reading line.
+    let lo = 0;
+    let hi = spy.tops.length - 1;
+    let found = 0;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (spy.tops[mid] <= threshold) { found = mid; lo = mid + 1; } else hi = mid - 1;
+    }
+    if (content.scrollTop + content.clientHeight >= content.scrollHeight - 2) {
+      // At the very end the last short sections can never reach the reading line.
+      for (let i = spy.tops.length - 1; i > found; i -= 1) {
+        if (spy.tops[i] < top + content.clientHeight * 0.6) { found = i; break; }
+      }
+    }
+    active = spy.headings[found];
+  }
+  setActiveTocLink(list, active && active.id);
 }
