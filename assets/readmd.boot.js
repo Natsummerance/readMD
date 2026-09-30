@@ -513,6 +513,9 @@ const state = {
   theme: 'auto',
   fontSize: 100,
   lineWidth: 860,
+  readingFont: 'sans',      // reader lane: sans | serif
+  readingWidth: 'normal',   // narrow | normal | wide
+  readingLeading: 'normal', // compact | normal | relaxed
   aiPanelWidth: 432,
   autoReload: true,
   history: [],
@@ -1152,6 +1155,7 @@ async function saveSettings() {
     theme: state.theme, fontSize: state.fontSize, lineWidth: state.lineWidth, aiPanelWidth: state.aiPanelWidth,
     autoReload: state.autoReload, pvLayout: state.pvLayout, pvSync: state.pvSync,
     pvSplitX: state.pvSplitX, pvSplitY: state.pvSplitY,
+    readingFont: state.readingFont, readingWidth: state.readingWidth, readingLeading: state.readingLeading,
   };
   try {
     if (hasPy) await py.save_settings(s);
@@ -1170,6 +1174,7 @@ function applySettings() {
   document.body.style.setProperty('--line-width', state.lineWidth + 'px');
   document.body.style.setProperty('--ai-panel-width', state.aiPanelWidth + 'px');
   updateThemeButton();
+  if (window.ReadMDReader) window.ReadMDReader.applyReadingPrefs();
   if (prevTheme && prevTheme !== theme) {
     if (typeof reloadAllDiagrams === 'function') reloadAllDiagrams();
     if (typeof applyCmTheme === 'function') applyCmTheme();
@@ -3351,6 +3356,7 @@ function buildToc() {
       list.childElementCount;
     if (canReuseOutline) {
       refreshCurrentTocPage(list);
+      if (window.ReadMDReader && !list.querySelector(':scope > .rd-toc-head')) window.ReadMDReader.decorateToc(list, null);
       if (typeof updateActiveTocHeading === 'function') updateActiveTocHeading();
       return;
     }
@@ -3409,6 +3415,7 @@ function buildToc() {
       list.innerHTML = `<div class="side-empty">${_t('sidebar.emptyToc') || '（当前文档暂无标题大纲）'}</div>`;
       return;
     }
+    if (window.ReadMDReader) window.ReadMDReader.decorateToc(list, null);
 
     const headingGroups = new Map();
     globalHeadings.forEach(h => {
@@ -3512,14 +3519,19 @@ function buildToc() {
     return;
   }
 
+  const fragment = document.createDocumentFragment();
+  const items = [];
   headings.forEach((h, i) => {
     if (!h.id) h.id = 'toc-h-' + i;
+    const lv = +h.tagName[1];
+    const item = document.createElement('div');
+    item.className = 'rd-toc-item';
+    item.dataset.level = String(lv);
     const a = document.createElement('a');
     a.href = '#' + h.id;
-    a.textContent = h.textContent.trim() || ((_t('toc.sectionDefault') || '章节') + ' ' + (i + 1));
-    const lv = +h.tagName[1];
-
+    a.textContent = tocHeadingText(h) || ((_t('toc.sectionDefault') || '章节') + ' ' + (i + 1));
     a.className = 'lv' + lv;
+    a.dataset.headingId = h.id;
     a.addEventListener('click', e => {
       e.preventDefault();
       const el = document.getElementById(h.id);
@@ -3531,31 +3543,114 @@ function buildToc() {
         void el.offsetWidth;
         el.classList.add('heading-target-highlight');
         setTimeout(() => el.classList.remove('heading-target-highlight'), 1500);
+        setActiveTocLink(list, h.id);
       }
     });
-    list.appendChild(a);
+    item.appendChild(a);
+    items.push(item);
+    fragment.appendChild(item);
   });
+  list.appendChild(fragment);
+  if (window.ReadMDReader) window.ReadMDReader.decorateToc(list, items);
+  if (typeof window.invalidateTocSpy === 'function') window.invalidateTocSpy();
+  updateActiveTocHeading();
+}
+
+function tocHeadingText(h) {
+  const clone = h.cloneNode(true);
+  clone.querySelectorAll('[data-rd-chrome]').forEach(node => node.remove());
+  return clone.textContent.trim();
+}
+
+/* ---------------- 滚动同步（scroll-spy） ---------------- */
+
+let tocSpy = { headings: null, tops: null, scrollHeight: 0, width: 0 };
+window.invalidateTocSpy = function invalidateTocSpy() {
+  tocSpy = { headings: null, tops: null, scrollHeight: 0, width: 0 };
+};
+
+function tocSpyPositions(content) {
+  if (!content.__rdFocusBound) {
+    content.__rdFocusBound = true;
+    content.addEventListener('focusin', () => { content.__rdFocusAt = Date.now(); });
+  }
+  const body = content.querySelector(':scope > .markdown-body');
+  if (!body) return null;
+  if (tocSpy.headings && tocSpy.scrollHeight === content.scrollHeight && tocSpy.width === content.clientWidth &&
+      tocSpy.headings.length && tocSpy.headings[0].isConnected) return tocSpy;
+  const headings = Array.from(body.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]'));
+  const base = content.getBoundingClientRect().top - content.scrollTop;
+  tocSpy = {
+    headings,
+    tops: headings.map(h => h.getBoundingClientRect().top - base),
+    scrollHeight: content.scrollHeight,
+    width: content.clientWidth,
+  };
+  return tocSpy;
+}
+
+function setActiveTocLink(list, id) {
+  const current = list.querySelector('.toc-heading-active');
+  const link = id ? list.querySelector(`[data-heading-id="${CSS.escape(id)}"]`) : null;
+  if (current === link) return;
+  list.querySelectorAll('.toc-heading-active').forEach(el => el.classList.remove('toc-heading-active'));
+  list.querySelectorAll('.rd-toc-item.is-trail').forEach(el => el.classList.remove('is-trail'));
+  if (!link) return;
+  link.classList.add('toc-heading-active');
+  const item = link.closest('.rd-toc-item');
+  if (item) {
+    let level = +item.dataset.level;
+    for (let prev = item.previousElementSibling; prev && level > 1; prev = prev.previousElementSibling) {
+      if (!prev.classList.contains('rd-toc-item')) continue;
+      const prevLevel = +prev.dataset.level;
+      if (prevLevel < level) { prev.classList.add('is-trail'); level = prevLevel; }
+    }
+  }
+  // Keep the active entry in view inside the outline without moving the page.
+  const visible = link.offsetParent ? link : list.querySelector('.rd-toc-item.is-trail:not(.is-hidden) > a');
+  if (!visible || list.classList.contains('hidden')) return;
+  const lr = list.getBoundingClientRect();
+  const r = visible.getBoundingClientRect();
+  if (r.top < lr.top + 48 || r.bottom > lr.bottom - 16) {
+    list.scrollTop += r.top - lr.top - lr.height / 3;
+  }
 }
 
 function updateActiveTocHeading() {
-  const p = state.pagination;
-  if (!p || !p.enabled || p.mode !== 'paged' || !p.pages?.length) return;
   const content = $('content');
   const list = $('toc-list');
-  if (!content || !list) return;
-  const headings = Array.from(content.querySelectorAll('.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6'));
-  const focusedHeading = content.contains(document.activeElement) && document.activeElement?.id ? document.activeElement : null;
-  const visibleTop = content.scrollTop + 72;
-  let active = focusedHeading || headings[0];
-  if (!focusedHeading) {
-    headings.forEach(heading => {
-      if (heading.offsetTop <= visibleTop) active = heading;
-    });
+  if (!content || !list || state.editing) return;
+  const spy = tocSpyPositions(content);
+  if (!spy || !spy.headings.length) return;
+  const top = content.scrollTop;
+  const threshold = top + Math.min(96, content.clientHeight * 0.25);
+  const focused = content.contains(document.activeElement) && document.activeElement?.id ? document.activeElement : null;
+  let active = null;
+  if (focused) {
+    // A heading reached through the outline or a link wins while its jump is
+    // in flight and while it stays on screen; manual scrolling takes over after.
+    const index = spy.headings.indexOf(focused);
+    const recent = Date.now() - (content.__rdFocusAt || 0) < 1200;
+    if (index >= 0 && (recent || (spy.tops[index] >= top - 8 && spy.tops[index] < top + content.clientHeight))) active = focused;
   }
-  list.querySelectorAll('.toc-heading-active').forEach(link => link.classList.remove('toc-heading-active'));
-  if (!active?.id) return;
-  const link = list.querySelector(`[data-heading-id="${CSS.escape(active.id)}"]`);
-  if (link) link.classList.add('toc-heading-active');
+  if (!active) {
+    // Binary search: last heading whose top is above the reading line.
+    let lo = 0;
+    let hi = spy.tops.length - 1;
+    let found = 0;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (spy.tops[mid] <= threshold) { found = mid; lo = mid + 1; } else hi = mid - 1;
+    }
+    if (content.scrollTop + content.clientHeight >= content.scrollHeight - 2) {
+      // At the very end the last short sections can never reach the reading line.
+      for (let i = spy.tops.length - 1; i > found; i -= 1) {
+        if (spy.tops[i] < top + content.clientHeight * 0.6) { found = i; break; }
+      }
+    }
+    active = spy.headings[found];
+  }
+  setActiveTocLink(list, active && active.id);
 }
 
 ;
@@ -3584,6 +3679,7 @@ function clearMarks() {
   state.searchIndex = 0;
   globalSearchState = { query: '', matches: [], globalIndex: 0 };
   updateSearchCount();
+  if (window.ReadMDReader) window.ReadMDReader.flushPendingHighlight();
 }
 
 function pageSearchText(page) {
@@ -3593,7 +3689,11 @@ function pageSearchText(page) {
   const html = marked.parse(prot.src, { gfm: true, breaks: false });
   const probe = document.createElement('div');
   probe.innerHTML = restoreMath(html, prot.saved);
-  page.searchText = (probe.textContent || '').toLowerCase();
+  // Mirror the reader's DOM: callout markers such as "[!NOTE]" become
+  // non-searchable chrome labels, so they must not count as matches here.
+  page.searchText = (probe.textContent || '')
+    .replace(/\[![A-Za-z][\w-]*\][+-]?/g, '')
+    .toLowerCase();
   return page.searchText;
 }
 
@@ -3603,6 +3703,8 @@ function highlightTextMatches(body, query) {
       const parent = node.parentNode;
       if (!parent || parent.nodeName === 'SCRIPT' || parent.nodeName === 'STYLE') return NodeFilter.FILTER_REJECT;
       if (parent.nodeName === 'MARK' && parent.classList.contains('hl')) return NodeFilter.FILTER_REJECT;
+      // Reader chrome (code headers, line numbers, reading time) is not document text.
+      if (parent.closest && parent.closest('[data-rd-chrome]')) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     },
   });
@@ -3780,6 +3882,11 @@ function revealSearchMark(mark) {
 
 function updateSearchCount() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const bar = $('search-bar');
+  if (bar) {
+    const hasHits = state.currentMarks.length > 0 || globalSearchState.matches.length > 0;
+    bar.classList.toggle('rd-search-empty', !!state.lastQuery && !hasHits);
+  }
   const isPaged = state.pagination && state.pagination.enabled && state.pagination.mode === 'paged' && globalSearchState.matches.length > 0;
 
   if (isPaged) {
@@ -4472,6 +4579,11 @@ function transformAcademicCallouts(src) {
   });
 }
 
+/* Reader source pre-pass (footnote definitions); see reader/enhance.js. */
+function readerPrepare(src) {
+  return window.ReadMDReader && window.ReadMDReader.prepare ? window.ReadMDReader.prepare(src) : src;
+}
+
 function transformWikilinks(src) {
   if (!src || !src.includes('[[')) return src;
 
@@ -4824,11 +4936,11 @@ function renderPage(pageIndex, targetHeadingId, preserveScroll) {
   const el = $('content');
   if (!el) return;
 
-  const transformed = transformAcademicCallouts(transformWikilinks(page.content));
+  const transformed = transformAcademicCallouts(transformWikilinks(readerPrepare(page.content)));
   const prot = protectMath(transformed);
   const html = marked.parse(prot.src, { gfm: true, breaks: false });
   const finalHtml = restoreMath(html, prot.saved);
-  el.innerHTML = '<article class="markdown-body">' + sanitizeRenderedHtml(finalHtml) + '</article>';
+  el.innerHTML = '<article class="markdown-body rd-article">' + sanitizeRenderedHtml(finalHtml) + '</article>';
 
   if (state.pagination.allHeadings?.length) {
     const pageOutline = state.pagination.allHeadings.filter(heading => heading.pageIndex === pageIndex);
@@ -5129,8 +5241,9 @@ function parseMarkdownWithSourceMap(content, options = {}) {
         </div>\n`;
       }
 
-      // 3. Standard Code Block
-      return `<pre ${lineAttr}><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre>\n`;
+      // 3. Standard Code Block (`linenos` / `showLineNumbers` adds a gutter in the reader)
+      const lineNumbers = boolAttribute('linenos') || boolAttribute('showlinenumbers') || boolAttribute('line-numbers') || boolAttribute('numberlines');
+      return `<pre ${lineAttr}${lineNumbers ? ' data-line-numbers="true"' : ''}><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre>\n`;
     };
 
     return marked.parser(tokens, { renderer: renderer, gfm: true, breaks: breaks });
@@ -5304,6 +5417,11 @@ function sanitizeRenderedHtml(html, { allowInteractive = true } = {}) {
         if (name === 'type' && value.toLowerCase() !== 'checkbox') node.removeAttribute(attribute.name);
         return;
       }
+      // GFM column alignment is presentation-only; keep the three legal values.
+      if ((tag === 'th' || tag === 'td') && name === 'align') {
+        if (!['left', 'center', 'right'].includes(value.toLowerCase())) node.removeAttribute(attribute.name);
+        return;
+      }
       if ((tag === 'ol' && ['start', 'type'].includes(name)) ||
           (tag === 'details' && name === 'open') || (tag === 'a' && name === 'target')) return;
       node.removeAttribute(attribute.name);
@@ -5398,7 +5516,7 @@ async function renderContent(content, name) {
     const html = parseMarkdownWithSourceMap(prot.src);
     const finalHtml = restoreMath(html, prot.saved);
     if (!isReaderRenderCurrent(render)) return;
-    $('content').innerHTML = '<article class="markdown-body">' + headerHtml + sanitizeRenderedHtml(finalHtml) + '</article>';
+    $('content').innerHTML = '<article class="markdown-body rd-article">' + headerHtml + sanitizeRenderedHtml(finalHtml) + '</article>';
     postProcess();
     bindCodeDocActions(content, name, lang);
     if (saved) requestAnimationFrame(() => {
@@ -5412,12 +5530,12 @@ async function renderContent(content, name) {
     await renderContentIncremental(content, saved, render);
     return;
   }
-  const transformed = transformAcademicCallouts(transformWikilinks(content));
+  const transformed = transformAcademicCallouts(transformWikilinks(readerPrepare(content)));
   const prot = protectMath(transformed);
   const html = parseMarkdownWithSourceMap(prot.src);
   const finalHtml = restoreMath(html, prot.saved);
   if (!isReaderRenderCurrent(render)) return;
-  $('content').innerHTML = '<article class="markdown-body">' + sanitizeRenderedHtml(finalHtml) + '</article>';
+  $('content').innerHTML = '<article class="markdown-body rd-article">' + sanitizeRenderedHtml(finalHtml) + '</article>';
   postProcess();
   if (saved) requestAnimationFrame(() => {
     if (isReaderRenderCurrent(render)) $('content').scrollTop = saved;
@@ -5511,14 +5629,14 @@ async function renderContentIncremental(content, savedTop, render = null) {
   const task = render || beginReaderRender();
   if (!isReaderRenderCurrent(task)) return;
   const el = $('content');
-  el.innerHTML = '<article class="markdown-body"></article>';
+  el.innerHTML = '<article class="markdown-body rd-article"></article>';
   const body = el.querySelector('.markdown-body');
   const blocks = splitMdBlocks(content);
   const total = blocks.length;
   let prog = null;
   try {
     if (total <= 1) {
-      const transformed = transformAcademicCallouts(transformWikilinks(content));
+      const transformed = transformAcademicCallouts(transformWikilinks(readerPrepare(content)));
       const prot = protectMath(transformed);
       body.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
       postProcess();
@@ -5538,7 +5656,7 @@ async function renderContentIncremental(content, savedTop, render = null) {
       const end = Math.min(i + CHUNK, total);
       for (let k = i; k < end; k++) {
         const div = document.createElement('div');
-        const transformed = transformAcademicCallouts(transformWikilinks(blocks[k]));
+        const transformed = transformAcademicCallouts(transformWikilinks(readerPrepare(blocks[k])));
         const prot = protectMath(transformed);
         div.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
         frag.appendChild(div);
@@ -5797,10 +5915,67 @@ function hideBibHoverCard() {
 }
 
 
+/* Reader enhancements (callouts, code headers, figures, reading prefs) live
+   in a separately loaded module + stylesheet so the welcome screen stays
+   within its startup budget.  They load on the first rendered document, or
+   during idle time after startup, like the diagram engines and MathJax. */
+let readerAssetsPromise = null;
+function loadReaderAssets() {
+  if (window.ReadMDReader) return Promise.resolve(window.ReadMDReader);
+  if (readerAssetsPromise) return readerAssetsPromise;
+  const version = (document.querySelector('script[src*="readmd.boot.js"]')?.getAttribute('src') || '').split('?')[1] || '';
+  const suffix = version ? '?' + version : '';
+  const css = new Promise(resolve => {
+    if (document.getElementById('readmd-reader-article-css')) { resolve(); return; }
+    const link = document.createElement('link');
+    link.id = 'readmd-reader-article-css';
+    link.rel = 'stylesheet';
+    link.href = '/assets/css/reader-article.css' + suffix;
+    link.onload = link.onerror = () => resolve();
+    const anchor = document.querySelector('link[href*="/assets/css/reader.css"]');
+    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(link, anchor.nextSibling);
+    else document.head.appendChild(link);
+  });
+  const js = loadDiagramScript('/assets/js/reader/enhance.js' + suffix, 'ReadMDReader').catch(() => null);
+  readerAssetsPromise = Promise.all([css, js]).then(() => window.ReadMDReader || null);
+  return readerAssetsPromise;
+}
+window.loadReaderAssets = loadReaderAssets;
+if (typeof window !== 'undefined' && !(window.__STARTUP_PROBE__)) {
+  // Warm the cache a few seconds after startup settles, off the critical path.
+  const idle = window.requestIdleCallback || (fn => setTimeout(fn, 0));
+  window.addEventListener('load', () => setTimeout(() => idle(() => loadReaderAssets(), { timeout: 4000 }), 3000), { once: true });
+}
+
+function readerEnhance(body) {
+  if (!body || !body.classList || !body.classList.contains('rd-article')) {
+    if (window.ReadMDReader) window.ReadMDReader.enhance(body);
+    return;
+  }
+  if (window.ReadMDReader) { window.ReadMDReader.enhance(body); return; }
+  // First document before the module arrived: keep the article hidden for
+  // the few milliseconds it takes, then upgrade and run the link fix-ups the
+  // new anchors (footnotes, heading links) need.
+  body.classList.add('rd-pending');
+  const reveal = setTimeout(() => body.classList.remove('rd-pending'), 1200);
+  loadReaderAssets().then(reader => {
+    clearTimeout(reveal);
+    if (reader && body.isConnected) {
+      reader.enhance(body);
+      fixLinks(body, 'a.rd-anchor, sup.rd-fnref a, a.rd-fnback');
+      fixImages(body);
+      buildToc();
+      reader.afterRender(body);
+    }
+    body.classList.remove('rd-pending');
+  });
+}
+
 function postProcess(container) {
   const body = container || document.querySelector('#content .markdown-body') || $('content');
   if (!body) return;
   ensureHeadingIds(body);
+  readerEnhance(body);
   fixLinks(body);
   fixImages(body);
   processBibCitations(body);
@@ -5808,6 +5983,7 @@ function postProcess(container) {
   renderMath(body);
   renderAllCodeChunks(body);
   renderAllDiagrams(body);
+  if (window.ReadMDReader) window.ReadMDReader.afterRender(body);
 }
 
 function renderAllCodeChunks(container) {
@@ -6979,9 +7155,9 @@ function rewritePresentationAssets(md) {
   return out;
 }
 
-function fixLinks(body) {
+function fixLinks(body, selector = 'a') {
   const allHeadings = Array.from(body.querySelectorAll('h1, h2, h3, h4, h5, h6'));
-  body.querySelectorAll('a').forEach(a => {
+  body.querySelectorAll(selector).forEach(a => {
     if (a.classList.contains('wikilink')) {
       const target = a.dataset.target || '';
       a.addEventListener('click', async e => {

@@ -158,3 +158,37 @@ body[data-theme="sepia"] { --color-success: #3f6b2a; }
   :focus-visible { outline: 2px solid Highlight; }
   button, [role="button"], .tb-btn { border: 1px solid ButtonText; }
 }
+/* ============================================================
+   Reader lane tokens (assets/css/reader.css).  Typeface stacks pair a
+   Latin face with a CJK fallback; syntax and callout colours are tuned
+   per theme to stay >= 4.5:1 on their surfaces.
+   ============================================================ */
+:root {
+  --reader-font-sans: -apple-system, "Segoe UI Variable Text", "Segoe UI", "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", system-ui, sans-serif;
+  --reader-font-serif: "Charter", "Iowan Old Style", "Source Serif 4", "Source Serif Pro", "Palatino Linotype", "Book Antiqua", Georgia, "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  --reader-base: 1.0625rem;
+  --reader-leading: 1.75;
+  --reader-pad-inline: var(--space-10);
+  --rd-syn-kw: #cf222e; --rd-syn-str: #0a3069; --rd-syn-com: #5f6873; --rd-syn-num: #0550ae;
+  --rd-syn-fn: #8250df; --rd-syn-type: #953800; --rd-syn-tag: #116329; --rd-syn-punct: #57606a;
+  --rd-callout-note: #2f5fe8; --rd-callout-tip: #1a7f37; --rd-callout-important: #8250df;
+  --rd-callout-warning: #8a5a00; --rd-callout-caution: #cf222e;
+  --rd-mark: #fff1b8; --rd-mark-fg: #3d2f00;
+  --rd-hit: #fde68a; --rd-hit-cur: #f5a524; --rd-hit-cur-fg: #1c1f26;
+}
+body[data-theme="dark"] {
+  --rd-syn-kw: #ff7b72; --rd-syn-str: #a5d6ff; --rd-syn-com: #8b949e; --rd-syn-num: #79c0ff;
+  --rd-syn-fn: #d2a8ff; --rd-syn-type: #ffa657; --rd-syn-tag: #7ee787; --rd-syn-punct: #9aa3b2;
+  --rd-callout-note: #6d9bff; --rd-callout-tip: #56d364; --rd-callout-important: #b87fff;
+  --rd-callout-warning: #e3b341; --rd-callout-caution: #ff7b72;
+  --rd-mark: #5b4a12; --rd-mark-fg: #fff4cc;
+  --rd-hit: #5b420e; --rd-hit-cur: #f2b84b; --rd-hit-cur-fg: #1a1406;
+}
+body[data-theme="sepia"] {
+  --rd-syn-kw: #9b2c5a; --rd-syn-str: #3d6b21; --rd-syn-com: #6b5d46; --rd-syn-num: #1f5f8b;
+  --rd-syn-fn: #6b3fa0; --rd-syn-type: #8a4b0f; --rd-syn-tag: #2f6b4f; --rd-syn-punct: #665b49;
+  --rd-callout-note: #2c5d8a; --rd-callout-tip: #3f6b2a; --rd-callout-important: #6b3fa0;
+  --rd-callout-warning: #855500; --rd-callout-caution: #a32424;
+  --rd-mark: #f3dd9a; --rd-mark-fg: #3a2c10;
+  --rd-hit: #f0c86a; --rd-hit-cur: #d9892b; --rd-hit-cur-fg: #2a1d0b;
+}

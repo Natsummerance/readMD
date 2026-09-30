@@ -23,6 +23,7 @@ async function saveSettings() {
     theme: state.theme, fontSize: state.fontSize, lineWidth: state.lineWidth, aiPanelWidth: state.aiPanelWidth,
     autoReload: state.autoReload, pvLayout: state.pvLayout, pvSync: state.pvSync,
     pvSplitX: state.pvSplitX, pvSplitY: state.pvSplitY,
+    readingFont: state.readingFont, readingWidth: state.readingWidth, readingLeading: state.readingLeading,
   };
   try {
     if (hasPy) await py.save_settings(s);
@@ -41,6 +42,7 @@ function applySettings() {
   document.body.style.setProperty('--line-width', state.lineWidth + 'px');
   document.body.style.setProperty('--ai-panel-width', state.aiPanelWidth + 'px');
   updateThemeButton();
+  if (window.ReadMDReader) window.ReadMDReader.applyReadingPrefs();
   if (prevTheme && prevTheme !== theme) {
     if (typeof reloadAllDiagrams === 'function') reloadAllDiagrams();
     if (typeof applyCmTheme === 'function') applyCmTheme();

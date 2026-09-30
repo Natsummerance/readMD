@@ -1,1 +1,6 @@
-/* ReadMD reader surface — see tokens.css for the design tokens used here. */
+/* ReadMD reader surface — see tokens.css for the design tokens used here.
+   The full reader stylesheet (reader-article.css) and enhancement module
+   (js/reader/enhance.js) load on the first document render, or during idle
+   time after startup, to keep the welcome screen light.  Until they are in,
+   a freshly rendered article stays invisible so it never flashes unstyled. */
+.rd-article.rd-pending { visibility: hidden; }
