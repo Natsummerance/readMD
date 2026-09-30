@@ -4,7 +4,7 @@ const { spawn, execSync } = require('child_process');
 const { chromium } = require('@playwright/test');
 
 const UI_PORT = 28492;
-const ARTIFACT_DIR = 'C:/Users/Natsumer/.gemini/antigravity/brain/ccbcea97-6f62-4db3-97fb-cfc7f4d855a8';
+const ARTIFACT_DIR = process.env.READMD_CAPTURE_COPY_DIR || '';
 const OUTPUT_DIR = path.join(__dirname, 'showcase_output');
 
 if (!fs.existsSync(OUTPUT_DIR)) {
@@ -56,8 +56,8 @@ $$
 
 async function main() {
   console.log('[1/6] 启动独立 ReadMD UI 服务...');
-  const serverPy = path.join(__dirname, '..', 'tools', 'ui_server.py');
-  const server = spawn('python', [serverPy, String(UI_PORT)], {
+  const serverPy = path.join(__dirname, 'ui-server.cjs');
+  const server = spawn(process.execPath, [serverPy, String(UI_PORT)], {
     stdio: ['ignore', 'pipe', 'inherit'],
     cwd: path.dirname(serverPy),
     env: { ...process.env, READMD_UI_PORT: String(UI_PORT) }
@@ -164,7 +164,7 @@ async function main() {
     body: JSON.stringify({
       ok: true,
       ffmpeg: true,
-      sandbox_dir: 'C:/Users/Natsumer/AppData/Roaming/ReadMD/plugins',
+      sandbox_dir: 'C:/Users/demo/AppData/Roaming/ReadMD/plugins',
       plugins: pluginState,
     }),
   }));
@@ -363,7 +363,7 @@ async function main() {
   for (const item of artifactsToCopy) {
     const src = path.join(OUTPUT_DIR, item);
     const dest = path.join(ARTIFACT_DIR, item);
-    if (fs.existsSync(src)) {
+    if (ARTIFACT_DIR && fs.existsSync(src)) {
       fs.copyFileSync(src, dest);
       console.log(`✓ 复制产物到 Artifacts 目录: ${item}`);
     }

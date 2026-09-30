@@ -1244,8 +1244,16 @@ pub(crate) fn h_export_epub(app: &Arc<App>, req: &Request) -> ApiResult<Response
     // language=…, options=…)` — `mdexport::epub_build_bytes` is that function's
     // body, and `str` metadata defaults live in the caller exactly as Python
     // keeps them in `_api_export_epub`.
-    let bytes = match crate::mdexport::epub_build_bytes(
+    // `baseDir` (the source file's folder) lets relative images be packaged.
+    let base_dir = body
+        .get("baseDir")
+        .or_else(|| body.get("base_dir"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let (bytes, warns) = match crate::mdexport::epub_build_bytes(
         &content_v,
+        &base_dir,
         &options,
         &title,
         &author,
@@ -1262,7 +1270,9 @@ pub(crate) fn h_export_epub(app: &Arc<App>, req: &Request) -> ApiResult<Response
 
     // `self._send_json(200, {'ok': bool(ok), 'path': out_path})` — `build_epub`
     // returns the written path, so `ok` is always true here.
-    Ok(Response::json(&json!({ "ok": true, "path": out_path })))
+    let mut body = json!({ "ok": true, "path": out_path, "warns": warns });
+    crate::api_codes::attach_warn_items(&mut body);
+    Ok(Response::json(&body))
 }
 
 // ============================================================================
@@ -1634,6 +1644,20 @@ pub(crate) fn h_convert_progress(_app: &Arc<App>, req: &Request) -> ApiResult<Re
         "total": job.items.len(),
         "items": job.items,
     })))
+}
+
+/// `/api/task/cancel` for a batch job id: raise the job's cancel flag.
+pub(crate) fn cancel_convert_job(id: &str) -> crate::cancel::CancelState {
+    use crate::cancel::CancelState;
+    let mut guard = CONVERT_JOBS.lock().unwrap_or_else(|e| e.into_inner());
+    match guard.as_mut().and_then(|m| m.get_mut(id)) {
+        None => CancelState::Unknown,
+        Some(job) if job.finished => CancelState::Finished,
+        Some(job) => {
+            job.cancel = true;
+            CancelState::Cancelling
+        }
+    }
 }
 
 /// `readmd.py:3342 Handler._api_convert_cancel`.
@@ -2394,7 +2418,7 @@ fn transcribe_fields(body: &Value) -> (String, Option<String>, String) {
 /// for `path`/`language`/`model` -> 404 `file_not_found` -> 400
 /// `unsupported_media_format` -> `transcribe_to_md()`.  A truthy text is a 200
 /// `{'ok','content','path','warning'}` **even when it is only the install notice**:
-/// `transcribe_to_md` returns `(notice, 'Whisper plugin or FFmpeg not available.')`
+/// `transcribe_to_md` returns `(notice, 'transcribe_unavailable')`
 /// when neither engine is present, which is the answer a user without whisper sees.
 /// Otherwise a truthy error is 422 `transcribe_failed` + `error_detail`, and a
 /// silent failure is 500 `transcribe_empty`.
@@ -2522,6 +2546,58 @@ fn autosave_md(fixed: &str, out: &Path, overwrite: bool) -> (bool, bool) {
     }
 }
 
+/// What to do when the converted `.md` already exists.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum OnExists {
+    Skip,
+    Overwrite,
+    Rename,
+}
+
+impl OnExists {
+    /// `on_exists=skip|overwrite|rename`; the legacy `overwrite=1` still means overwrite.
+    pub(crate) fn from_request(req: &Request) -> OnExists {
+        match req.q("on_exists").map(|s| s.trim().to_ascii_lowercase()) {
+            Some(v) if v == "overwrite" => OnExists::Overwrite,
+            Some(v) if v == "rename" => OnExists::Rename,
+            Some(v) if v == "skip" => OnExists::Skip,
+            _ if req.q("overwrite") == Some("1") => OnExists::Overwrite,
+            _ => OnExists::Skip,
+        }
+    }
+}
+
+/// `report.md` → `report (1).md`, `report (2).md`, … — the first name not on disk.
+pub(crate) fn free_output_path(out: &Path) -> PathBuf {
+    if !out.exists() {
+        return out.to_path_buf();
+    }
+    let parent = out.parent().map(Path::to_path_buf).unwrap_or_default();
+    let stem = out.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_else(|| "document".into());
+    let ext = out.extension().map(|e| format!(".{}", e.to_string_lossy())).unwrap_or_default();
+    for n in 1..10_000 {
+        let cand = parent.join(format!("{stem} ({n}){ext}"));
+        if !cand.exists() {
+            return cand;
+        }
+    }
+    out.to_path_buf()
+}
+
+/// Resolve the output path and write it according to `mode`.
+/// Returns `(out, saved, skipped, existed)`.
+fn save_converted(fixed: &str, out: PathBuf, mode: OnExists, force: bool) -> (PathBuf, bool, bool, bool) {
+    let existed = out.exists();
+    let (target, overwrite) = match mode {
+        _ if force => (out, true),
+        OnExists::Overwrite => (out, true),
+        OnExists::Rename => (free_output_path(&out), true),
+        OnExists::Skip => (out, false),
+    };
+    let (saved, skipped) = autosave_md(fixed, &target, overwrite);
+    (target, saved, skipped, existed)
+}
+
 /// `os.path.dirname(os.path.abspath(p))`, the base directory `MDC.check`
 /// resolves relative image references against (readmd.py:3162, 3197).
 fn mdcheck_base_dir(working: &Path) -> String {
@@ -2530,7 +2606,7 @@ fn mdcheck_base_dir(working: &Path) -> String {
 
 /// `readmd.py:3184 Handler._convert_txt(p)` — TXT intelligence, no convert
 /// module involved.
-fn convert_txt_lane(app: &Arc<App>, p: &str, working: &Path, overwrite_q: bool) -> Response {
+fn convert_txt_lane(app: &Arc<App>, p: &str, working: &Path, mode: OnExists) -> Response {
     let name = crate::convert::basename(p);
     let dir = crate::convert::dirname(p);
     let ws = working.to_string_lossy().into_owned();
@@ -2547,16 +2623,16 @@ fn convert_txt_lane(app: &Arc<App>, p: &str, working: &Path, overwrite_q: bool) 
             "dir": dir,
             "source": "convert",
             "engine": "txt 智能识别",
-            "note": "文件为空，没有可转换的内容"
+            "note": "文件为空，没有可转换的内容",
+            "note_code": crate::api_codes::CONVERT_NO_TEXT
         }));
     }
 
     let (fixed, warns) = crate::convert::mdcheck_check(&md, &mdcheck_base_dir(working));
     let fixes = auto_fixes(&warns);
     let out = PathBuf::from(crate::convert::md_output_path(&ws));
-    let overwrite = overwrite_q
-        || crate::convert::is_upload_path(&ws, &app.paths.data_dir);
-    let (saved, skipped) = autosave_md(&fixed, &out, overwrite);
+    let force = crate::convert::is_upload_path(&ws, &app.paths.data_dir);
+    let (out, saved, skipped, out_exists) = save_converted(&fixed, out, mode, force);
 
     Response::json(&json!({
         "content": fixed,
@@ -2569,6 +2645,7 @@ fn convert_txt_lane(app: &Arc<App>, p: &str, working: &Path, overwrite_q: bool) 
         "out": out.to_string_lossy(),
         "saved": saved,
         "skipped": skipped,
+        "out_exists": out_exists,
         "warns": warns
     }))
 }
@@ -2589,9 +2666,9 @@ pub(crate) fn h_convert(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
         }
         // readmd.py:3165 `overwrite` is a query flag; there is no `form_tables`
         // switch on this route, the module is always called with its default.
-        let overwrite_q = req.q("overwrite").map(|v| v == "1").unwrap_or(false);
+        let mode = OnExists::from_request(req);
         if ext == ".txt" {
-            return Ok(convert_txt_lane(app, &p, &target, overwrite_q));
+            return Ok(convert_txt_lane(app, &p, &target, mode));
         }
 
         let ws = target.to_string_lossy().into_owned();
@@ -2599,10 +2676,16 @@ pub(crate) fn h_convert(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
         let err = res.error.clone().unwrap_or_default();
         if !err.is_empty() && res.text.is_empty() {
             // readmd.py:3152 `if err and not text:`
-            return Ok(Response::json_status(
-                422,
-                &json!({ "ok": false, "error_code": "conversion_failed", "engine": res.engine }),
-            ));
+            // `error` carries the human reason (DRM, damaged file, …) for the toast;
+            // `reason` is the stable machine code when the converter supplied one.
+            let reason = ["legacy_office_parse_failed", "mobi_drm", "mobi_huffcdic", "unsupported_format"]
+                .into_iter()
+                .find(|c| err.contains(c));
+            let mut body = json!({ "ok": false, "error_code": "conversion_failed", "engine": res.engine, "error": err });
+            if let Some(r) = reason {
+                body["reason"] = json!(r);
+            }
+            return Ok(Response::json_status(422, &body));
         }
         if res.text.trim().is_empty() {
             // readmd.py:3155 — an empty extraction is a 200, not an error.
@@ -2612,7 +2695,8 @@ pub(crate) fn h_convert(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
                 "dir": crate::convert::dirname(&p),
                 "source": "convert",
                 "engine": res.engine,
-                "note": "未提取到文字，可尝试“扫描转 MD”（OCR）"
+                "note": "未提取到文字，可尝试“扫描转 MD”（OCR）",
+                "note_code": crate::api_codes::CONVERT_NO_TEXT
             })));
         }
 
@@ -2621,8 +2705,8 @@ pub(crate) fn h_convert(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
         let (fixed, warns) = crate::convert::mdcheck_check(&res.text, &mdcheck_base_dir(&target));
         let fixes = auto_fixes(&warns);
         let out = PathBuf::from(crate::convert::md_output_path(&ws));
-        let overwrite = overwrite_q || crate::convert::is_upload_path(&ws, &app.paths.data_dir);
-        let (saved, skipped) = autosave_md(&fixed, &out, overwrite);
+        let force = crate::convert::is_upload_path(&ws, &app.paths.data_dir);
+        let (out, saved, skipped, out_exists) = save_converted(&fixed, out, mode, force);
 
         return Ok(Response::json(&json!({
             "content": fixed,
@@ -2635,6 +2719,7 @@ pub(crate) fn h_convert(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
             "out": out.to_string_lossy(),
             "saved": saved,
             "skipped": skipped,
+            "out_exists": out_exists,
             "warns": warns
         })));
     }
@@ -2792,7 +2877,15 @@ fn convert_worker(job_id: &str, data_dir: &Path) {
         };
 
         // `mod.convert_verbose(it['src'])` — the raw client path, verbatim.
-        let res = crate::convert::convert_triple(&src, true);
+        // A converter panic on one malformed file becomes that item's error;
+        // without the guard the worker thread dies and the job never finishes.
+        let res = std::panic::catch_unwind(|| crate::convert::convert_triple(&src, true)).unwrap_or_else(|_| {
+            crate::convert::ConvertTriple {
+                text: String::new(),
+                engine: String::new(),
+                error: Some("转换器内部错误".to_string()),
+            }
+        });
         let err = res.error.clone().unwrap_or_default();
         let mut status = "error".to_string();
         let mut error: Option<String> = None;
@@ -4100,7 +4193,7 @@ mod tests {
         assert!(!body["content"].as_str().unwrap_or("").is_empty());
         assert_eq!(
             body["warning"].as_str(),
-            Some("Whisper plugin or FFmpeg not available.")
+            Some(crate::transcribe::TRANSCRIBE_UNAVAILABLE)
         );
 
         // 6. `_read_json_body`'s `ValueError` is a 400 whose `error_code` is
@@ -4378,11 +4471,11 @@ mod tests {
         );
         let (status, payload, _) = convert_call(&app, Some(file.to_str().unwrap()));
         assert_eq!(status, 422, "{payload}");
-        assert_eq!(
-            payload,
-            json!({"ok": false, "error_code": "conversion_failed", "engine": ""})
-        );
-        assert_eq!(key_set(&payload), vec!["engine", "error_code", "ok"]);
+        assert_eq!(payload["ok"], json!(false));
+        assert_eq!(payload["error_code"], json!("conversion_failed"));
+        assert_eq!(payload["engine"], json!(""));
+        assert_eq!(payload["reason"], json!("unsupported_format"));
+        assert!(payload["error"].as_str().unwrap_or("").contains("unsupported_format"));
     }
 
     /// `readmd.py:3141` — the legacy-Windows gate runs after `isfile()` and
@@ -4444,8 +4537,8 @@ mod tests {
         assert_eq!(
             key_set(&payload),
             vec![
-                "content", "dir", "engine", "fixes", "name", "out", "path", "saved", "skipped",
-                "source", "warns"
+                "content", "dir", "engine", "fixes", "name", "out", "out_exists", "path", "saved",
+                "skipped", "source", "warns"
             ]
         );
         let engine = payload["engine"].as_str().unwrap_or_default();
@@ -4494,7 +4587,7 @@ mod tests {
         assert_eq!(status, 200, "{payload}");
         assert_eq!(
             key_set(&payload),
-            vec!["content", "dir", "engine", "name", "note", "source"]
+            vec!["content", "dir", "engine", "name", "note", "note_code", "source"]
         );
         assert_eq!(
             payload,
@@ -4504,7 +4597,8 @@ mod tests {
                 "dir": file.parent().unwrap().to_str().unwrap(),
                 "source": "convert",
                 "engine": "txt 智能识别",
-                "note": "文件为空，没有可转换的内容"
+                "note": "文件为空，没有可转换的内容",
+                "note_code": "convert_no_text"
             })
         );
     }

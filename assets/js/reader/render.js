@@ -139,7 +139,7 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
     const r = await apiFetch('/api/file?p=' + encodeURIComponent(path));
     if (!r.ok) {
       const d = await r.json().catch(() => ({}));
-      showToast((_t('toast.openFailed') || '无法打开：') + (d.error || r.status));
+      showToast((_t('toast.openFailed') || '无法打开：') + (apiMessage(d) || r.status));
       setProgress(0);
       return;
     }
@@ -374,7 +374,7 @@ function transformWikilinks(src) {
     const fullTarget = cleanHeading ? `${rawTarget}#${cleanHeading}` : rawTarget;
     const safeTarget = escapeHtml(fullTarget);
     const safeDisplay = escapeHtml(displayText);
-    return `<a class="wikilink" data-target="${safeTarget}" href="javascript:void(0)" title="双链跳转: ${safeTarget}">${safeDisplay}</a>`;
+    return `<a class="wikilink" data-target="${safeTarget}" href="javascript:void(0)" title="${escapeHtml((window.i18n ? window.i18n.t('wikilink.jump', { target: fullTarget }) : '双链跳转: ' + fullTarget))}">${safeDisplay}</a>`;
   });
 
   return replaced.replace(/\x00WIKICODE(\d+)\x00/g, (_, idx) => codeBlocks[Number(idx)] || '');
@@ -419,7 +419,7 @@ async function navigateWikilink(target, allHeadings) {
   } else if (targetPath && hasPy && py.open_file) {
     py.open_file(targetPath);
   } else {
-    showToast('正在打开文档：' + docName, 1500);
+    showToast((window.i18n ? window.i18n.t('toast.openingDoc', { name: docName }) : '正在打开文档：' + docName), 1500);
   }
 }
 
@@ -1264,10 +1264,10 @@ async function renderContent(content, name) {
           <span class="code-doc-size">${sizeKb} KB</span>
         </div>
         <div class="code-doc-actions">
-          <button class="btn btn-sm btn-primary" id="btn-code-to-md" data-i18n="codebar.aiToMd" title="转换为结构化 Markdown 文档">${_t('codebar.aiToMd') || 'AI 结构化转 MD'}</button>
-          <button class="btn btn-sm" id="btn-code-edit" data-i18n="codebar.edit" title="进入源码编辑器 (Ctrl+E)">${_t('codebar.edit') || '编辑源码 (Ctrl+E)'}</button>
-          <button class="btn btn-sm" id="btn-code-ai-explain" data-i18n="codebar.aiExplain" title="调用 AI 进行深度解析与排错">${_t('codebar.aiExplain') || 'AI 深度解析'}</button>
-          <button class="btn btn-sm" id="btn-code-copy" data-i18n="codebar.copyCode" title="复制代码正文">${_t('codebar.copyCode') || '复制代码'}</button>
+          <button class="btn btn-sm btn-primary" id="btn-code-to-md" data-i18n="codebar.aiToMd" title="${escapeHtml(_t('codebar.aiToMdTip') || '转换为结构化 Markdown 文档')}">${_t('codebar.aiToMd') || 'AI 结构化转 MD'}</button>
+          <button class="btn btn-sm" id="btn-code-edit" data-i18n="codebar.edit" title="${escapeHtml(_t('codebar.editTip') || '进入源码编辑器 (Ctrl+E)')}">${_t('codebar.edit') || '编辑源码 (Ctrl+E)'}</button>
+          <button class="btn btn-sm" id="btn-code-ai-explain" data-i18n="codebar.aiExplain" title="${escapeHtml(_t('codebar.aiExplainTip') || '调用 AI 进行深度解析与排错')}">${_t('codebar.aiExplain') || 'AI 深度解析'}</button>
+          <button class="btn btn-sm" id="btn-code-copy" data-i18n="codebar.copyCode" title="${escapeHtml(_t('codebar.copyCodeTip') || '复制代码正文')}">${_t('codebar.copyCode') || '复制代码'}</button>
         </div>
       </div>`;
 
@@ -2428,8 +2428,8 @@ function renderAllDiagrams(container) {
               const isZh = window.i18n ? ((window.i18n.currentLang || window.i18n.locale || '').startsWith('zh')) : true;
               const netSpan = document.createElement('span');
               netSpan.className = 'diagram-network-indicator';
-              netSpan.textContent = isZh ? ' · 在线代理' : ' · Online Proxy';
-              netSpan.setAttribute('aria-label', isZh ? '在线代理渲染' : 'Rendered via online proxy');
+              netSpan.textContent = ' · ' + (window.i18n ? window.i18n.t('diagram.onlineProxy') : (isZh ? '在线代理' : 'Online Proxy'));
+              netSpan.setAttribute('aria-label', window.i18n ? window.i18n.t('diagram.onlineProxyAria') : (isZh ? '在线代理渲染' : 'Rendered via online proxy'));
               badge.appendChild(netSpan);
             }
           }
@@ -3024,28 +3024,47 @@ async function ensureModule(name, timeoutMs) {
   return false;
 }
 
-async function convertFile(path) {
+async function convertFile(path, onExists) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!(await ensureModule('convert'))) return;
   busy(true);
+  let d;
   try {
-    const r = await apiFetch('/api/convert?p=' + encodeURIComponent(path) + '&overwrite=1');
-    const d = await r.json();
+    const q = '/api/convert?p=' + encodeURIComponent(path) + '&on_exists=' + encodeURIComponent(onExists || 'skip');
+    const r = await apiFetch(q);
+    d = await r.json().catch(() => ({}));
     if (r.status === 409) { showToast(d.error || (_t('toast.moduleLoading') || '模块加载中…')); return; }
-    if (!r.ok) { showToast(d.error || (_t('toast.convertFailed') || '转换失败')); return; }
-    if (!d.content) { showToast(d.note || (_t('toast.convertNoContent') || '未提取到内容')); return; }
-    showConvertWarns(d.warns);
-    if (d.saved && d.out) {
-      showToast((_t('toast.savedPrefix') || '已保存：') + d.out);
-      await loadFile(d.out);
-    } else if (d.skipped) {
-      showToast(_t('toast.skippedExistsNotice') || '已存在同名 .md，跳过保存（可在批量转换中勾选“覆盖已存在”）', 3400);
-      renderVirtual('convert', d.name, d.dir, d.content, d.fixes);
-    } else {
-      renderVirtual('convert', d.name, d.dir, d.content, d.fixes);
+    if (!r.ok) {
+      const why = d.reason ? _t('convert.reason.' + d.reason) : '';
+      showToast((why && why !== 'convert.reason.' + d.reason ? why : apiMessage(d, 'toast.convertFailed')) || '转换失败', 4200);
+      return;
     }
-  } catch (e) { showToast((_t('toast.convertFailPrefix') || '转换失败：') + e.message); }
+    if (!d.content) { showToast(apiMessage(d, 'toast.convertNoContent') || '未提取到内容', 4200); return; }
+    showConvertWarns(d.warns);
+  } catch (e) { showToast((_t('toast.convertFailPrefix') || '转换失败：') + e.message); return; }
   finally { busy(false); }
+
+  if (d.saved && d.out) {
+    showToast((_t('toast.savedPrefix') || '已保存：') + d.out);
+    await loadFile(d.out);
+    return;
+  }
+  if (d.skipped && !onExists) {
+    // 已存在同名 .md：让用户决定，而不是静默覆盖或静默丢弃。
+    const name = (d.out || '').split(/[\\/]/).pop();
+    const choice = await askChoice(
+      _t('convert.existsTitle') || '已存在同名 Markdown 文件',
+      _t('convert.existsDesc', { name }) || `「${name}」已存在，要怎么处理这次转换结果？`,
+      [
+        { id: 'rename', label: _t('convert.existsRename') || '另存为新文件', kind: 'accent' },
+        { id: 'overwrite', label: _t('convert.existsOverwrite') || '覆盖', kind: 'danger' },
+        { id: 'preview', label: _t('convert.existsPreview') || '仅预览' },
+      ]
+    );
+    if (choice === 'rename' || choice === 'overwrite') { await convertFile(path, choice); return; }
+    if (choice === 'cancel') return;
+  }
+  renderVirtual('convert', d.name, d.dir, d.content, d.fixes);
 }
 
 function showConvertWarns(warns) {

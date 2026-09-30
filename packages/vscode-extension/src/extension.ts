@@ -42,6 +42,13 @@ function errorText(error: unknown): string {
     core_not_connected: ['errCoreNotConnected', 'ReadMD Core is not connected'],
     core_operation_timeout: ['errCoreOperationTimeout', 'The operation timed out; try again'],
     core_closed: ['errCoreClosed', 'ReadMD Core is closed'],
+    readmd_binary_not_found: ['errBinaryNotFound', 'ReadMD is not installed or not on PATH; install the desktop app or set readmd.executablePath'],
+    readmd_binary_invalid: ['errBinaryInvalid', 'readmd.executablePath does not point to a working ReadMD executable'],
+    confirmation_required: ['errConfirmationRequired', 'This action needs confirmation'],
+    output_exists: ['errOutputExists', 'The target file already exists'],
+    output_path_must_be_absolute: ['errOutputPathAbsolute', 'The output path must be absolute'],
+    output_directory_not_found: ['errOutputDirMissing', 'The output folder does not exist'],
+    file_not_found: ['errFileNotFound', 'File not found'],
     mcp_request_failed: ['errMcpRequestFailed', 'Core request failed'],
     mcp_tool_failed: ['errMcpToolFailed', 'Core tool failed'],
     ai_cancelled: ['errAiCancelled', 'AI generation cancelled'],
@@ -912,14 +919,17 @@ export function activate(context: vscode.ExtensionContext) {
   // 16. 命令：一键配置工作区 MCP Server
   const setupMcpDisposable = vscode.commands.registerCommand('readmd.setupMcpServer', async () => {
     const wsFolders = vscode.workspace.workspaceFolders;
-    const mcpScriptPath = bridge.getServerPath();
+    let readmdBinary: string;
+    try {
+      readmdBinary = await bridge.getServerCommand();
+    } catch (err) {
+      vscode.window.showErrorMessage(errorText(err));
+      return;
+    }
 
     const readmdServerConfig = {
-      command: 'python',
-      args: [mcpScriptPath],
-      env: {
-        PYTHONIOENCODING: 'utf-8',
-      },
+      command: readmdBinary,
+      args: ['--mcp'],
     };
 
     const choice = await vscode.window.showQuickPick([

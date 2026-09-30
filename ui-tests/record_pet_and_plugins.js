@@ -9,7 +9,7 @@ const SHOWCASE_ROOT = path.join(REPO_ROOT, 'showcase', 'pet_and_plugins');
 const VIDEO_DIR = path.join(SHOWCASE_ROOT, 'videos');
 const SNAPSHOT_DIR = path.join(SHOWCASE_ROOT, 'snapshots');
 const SAMPLES_DIR = path.join(SHOWCASE_ROOT, 'samples');
-const ARTIFACT_DIR = 'C:/Users/Natsumer/.gemini/antigravity/brain/ccbcea97-6f62-4db3-97fb-cfc7f4d855a8';
+const ARTIFACT_DIR = process.env.READMD_CAPTURE_COPY_DIR || '';
 
 fs.mkdirSync(VIDEO_DIR, { recursive: true });
 fs.mkdirSync(SNAPSHOT_DIR, { recursive: true });
@@ -34,8 +34,8 @@ async function smoothMouseMove(page, locator, steps = 18) {
 
 async function startServer() {
   console.log('[Server] 启动 ReadMD UI 测试服务器 (Port: ' + UI_PORT + ')...');
-  const serverPy = path.join(REPO_ROOT, 'tools', 'ui_server.py');
-  const server = spawn('python', [serverPy, String(UI_PORT)], {
+  const serverPy = path.join(REPO_ROOT, 'ui-tests', 'ui-server.cjs');
+  const server = spawn(process.execPath, [serverPy, String(UI_PORT)], {
     stdio: ['ignore', 'pipe', 'inherit'],
     cwd: path.dirname(serverPy),
     env: { ...process.env, READMD_UI_PORT: String(UI_PORT) }
@@ -535,11 +535,11 @@ async function run() {
 
     // Copy snapshots and master videos to brain artifacts directory
     console.log('\n[Artifacts] Copying assets to conversation artifacts directory...');
-    const snaps = fs.readdirSync(SNAPSHOT_DIR).filter(f => f.endsWith('.png'));
+    const snaps = ARTIFACT_DIR ? fs.readdirSync(SNAPSHOT_DIR).filter(f => f.endsWith('.png')) : [];
     for (const snap of snaps) {
       fs.copyFileSync(path.join(SNAPSHOT_DIR, snap), path.join(ARTIFACT_DIR, snap));
     }
-    const vids = fs.readdirSync(VIDEO_DIR).filter(f => f.endsWith('.mp4'));
+    const vids = ARTIFACT_DIR ? fs.readdirSync(VIDEO_DIR).filter(f => f.endsWith('.mp4')) : [];
     for (const vid of vids) {
       fs.copyFileSync(path.join(VIDEO_DIR, vid), path.join(ARTIFACT_DIR, vid));
     }

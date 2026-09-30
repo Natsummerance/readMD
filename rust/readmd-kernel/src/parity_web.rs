@@ -249,9 +249,11 @@ fn touch_module(app: &App, name: &str) -> GateState {
             reg.set_error(name, &message);
             GateState::Unavailable("error".to_string())
         }
+        // The loader ran synchronously and succeeded, so this request can
+        // proceed; reporting `loading` here only forced the UI to retry.
         Loaded::Ready => {
             reg.set(name, "ready");
-            GateState::Loading
+            GateState::Ready
         }
     }
 }
@@ -1721,10 +1723,20 @@ fn ntpath_split(path: &str) -> (String, String) {
 // ------------------------------------------------------------------- handlers
 
 /// `Handler._api_ocr` (`readmd.py:3356`).
+/// The OCR output holds no recognised text: only the placeholder notes and/or
+/// the preserved `![原图](…)` image line.
+fn ocr_result_is_empty(text: &str) -> bool {
+    text.lines().map(str::trim).filter(|l| !l.is_empty()).all(|l| {
+        l.starts_with("![原图](")
+            || l == "> （未识别出文字，仅保留原图）"
+            || l == ocr::OCR_PDF_EMPTY_PLACEHOLDER
+    })
+}
+
 pub fn h_ocr(app: &App, req: &Request) -> Response {
     let p = double_decode(req.q("p").unwrap_or(""));
     if !Path::new(&p).is_file() {
-        return Response::json_status(404, &json!({"error": "文件不存在"}));
+        return Response::json_status(404, &json!({"error": "文件不存在", "error_code": crate::api_codes::FILE_NOT_FOUND}));
     }
     if let Some(gate) = module_gate(app, "ocr") {
         return gate;
@@ -1733,16 +1745,46 @@ pub fn h_ocr(app: &App, req: &Request) -> Response {
         Ok(text) => {
             let fixed = readmd_fix::fix_markdown(&text);
             let (dir, name) = ntpath_split(&p);
-            Response::json(&json!({
+            let mut body = json!({
                 "content": fixed.text,
                 "fixes": fixed.fixes,
                 "name": name,
                 "dir": dir,
                 "source": "ocr",
                 "path": p,
-            }))
+            });
+            // Nothing recognised: no file is written, and the UI says so.
+            let empty = ocr_result_is_empty(&text);
+            if empty {
+                body["empty"] = json!(true);
+                body["note_code"] = json!("ocr_no_text");
+            }
+            // `save=1`: write `<src>.md` beside the source, honouring `on_exists`.
+            if req.q("save") == Some("1") && !empty {
+                let out = std::path::PathBuf::from(crate::convert::md_output_path(&p));
+                let mode = req.q("on_exists").unwrap_or("skip");
+                let target = match mode {
+                    "rename" => crate::batch2::free_output_path(&out),
+                    _ => out.clone(),
+                };
+                let (saved, skipped) = if target.exists() && mode != "overwrite" && mode != "rename" {
+                    (false, true)
+                } else {
+                    (crate::convert::write_md(&target.to_string_lossy(), &fixed.text).is_ok(), false)
+                };
+                body["out"] = json!(target.to_string_lossy());
+                body["saved"] = json!(saved);
+                body["skipped"] = json!(skipped);
+            }
+            Response::json(&body)
         }
-        Err(_) => Response::json_status(500, &json!({"ok": false, "error_code": "ocr_failed"})),
+        Err(e) => {
+            let code = match e.error_code {
+                ocr::OcrErrorCode::OcrNoEngine => "ocr_no_engine",
+                _ => "ocr_failed",
+            };
+            Response::json_status(500, &json!({"ok": false, "error_code": code}))
+        }
     }
 }
 

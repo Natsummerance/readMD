@@ -1,7 +1,7 @@
 # Rust 内核重写 · 交接文档（致 Qwen3.8max 接手会话）
 
 日期：2026-09-22
-仓库：`T:\Programming\Project\codex\creator\readmd`，分支 `main`，HEAD `0c3e501`
+仓库：`<repo>/`，分支 `main`，HEAD `0c3e501`
 交接人：上一轮 Qoder 会话（已完成实测核查，未提交任何 Rust 代码）
 
 ---

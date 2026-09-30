@@ -61,5 +61,12 @@
   "errMcpRequestFailed": "Core request failed",
   "errMcpToolFailed": "Core tool failed",
   "errAiCancelled": "AI generation cancelled",
-  "errOperationFailed": "Operation failed; try again"
+  "errOperationFailed": "Operation failed; try again",
+  "errBinaryNotFound": "ReadMD is not installed or not on PATH; install the desktop app or set readmd.executablePath",
+  "errBinaryInvalid": "readmd.executablePath does not point to a working ReadMD executable",
+  "errConfirmationRequired": "This action needs confirmation",
+  "errOutputExists": "The target file already exists",
+  "errOutputPathAbsolute": "The output path must be absolute",
+  "errOutputDirMissing": "The output folder does not exist",
+  "errFileNotFound": "File not found"
 }

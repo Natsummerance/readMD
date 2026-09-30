@@ -611,6 +611,53 @@ function promptDirtyClose(tabName) {
   });
 }
 
+/**
+ * 通用多选一对话框。choices: [{id, label, kind?: 'accent'|'danger'}]；
+ * Esc / 点击遮罩返回 'cancel'。焦点困在对话框内，关闭后还给触发元素。
+ */
+function askChoice(title, desc, choices) {
+  return new Promise(resolve => {
+    const modal = $('choice-modal');
+    const actions = $('choice-actions');
+    if (!modal || !actions) { resolve('cancel'); return; }
+    const opener = document.activeElement;
+    $('choice-title').textContent = title || '';
+    $('choice-desc').textContent = desc || '';
+    actions.innerHTML = '';
+    const buttons = choices.map(c => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tb-btn' + (c.kind ? ' ' + c.kind : '');
+      b.textContent = c.label;
+      b.onclick = () => done(c.id);
+      actions.appendChild(b);
+      return b;
+    });
+    const onKey = e => {
+      if (e.key === 'Escape') { e.preventDefault(); done('cancel'); return; }
+      if (e.key === 'Tab' && buttons.length) {
+        const i = buttons.indexOf(document.activeElement);
+        const next = e.shiftKey ? (i <= 0 ? buttons.length - 1 : i - 1) : (i + 1) % buttons.length;
+        e.preventDefault();
+        buttons[next].focus();
+      }
+    };
+    const onBackdrop = e => { if (e.target === modal) done('cancel'); };
+    function done(id) {
+      modal.classList.add('hidden');
+      modal.removeEventListener('click', onBackdrop);
+      document.removeEventListener('keydown', onKey, true);
+      actions.innerHTML = '';
+      if (opener && typeof opener.focus === 'function') opener.focus();
+      resolve(id);
+    }
+    modal.addEventListener('click', onBackdrop);
+    document.addEventListener('keydown', onKey, true);
+    modal.classList.remove('hidden');
+    setTimeout(() => (buttons[0] || modal).focus(), 30);
+  });
+}
+
 
 async function closeTab(tabId, force = false) {
   const tab = state.tabs.find(t => t.id === tabId);

@@ -29,7 +29,7 @@ Module._load = function patchedLoad(request, parent, isMain) {
   const parentFile = (parent && parent.filename ? parent.filename : '').replace(/\\/g, '/');
   if (parentFile.endsWith('/out/bridge.js')) {
     if (request === 'child_process') return fakeCp;
-    if (request === './pythonFinder') return { findPythonPath: async () => 'python-stub' };
+    if (request === './binaryFinder') return { findReadmdBinary: async () => 'readmd-stub' };
     if (request === 'vscode') return vscodeStub;
   }
   return originalLoad.call(this, request, parent, isMain);
@@ -118,7 +118,7 @@ test('a failed spawn does not report a disconnect and the bridge can respawn', a
 
   const first = bridge.callMcpMethod('tools/list');
   await sleep();
-  proc1.emit('error', new Error('spawn python ENOENT'));
+  proc1.emit('error', new Error('spawn readmd ENOENT'));
   await assert.rejects(first, /ENOENT/);
   await sleep();
   assert.deepEqual(events, []);

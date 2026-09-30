@@ -640,6 +640,23 @@ fn expand_user(sandbox: &Sandbox, path: &str) -> PathBuf {
 }
 
 /// `load_manifest()` — the per-plugin view the UI renders.
+/// What the Rust kernel itself provides for a plugin's capability.  The
+/// plugin center shows these as built in instead of offering a pip install
+/// this build can never run (`pip_unavailable`).
+pub fn native_support(spec: &PluginSpec) -> Value {
+    let engine = match spec.capability {
+        "ocr" if crate::ocr::pick_engine().is_some() => Some("system-ocr"),
+        "latex" => Some("texmd"),
+        "highlight" => Some("code-highlight"),
+        "document" => Some("native-converters"),
+        "pdf" => Some("pdf-text"),
+        "web" => Some("readability"),
+        "encoding" => Some("encoding-detect"),
+        _ => None,
+    };
+    json!({ "builtin": engine.is_some(), "engine": engine })
+}
+
 pub fn plugin_manifest(sandbox: &Sandbox) -> Map<String, Value> {
     sandbox.ensure_dirs();
     let data = read_manifest_data(sandbox);
@@ -708,6 +725,7 @@ pub fn plugin_manifest(sandbox: &Sandbox) -> Map<String, Value> {
             "install_error_code": task.map(|record| record.error_code.clone()).unwrap_or_default(),
             "install_error_detail": task.map(|record| record.error_detail.clone()).unwrap_or_default(),
             "last_log": task.map(|record| record.last_log.clone()).unwrap_or_default(),
+            "native": native_support(spec),
         });
         rows.push(Row {
             pid: spec.id,
@@ -1302,6 +1320,7 @@ mod tests {
             "last_log",
             "name",
             "name_key",
+            "native",
             "progress",
             "requires_model",
             "runtime",
@@ -1312,7 +1331,9 @@ mod tests {
         ] {
             assert!(keys.contains(&expected), "missing {expected}");
         }
-        assert_eq!(keys.len(), 24);
+        assert_eq!(keys.len(), 25);
+        assert_eq!(manifest["pymupdf4llm"]["native"], json!({ "builtin": true, "engine": "pdf-text" }));
+        assert_eq!(manifest["whisper"]["native"], json!({ "builtin": false, "engine": null }));
         // Nothing is installed in a fresh sandbox, so nothing is enabled.
         assert_eq!(easyocr["installed"], json!(false));
         assert_eq!(easyocr["enabled"], json!(false));

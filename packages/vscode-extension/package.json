@@ -267,20 +267,16 @@
     "configuration": {
       "title": "%configuration.title%",
       "properties": {
-        "readmd.pythonPath": {
+        "readmd.executablePath": {
           "type": "string",
           "default": "",
-          "description": "%configuration.pythonPath%"
+          "scope": "machine",
+          "description": "%configuration.executablePath%"
         },
         "readmd.customCssPath": {
           "type": "string",
           "default": "",
           "description": "%configuration.customCssPath%"
-        },
-        "readmd.mcpServerPath": {
-          "type": "string",
-          "default": "",
-          "description": "%configuration.mcpServerPath%"
         }
       }
     }

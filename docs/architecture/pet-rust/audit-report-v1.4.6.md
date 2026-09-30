@@ -40,13 +40,13 @@
 
 | 资产角色 | 规范路径 | 行数 | 字节数 | SHA-256 校验和 |
 | :--- | :--- | :--- | :--- | :--- |
-| **`golden_contract`** | [`docs/architecture/pet-rust/golden-contract.json`](file:///T:/Programming/Project/codex/creator/readmd/docs/architecture/pet-rust/golden-contract.json) | 247 | 9,888 B | `897c729426ba3d9b68b3dc1f9f2ecd25347712f5a7907a430529c246a8689116` |
-| **`golden_build_provenance`** | [`docs/architecture/pet-rust/golden-build-provenance.json`](file:///T:/Programming/Project/codex/creator/readmd/docs/architecture/pet-rust/golden-build-provenance.json) | 214 | 7,970 B | `243952146b8bcccec462392696258b7d3d58698b22be1bad0681305a7e5747f2` |
-| **`tuple_registry`** | [`docs/architecture/pet-rust/tuple-registry.json`](file:///T:/Programming/Project/codex/creator/readmd/docs/architecture/pet-rust/tuple-registry.json) | 386 | 11,481 B | `ac4998e6ce96d8fc2890a95309649c204bf272d9c6650a9486d153e6a8b8b0a3` |
-| **`validation_registry`** | [`docs/architecture/pet-rust/validation-registry.json`](file:///T:/Programming/Project/codex/creator/readmd/docs/architecture/pet-rust/validation-registry.json) | 1032 | 33,886 B | `c988996b59fbd59834e6220f91fa0ff293a3c644285d22dd4c27afb7da705746` |
-| **`gate_registry`** | [`docs/architecture/pet-rust/gate-registry.json`](file:///T:/Programming/Project/codex/creator/readmd/docs/architecture/pet-rust/gate-registry.json) | 839 | 18,688 B | `85aaa3d637de38009085d4ec1b8f6a1fb7eb7c0c9f797cd2cb7031394c75f019` |
-| **`blocker_registry`** | [`docs/architecture/pet-rust/blocker-registry.json`](file:///T:/Programming/Project/codex/creator/readmd/docs/architecture/pet-rust/blocker-registry.json) | 664 | 19,267 B | `7e8120e87f74b8ba96501de72d42d3cc80fedd86f13c24a3c096b2517e772242` |
-| **`spec_integrity`** | [`docs/architecture/pet-rust/spec.integrity.json`](file:///T:/Programming/Project/codex/creator/readmd/docs/architecture/pet-rust/spec.integrity.json) | 26 | 1,183 B | `95eb56158fdc871a5f7e1ec246e566c82c5c663cf252bccb6976e98a92a33a36` |
+| **`golden_contract`** | [`docs/architecture/pet-rust/golden-contract.json`](file:///<repo>/docs/architecture/pet-rust/golden-contract.json) | 247 | 9,888 B | `897c729426ba3d9b68b3dc1f9f2ecd25347712f5a7907a430529c246a8689116` |
+| **`golden_build_provenance`** | [`docs/architecture/pet-rust/golden-build-provenance.json`](file:///<repo>/docs/architecture/pet-rust/golden-build-provenance.json) | 214 | 7,970 B | `243952146b8bcccec462392696258b7d3d58698b22be1bad0681305a7e5747f2` |
+| **`tuple_registry`** | [`docs/architecture/pet-rust/tuple-registry.json`](file:///<repo>/docs/architecture/pet-rust/tuple-registry.json) | 386 | 11,481 B | `ac4998e6ce96d8fc2890a95309649c204bf272d9c6650a9486d153e6a8b8b0a3` |
+| **`validation_registry`** | [`docs/architecture/pet-rust/validation-registry.json`](file:///<repo>/docs/architecture/pet-rust/validation-registry.json) | 1032 | 33,886 B | `c988996b59fbd59834e6220f91fa0ff293a3c644285d22dd4c27afb7da705746` |
+| **`gate_registry`** | [`docs/architecture/pet-rust/gate-registry.json`](file:///<repo>/docs/architecture/pet-rust/gate-registry.json) | 839 | 18,688 B | `85aaa3d637de38009085d4ec1b8f6a1fb7eb7c0c9f797cd2cb7031394c75f019` |
+| **`blocker_registry`** | [`docs/architecture/pet-rust/blocker-registry.json`](file:///<repo>/docs/architecture/pet-rust/blocker-registry.json) | 664 | 19,267 B | `7e8120e87f74b8ba96501de72d42d3cc80fedd86f13c24a3c096b2517e772242` |
+| **`spec_integrity`** | [`docs/architecture/pet-rust/spec.integrity.json`](file:///<repo>/docs/architecture/pet-rust/spec.integrity.json) | 26 | 1,183 B | `95eb56158fdc871a5f7e1ec246e566c82c5c663cf252bccb6976e98a92a33a36` |
 
 > **完整性解耦原则 (P0-192)**：`spec.integrity.json` 记录所有其他资产的哈希，其自身的哈希由报告生成器在写入后外部独立计算，杜绝自引悖论。
 

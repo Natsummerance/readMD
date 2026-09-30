@@ -19,7 +19,37 @@ pub mod import_processor;
 pub mod latex2omml;
 pub mod link_indexer;
 pub mod mdexport;
+/// Shared pulldown-cmark AST for the DOCX / LaTeX / PDF exporters.
+pub mod md_ast;
+/// AST-based Markdown → LaTeX writer used by the LaTeX export.
+pub mod latex_writer;
+/// AST-based Markdown → DOCX (WordprocessingML) writer.
+pub mod docx_writer;
+/// Rule-based syntax colouring for exported code blocks.
+pub mod code_highlight;
+/// Encoding detection and non-lossy encoding for the editor save path.
+pub mod text_encoding;
+/// TrueType subset embedding (CIDFontType2 / Identity-H) for the PDF writer.
+pub mod pdf_fonts;
+/// OMML tree reader + MathML writer shared by EPUB/PDF math.
+pub mod omml;
+/// OpenType MATH layout → vector glyph paths for PDF formulas.
+pub mod math_layout;
+/// AST-based EPUB chapter (XHTML) writer.
+pub mod epub_writer;
+/// In-process Win32 `IFileDialog` pickers (no PowerShell spawn).
+pub mod win_dialogs;
+/// Cross-platform dialogs (Win32 / osascript / zenity·kdialog) and open/reveal.
+pub mod native_dialogs;
+/// Excel 97-2003 (BIFF5/8) → Markdown tables.
+pub mod xls_biff;
+/// PowerPoint 97-2003 record stream → Markdown.
+pub mod ppt_binary;
+/// MOBI / AZW / PalmDOC → HTML → Markdown.
+pub mod mobi;
 pub mod ocr;
+/// Windows.Media.Ocr / Windows.Data.Pdf native OCR (no-op elsewhere).
+pub mod ocr_winrt;
 pub mod parity_aichat;
 pub mod parity_diagram;
 pub mod parity_pets;
@@ -73,6 +103,11 @@ pub mod skill_import;
 pub mod ai_providers;
 /// `src/readmd_modules/mdexport/pdf_render.py` native PDF renderer.
 pub mod pdf_render;
+/// Stable error / note / warning codes riding next to the legacy Chinese text.
+pub mod api_codes;
+pub mod cancel;
+/// `readmd --mcp`: Model Context Protocol server on stdio.
+pub mod mcp;
 
 pub use crate::error::{ApiError, ApiResult, Error, Result};
 pub use crate::process::silent_command;
@@ -359,24 +394,35 @@ pub mod paths {
         }
     }
 
-    pub fn assets_dir() -> PathBuf {
-        let exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("."));
-        let exe_dir = exe.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from("."));
+    /// Ordered places the frontend may live: the env override, beside the exe,
+    /// the Linux FHS layout (`bin/../share/readmd/assets`), the macOS bundle
+    /// (`MacOS/../Resources/assets`), dev-tree ancestors, cwd, the source tree.
+    pub fn assets_candidates(exe_dir: &Path, env_override: Option<&str>, cwd: &Path) -> Vec<PathBuf> {
         let mut candidates: Vec<PathBuf> = Vec::new();
-        if let Some(p) = env_text("READMD_ASSETS_DIR") {
+        if let Some(p) = env_override {
             candidates.push(PathBuf::from(p));
         }
         candidates.push(exe_dir.join("assets"));
+        candidates.push(exe_dir.join("..").join("share").join("readmd").join("assets"));
+        candidates.push(exe_dir.join("..").join("Resources").join("assets"));
         for up in 1..=5usize {
-            let mut p = exe_dir.clone();
+            let mut p = exe_dir.to_path_buf();
             for _ in 0..up {
                 p = p.join("..");
             }
             candidates.push(p.join("assets"));
         }
-        candidates.push(PathBuf::from("assets"));
+        candidates.push(cwd.join("assets"));
         candidates.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../assets"));
-        match candidates.into_iter().find(|p| p.is_dir()) {
+        candidates
+    }
+
+    pub fn assets_dir() -> PathBuf {
+        let exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("."));
+        let exe_dir = exe.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from("."));
+        let env = env_text("READMD_ASSETS_DIR");
+        let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        match assets_candidates(&exe_dir, env.as_deref(), &cwd).into_iter().find(|p| p.is_dir()) {
             Some(p) => p,
             None => exe_dir.join("assets"),
         }
@@ -925,6 +971,21 @@ fn session_token(seed: &std::path::Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn assets_candidates_keep_env_and_portable_first_then_packaged_layouts() {
+        let exe = std::path::Path::new("/opt/readmd/bin");
+        let cwd = std::path::Path::new("/work");
+        let c = paths::assets_candidates(exe, Some("/custom/assets"), cwd);
+        assert_eq!(c[0], PathBuf::from("/custom/assets"));
+        assert_eq!(c[1], exe.join("assets"));
+        assert_eq!(c[2], exe.join("..").join("share").join("readmd").join("assets"));
+        assert_eq!(c[3], exe.join("..").join("Resources").join("assets"));
+        assert!(c.contains(&cwd.join("assets")));
+        let no_env = paths::assets_candidates(exe, None, cwd);
+        assert_eq!(no_env[0], exe.join("assets"));
+    }
 
     #[test]
     fn session_token_is_stable_length_and_unique() {

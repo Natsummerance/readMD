@@ -1,0 +1,17 @@
+[package]
+name = "xtask"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+description = "ReadMD repository tasks: boot bundle, version sync, release assets, pet package"
+
+[dependencies]
+regex = "=1.11.1"
+serde_json = { version = "=1.0.151", features = ["preserve_order"] }
+sha2 = "=0.10.9"
+base64 = "=0.22.1"
+walkdir = "=2.5.0"
+flate2 = "=1.1.0"

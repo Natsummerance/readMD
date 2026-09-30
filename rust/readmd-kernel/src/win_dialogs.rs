@@ -355,6 +355,7 @@ impl DialogShape {
             "epub" => Some(("epub", "EPUB 电子书 (*.epub)|*.epub|所有文件 (*.*)|*.*")),
             "html" => Some(("html", "HTML 网页 (*.html)|*.html|所有文件 (*.*)|*.*")),
             "tex" => Some(("tex", "LaTeX 文档 (*.tex)|*.tex|所有文件 (*.*)|*.*")),
+            "presentation" => Some(("html", "演示文稿 HTML (*.html)|*.html|所有文件 (*.*)|*.*")),
             _ => None,
         }
     }

@@ -159,13 +159,12 @@ pub fn format_segments(
     format!("{}\n", joined.trim())
 }
 
-/// Python `_make_whisper_notice(path, details)`。
-///
-/// 里面那行 `pip install openai-whisper` 是**给用户看的指引文本**，逐字符来自
-/// `transcribe.py:126-144`（`pip` 那一行在 `:138`），本内核从不执行它、也从不
-/// 启动任何外部程序。字节级一致性由
-/// `scratch/rust_parity/_transcribe_notice_compare.py` 对照真实 Python 函数输出
-/// 量过（`ALL_IDENTICAL=True`）。
+/// Stable code for the "no transcription engine" state, for UI localisation.
+pub const TRANSCRIBE_UNAVAILABLE: &str = "transcribe_unavailable";
+
+/// The placeholder document written when no local transcription engine exists.
+/// It states the fact plainly; it does not ask the user to install Python
+/// packages (ReadMD has no Python runtime).
 pub fn make_whisper_notice(path: &str, details: &str) -> String {
     let title = basename(path);
     let ext = extension_stripped(path);
@@ -173,16 +172,8 @@ pub fn make_whisper_notice(path: &str, details: &str) -> String {
         "---\ntitle: \"{title}\"\nformat: \"{ext}\"\nstatus: \"unprocessed\"\n---\n\n\
          # 音频/视频转写：{title}\n\n\
          > **{details}**\n>\n\
-         > **快速安装指引**：\n\
-         > 1. **方式一（推荐）**：在 ReadMD 右上角打开「插件中心」，启用或一键安装 `whisper` 插件。\n\
-         > 2. **方式二（手动 CLI 命令）**：\n\
-         >    ```bash\n\
-         >    pip install openai-whisper\n\
-         >    ```\n\
-         >    若系统缺少 FFmpeg，请运行对应命令安装并加入环境变量 PATH：\n\
-         >    - **Windows**: `winget install Gyan.FFmpeg` 或从官网解压\n\
-         >    - **macOS**: `brew install ffmpeg`\n\
-         >    - **Linux**: `sudo apt install ffmpeg`\n"
+         > 当前版本尚未内置本地语音转写引擎，音视频文件暂时无法转为文字。\n\
+         > 可以先用其他工具导出字幕（`.srt` / `.vtt` / `.txt`），再用 ReadMD 打开或转换。\n"
     )
 }
 
@@ -203,8 +194,8 @@ pub fn transcribe_to_md(
     // 无 faster_whisper，且 whisper/ffmpeg 不成对可用：Python 在这一步直接返回
     // 安装指引 + warning，HTTP 层看到的是 200。
     (
-        Some(make_whisper_notice(path, "未检测到语音转写模型或 FFmpeg 工具")),
-        Some("Whisper plugin or FFmpeg not available.".to_string()),
+        Some(make_whisper_notice(path, "未检测到本地语音转写引擎")),
+        Some(TRANSCRIBE_UNAVAILABLE.to_string()),
     )
 }
 
@@ -275,13 +266,11 @@ mod tests {
         let path = file.to_str().unwrap();
         let (text, err) = transcribe_to_md(path, None, "base");
         let notice = text.unwrap();
-        assert_eq!(
-            err.as_deref(),
-            Some("Whisper plugin or FFmpeg not available.")
-        );
+        assert_eq!(err.as_deref(), Some(TRANSCRIBE_UNAVAILABLE));
         assert!(notice.starts_with("---\ntitle: \"degraded.mp3\"\nformat: \"mp3\"\nstatus: \"unprocessed\"\n---\n\n"), "{notice}");
         assert!(notice.contains("# 音频/视频转写：degraded.mp3"), "{notice}");
-        assert!(notice.ends_with(">    - **Linux**: `sudo apt install ffmpeg`\n"), "{notice}");
+        let lower = notice.to_lowercase();
+        assert!(!lower.contains("pip") && !lower.contains("python") && !notice.contains("插件中心"), "{notice}");
         let _ = std::fs::remove_file(&file);
     }
 

@@ -9,6 +9,7 @@
 <meta name="readmd-startup-probe" content="0">
 <title>ReadMD</title>
 <link rel="icon" type="image/x-icon" href="/assets/readmd.ico">
+<link rel="stylesheet" href="/assets/css/tokens.css?v=2.3.9">
 <link rel="stylesheet" href="/assets/style.css?v=2.3.9">
 <link rel="stylesheet" href="/assets/workspace-ui.css?v=2.3.9">
 <link rel="stylesheet" href="/assets/skill-workbench.css?v=2.3.9">
@@ -47,7 +48,7 @@
     <button id="btn-search" class="tb-btn icon" title="搜索 (Ctrl+F)" aria-label="搜索" data-i18n-title="toolbar.search" data-i18n-aria="toolbar.search">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
     </button>
-    <button id="btn-theme" class="tb-btn icon" title="切换主题 (Ctrl+D)" aria-label="切换主题" data-i18n-title="toolbar.theme" data-i18n-aria="toolbar.theme">&#9789;</button>
+    <button id="btn-theme" class="tb-btn icon" title="切换主题 (Ctrl+D)" aria-label="切换主题"><svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg></button>
     <button id="btn-zen" class="tb-btn icon" title="禅模式 (F11 / Esc)" aria-label="禅模式" data-i18n-title="toolbar.zen" data-i18n-aria="toolbar.zen">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
     </button>
@@ -928,6 +929,21 @@
   </div>
 </div>
 
+<div id="choice-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="choice-title" aria-describedby="choice-desc">
+  <div id="choice-box" class="close-confirm-box">
+    <div class="close-confirm-head">
+      <div class="close-confirm-icon-wrap">
+        <svg class="close-confirm-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><line x1="12" y1="12" x2="12" y2="15"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+      </div>
+      <div>
+        <h3 id="choice-title"></h3>
+        <p id="choice-desc"></p>
+      </div>
+    </div>
+    <div class="close-confirm-actions" id="choice-actions"></div>
+  </div>
+</div>
+
 <div id="save-conflict-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="save-conflict-title" aria-describedby="save-conflict-desc">
   <div id="save-conflict-box" class="close-confirm-box">
     <div class="close-confirm-head">
@@ -1026,6 +1042,7 @@
             <div class="exp-fmt-btn-row">
               <button id="export-tab-html" class="exp-fmt" data-fmt="html" role="tab" aria-selected="false" aria-controls="export-opts" data-i18n="export.fmtHtml">HTML</button>
               <button id="export-tab-tex" class="exp-fmt" data-fmt="tex" role="tab" aria-selected="false" aria-controls="export-opts" data-i18n="export.fmtTex">LaTeX</button>
+              <button id="export-tab-presentation" class="exp-fmt" data-fmt="presentation" role="tab" aria-selected="false" aria-controls="export-opts" data-i18n="export.fmtSlides">幻灯片</button>
             </div>
           </div>
         </div>
@@ -1088,9 +1105,10 @@
       <span class="export-spacer"></span>
       <button id="export-open" class="tb-btn hidden" data-i18n="app.open">打开</button>
       <button id="export-reveal" class="tb-btn hidden" data-i18n="export.openFolder">所在文件夹</button>
+      <button id="export-cancel" class="tb-btn hidden" data-i18n="task.cancel">取消</button>
       <button id="export-run" class="tb-btn accent" data-i18n="export.exportAction">导出</button>
     </div>
-    <p class="fix-note" data-i18n="export.noteOfflineMath">公式在 PDF / DOCX 中渲染为图片（本地离线）；HTML 为单文件（内联 marked + MathJax），图片保持相对路径，请连同原目录一起保存。样式参数会自动记忆。</p>
+    <p class="fix-note" data-i18n="export.noteOfflineMath">PDF 中的公式为矢量排版并嵌入字体子集；DOCX 公式为 Word 原生公式，可继续编辑；EPUB 会打包本地图片；HTML 为单文件（内联 marked + MathJax），图片保持相对路径。样式参数会自动记忆。</p>
   </div>
 </div>
 
@@ -1165,7 +1183,7 @@
     <div class="plugin-system-status">
       <div class="plugin-status-pill">
         <span class="status-indicator ready" aria-hidden="true"></span>
-        <span class="status-label" data-i18n="plugin.sandboxReady">本地安全沙箱已就绪 · 零全局依赖污染</span>
+        <span class="status-label" data-i18n="plugin.sandboxReady">能力由 ReadMD 内核原生提供 · 无需 Python 或 pip</span>
       </div>
       <div class="plugin-meta-indicators">
         <div class="plugin-indicator-item">
@@ -1236,7 +1254,6 @@
 <div id="busy" class="hidden" role="status" aria-live="polite"><span data-i18n="app.processing">处理中…</span></div>
 <button id="top-btn" class="hidden" title="回到顶部" data-i18n-title="toolbar.backToTop">&#8593;</button>
 <input id="file-input" type="file" class="hidden">
-<input id="batch-file-input" type="file" accept=".md,.markdown,.docx,.doc,.pptx,.xlsx,.pdf,.html,.htm,.txt,.csv,.json,.tex,.latex,.mp3,.wav,.m4a,.mp4,.flac,.ogg,.webm,.mkv,.mov" class="hidden" multiple>
 <input id="img-file-input" type="file" accept="image/*" class="hidden">
 
 <!-- 标签右键菜单 -->

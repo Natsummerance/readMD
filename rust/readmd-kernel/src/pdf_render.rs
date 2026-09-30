@@ -542,8 +542,11 @@ pub enum Face {
     TimesBold,
     TimesItalic,
     TimesBoldItalic,
-    /// Non-embedded Adobe-GB1 `STSong-Light` reached through `/UniGB-UCS2-H`.
+    /// Non-embedded Adobe-GB1 `STSong-Light` reached through `/UniGB-UCS2-H`;
+    /// only used when no embeddable system font has the glyph.
     Cjk,
+    /// A subset TrueType font from [`crate::pdf_fonts`] (index into its face list).
+    Embedded(u8),
 }
 
 impl Face {
@@ -562,11 +565,12 @@ impl Face {
             Face::TimesItalic => "Times-Italic",
             Face::TimesBoldItalic => "Times-BoldItalic",
             Face::Cjk => "STSong-Light",
+            Face::Embedded(_) => "Embedded",
         }
     }
 
     pub fn is_cid(&self) -> bool {
-        matches!(self, Face::Cjk)
+        matches!(self, Face::Cjk | Face::Embedded(_))
     }
 
     pub fn widths(&self) -> &'static [u16; 256] {
@@ -579,7 +583,7 @@ impl Face {
             Face::CourierBold | Face::CourierBoldOblique => &COURIER_BOLD_W,
             Face::TimesRoman | Face::TimesItalic => &TIMES_ROMAN_W,
             Face::TimesBold | Face::TimesBoldItalic => &TIMES_BOLD_W,
-            Face::Cjk => &HELVETICA_W, // unused; CID advances come from /DW
+            Face::Cjk | Face::Embedded(_) => &HELVETICA_W, // unused; CID advances come from /W
         }
     }
 
@@ -592,7 +596,7 @@ impl Face {
             Face::TimesRoman | Face::TimesItalic => 683.0,
             Face::TimesBold => 676.0,
             Face::TimesBoldItalic => 676.0,
-            Face::Cjk => 880.0,
+            Face::Cjk | Face::Embedded(_) => 880.0,
         }
     }
 
@@ -602,7 +606,7 @@ impl Face {
             Face::Courier | Face::CourierOblique => 157.0,
             Face::CourierBold | Face::CourierBoldOblique => 142.0,
             Face::TimesRoman | Face::TimesItalic | Face::TimesBold | Face::TimesBoldItalic => 217.0,
-            Face::Cjk => 120.0,
+            Face::Cjk | Face::Embedded(_) => 120.0,
         }
     }
 }
@@ -832,7 +836,7 @@ pub fn img_tag(tmpdir: &str, data: Option<&[u8]>, width: f64, height: f64) -> Op
     if !std::path::Path::new(&path).exists() {
         let _ = std::fs::write(&path, data);
     }
-    Some(InlineImage { src: path.replace('\\', "/"), width, height })
+    Some(InlineImage { src: path.replace('\\', "/"), width, height, math: None })
 }
 
 /// Stand-in for `abs(hash(data))`: only ever used to name a temp file, so the
@@ -852,6 +856,20 @@ pub struct InlineImage {
     pub src: String,
     pub width: f64,
     pub height: f64,
+    /// A vector formula placed like an image (`src` is empty).  `height` is
+    /// then height + depth; the formula's own baseline is used when drawing.
+    pub math: Option<std::sync::Arc<crate::math_layout::Formula>>,
+}
+
+impl InlineImage {
+    fn formula(f: crate::math_layout::Formula) -> InlineImage {
+        InlineImage {
+            src: String::new(),
+            width: f.width,
+            height: f.height + f.depth,
+            math: Some(std::sync::Arc::new(f)),
+        }
+    }
 }
 
 // ======================================================== `_inline_markup` (:131)
@@ -1072,6 +1090,7 @@ fn inline_markup_ctx(
                                         src: p.replace('\\', "/"),
                                         width: iw * scale,
                                         height: ih * scale,
+                                        math: None,
                                     }),
                                     face: ctx.face,
                                     size: ctx.size,
@@ -1098,7 +1117,16 @@ fn inline_markup_ctx(
             }
             "math" => {
                 let fallback = bool_or(nd.get("fallback").unwrap_or(&Value::Null), false);
-                if fallback {
+                let latex = json_text(nd.get("latex").unwrap_or(&Value::Null));
+                if let Some(f) = crate::math_layout::layout(&latex, false, ctx.size) {
+                    out.push(Run {
+                        content: RunContent::Image(InlineImage::formula(f)),
+                        face: ctx.face,
+                        size: ctx.size,
+                        color: ctx.color,
+                        href: ctx.href.clone(),
+                    });
+                } else if fallback {
                     out.push(Run {
                         content: RunContent::Text(json_text(nd.get("latex").unwrap_or(&Value::Null))),
                         face: ctx.face,
@@ -1369,7 +1397,10 @@ pub fn char_advance(face: FaceStyle, base: Face, c: char, size: f64) -> f64 {
             let f = face.face(base);
             (f.widths()[code as usize] as f64) * size / 1000.0
         }
-        None => size,
+        None => {
+            let bold = matches!(face, FaceStyle::Bold | FaceStyle::BoldItalic);
+            crate::pdf_fonts::advance(c, bold, size).unwrap_or(size)
+        }
     }
 }
 
@@ -1617,7 +1648,7 @@ pub enum Flowable {
     /// `Image(src, width=…, height=…)`
     ImageBlock(InlineImage),
     /// `Preformatted(content, CodeFlow, maxLineLength=…)`
-    Preformatted { lines: Vec<String>, st: PStyle, max_line: usize },
+    Preformatted { lines: Vec<String>, st: PStyle, max_line: usize, lang: String },
     /// `TableOfContents()` with the resolved entries of the previous pass.
     Toc(Vec<TocEntry>),
 }
@@ -1917,6 +1948,8 @@ pub struct RenderedDoc {
     pub outlines: Vec<(i64, String, i64, String)>,
     pub toc_entries: Vec<(i64, String, i64)>,
     pub producer_face: String,
+    /// Subset fonts referenced by `Face::Embedded` spans.
+    pub embedded: crate::pdf_fonts::EmbeddedSet,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1980,6 +2013,13 @@ pub enum DrawItem {
         w: f64,
         h: f64,
         src: String,
+    },
+    /// A vector formula with its baseline origin at (`x`, `y`).
+    Formula {
+        x: f64,
+        y: f64,
+        f: std::sync::Arc<crate::math_layout::Formula>,
+        color: Rgb,
     },
 }
 
@@ -2124,6 +2164,7 @@ pub fn build_story(
                                         src: path.replace('\\', "/"),
                                         width: iw * scale,
                                         height: ih * scale,
+                                        math: None,
                                     }));
                                     story.push(Flowable::Spacer(6.0));
                                 }
@@ -2247,6 +2288,7 @@ pub fn build_story(
                         lines: py_splitlines(&content),
                         st: st.code_flow.clone(),
                         max_line,
+                        lang: lang.clone(),
                     });
                 }
                 // `:408-419`
@@ -2263,10 +2305,16 @@ pub fn build_story(
                                     "\u{2610} ".to_string()
                                 }
                             } else if ordered {
-                                format!("{}. ", n + 1)
+                                // `number` (list start + index) comes from the
+                                // shared AST; older callers only have the index.
+                                let num = it.get("number").and_then(|v| v.as_u64()).unwrap_or(n as u64 + 1);
+                                format!("{num}. ")
+                            } else if it.get("level").and_then(|v| v.as_u64()).unwrap_or(0) % 2 == 1 {
+                                "\u{25e6} ".to_string()
                             } else {
                                 "\u{2022} ".to_string()
                             };
+                            let level = it.get("level").and_then(|v| v.as_u64()).unwrap_or(0).min(8) as f64;
                             let mut runs = vec![text_run(
                                 &prefix,
                                 st.li.face,
@@ -2279,7 +2327,8 @@ pub fn build_story(
                                 tmpdir,
                                 resolve,
                             ));
-                            let lst = st.li.clone();
+                            let mut lst = st.li.clone();
+                            lst.left_indent += level * 18.0;
                             story.push(Flowable::Paragraph {
                                 runs: retarget_runs(&runs, lst.size, lst.color),
                                 st: lst,
@@ -2341,8 +2390,22 @@ pub fn build_story(
                 }
                 // `:439-451`
                 "math" => {
-                    if bool_or(blk.get("fallback").unwrap_or(&Value::Null), false) {
-                        let latex = json_text(blk.get("latex").unwrap_or(&Value::Null));
+                    let latex = json_text(blk.get("latex").unwrap_or(&Value::Null));
+                    let size = st.body.size * 1.1;
+                    let formula = crate::math_layout::layout(&latex, true, size).and_then(|f| {
+                        // Too wide for the column: set it smaller rather than overflow.
+                        let max_w = geom.avail * 0.98;
+                        if f.width > max_w {
+                            crate::math_layout::layout(&latex, true, size * max_w / f.width)
+                        } else {
+                            Some(f)
+                        }
+                    });
+                    if let Some(f) = formula {
+                        story.push(Flowable::Spacer(4.0));
+                        story.push(Flowable::ImageBlock(InlineImage::formula(f)));
+                        story.push(Flowable::Spacer(6.0));
+                    } else if bool_or(blk.get("fallback").unwrap_or(&Value::Null), false) {
                         story.push(Flowable::Paragraph {
                             runs: retarget_runs(
                                 &vec![text_run(&esc(&latex), st.body.face, st.body.size, st.body.color)],
@@ -2375,6 +2438,7 @@ pub fn build_story(
                                         src: path.replace('\\', "/"),
                                         width: w,
                                         height: h,
+                                        math: None,
                                     }));
                                     story.push(Flowable::Spacer(8.0));
                                 }
@@ -2652,16 +2716,29 @@ impl<'a> Sheet<'a> {
         let mut spans: Vec<TextSpan> = Vec::new();
         let mut pen = 0.0f64;
         let mut anchored: Vec<(String, f64, f64)> = Vec::new();
+        // Images/formulas are positioned after alignment is known.
+        let mut placed: Vec<DrawItem> = Vec::new();
         for a in atoms {
             if let Some(im) = &a.image {
                 let w = im.width;
-                self.items.push(DrawItem::Image {
-                    x: x_left + pen,
-                    y: baseline - 0.2 * a.size,
-                    w,
-                    h: im.height,
-                    src: im.src.clone(),
-                });
+                match &im.math {
+                    Some(f) => placed.push(DrawItem::Formula {
+                        x: pen,
+                        y: baseline,
+                        f: f.clone(),
+                        color: a.color,
+                    }),
+                    None => placed.push(DrawItem::Image {
+                        x: pen,
+                        y: baseline - 0.2 * a.size,
+                        w,
+                        h: im.height,
+                        src: im.src.clone(),
+                    }),
+                }
+                if let Some(hr) = &a.href {
+                    anchored.push((hr.clone(), pen, w));
+                }
                 pen += w;
                 continue;
             }
@@ -2670,14 +2747,20 @@ impl<'a> Sheet<'a> {
             }
             let seg_x = pen;
             let face0 = a.face.face(a.base);
+            let bold = matches!(a.face, FaceStyle::Bold | FaceStyle::BoldItalic);
+            let mut pieces: Vec<(Face, f64, Vec<u8>)> = Vec::new();
             for (seg, cid) in split_winansi(&a.text) {
-                let face = if cid { Face::Cjk } else { face0 };
-                let adv = if cid {
-                    seg.chars().count() as f64 * a.size
+                if cid {
+                    for p in crate::pdf_fonts::encode(&seg, bold, a.size) {
+                        let f = p.face.map(Face::Embedded).unwrap_or(Face::Cjk);
+                        pieces.push((f, p.advance, p.bytes));
+                    }
                 } else {
-                    str_width(&seg, a.face, a.base, a.size)
-                };
-                let bytes = if cid { utf16be(&seg) } else { winansi_bytes(&seg) };
+                    let adv = str_width(&seg, a.face, a.base, a.size);
+                    pieces.push((face0, adv, winansi_bytes(&seg)));
+                }
+            }
+            for (face, adv, bytes) in pieces {
                 match spans.last_mut() {
                     Some(s)
                         if s.face == face
@@ -2701,14 +2784,24 @@ impl<'a> Sheet<'a> {
                 anchored.push((hr.clone(), seg_x, pen - seg_x));
             }
         }
-        if spans.is_empty() {
-            return;
-        }
         let dx = match align {
             ta if ta == TA_CENTER => ((w_avail - pen) / 2.0).max(0.0),
             ta if ta == TA_RIGHT => (w_avail - pen).max(0.0),
             _ => 0.0,
         };
+        for mut it in placed {
+            match &mut it {
+                DrawItem::Formula { x, .. } | DrawItem::Image { x, .. } => *x += x_left + dx,
+                _ => {}
+            }
+            self.items.push(it);
+        }
+        if spans.is_empty() {
+            for (href, lx, lw) in anchored {
+                self.items.push(DrawItem::Link { x: x_left + dx + lx, y: baseline - 2.0, w: lw, h: 4.0, href });
+            }
+            return;
+        }
         for (href, lx, lw) in anchored {
             self.items.push(DrawItem::Link {
                 x: x_left + dx + lx,
@@ -2761,6 +2854,18 @@ impl<'a> Sheet<'a> {
         let h = im.height;
         self.need(h);
         let dx = ((self.avail() - im.width) / 2.0).max(0.0);
+        if let Some(f) = &im.math {
+            self.items.push(DrawItem::Formula {
+                x: self.x0() + dx,
+                y: self.y - f.height,
+                f: f.clone(),
+                color: self.st.body.color,
+            });
+            self.texts.push(f.latex.clone());
+            self.y -= h;
+            self.placed += 1;
+            return;
+        }
         self.items.push(DrawItem::Image {
             x: self.x0() + dx,
             y: self.y - h,
@@ -2837,22 +2942,48 @@ impl<'a> Sheet<'a> {
         }
     }
 
-    fn add_pre(&mut self, src: &[String], st: &PStyle, max_line: usize) {
-        let mut out: Vec<String> = Vec::new();
-        for l in src {
-            let ch: Vec<char> = l.chars().collect();
-            if ch.is_empty() {
-                out.push(String::new());
-                continue;
-            }
-            let per = max_line.max(1);
-            let mut i = 0usize;
-            while i < ch.len() {
-                let e = (i + per).min(ch.len());
-                out.push(ch[i..e].iter().collect());
-                i = e;
+    fn add_pre(&mut self, src: &[String], st: &PStyle, max_line: usize, lang: &str) {
+        // Colour the whole block once (so multi-line comments/strings keep their
+        // colour), then split into source lines and hard-wrap at `max_line`
+        // characters, carrying each segment's colour.
+        let joined = src.join("\n");
+        let mut src_lines: Vec<Vec<(Option<Rgb>, String)>> = vec![Vec::new()];
+        for (kind, tok) in crate::code_highlight::tokenize(&joined, lang) {
+            let col = crate::code_highlight::color_of(kind).and_then(|h| hex_parse(&format!("#{h}")));
+            for (pi, piece) in tok.split('\n').enumerate() {
+                if pi > 0 {
+                    src_lines.push(Vec::new());
+                }
+                if !piece.is_empty() {
+                    src_lines.last_mut().unwrap().push((col, piece.to_string()));
+                }
             }
         }
+        let per = max_line.max(1);
+        let mut colored: Vec<Vec<(Option<Rgb>, String)>> = Vec::new();
+        for segs in src_lines {
+            let mut cur: Vec<(Option<Rgb>, String)> = Vec::new();
+            let mut n = 0usize;
+            for (col, text) in segs {
+                let mut buf = String::new();
+                for c in text.chars() {
+                    if n == per {
+                        if !buf.is_empty() {
+                            cur.push((col, std::mem::take(&mut buf)));
+                        }
+                        colored.push(std::mem::take(&mut cur));
+                        n = 0;
+                    }
+                    buf.push(c);
+                    n += 1;
+                }
+                if !buf.is_empty() {
+                    cur.push((col, buf));
+                }
+            }
+            colored.push(cur);
+        }
+        let out: Vec<String> = colored.iter().map(|segs| segs.iter().map(|(_, t)| t.as_str()).collect()).collect();
         let lead = st.leading;
         let size = st.size;
         let color = st.color;
@@ -2874,7 +3005,10 @@ impl<'a> Sheet<'a> {
                 seg_start = self.items.len();
                 seg_top = self.y;
             }
-            let runs = vec![text_run(l, face, size, color)];
+            let runs: Vec<Run> = colored[i]
+                .iter()
+                .map(|(col, t)| text_run(t, face, size, col.unwrap_or(color)))
+                .collect();
             let atoms = atoms_from_runs(&runs);
             let base = face_for_logical(&font_name).asc1000() / 1000.0;
             let baseline = self.y - size * base;
@@ -3060,7 +3194,8 @@ pub fn paginate(
                 lines,
                 st: p,
                 max_line,
-            } => s.add_pre(lines, p, *max_line),
+                lang,
+            } => s.add_pre(lines, p, *max_line, lang),
             Flowable::ImageBlock(im) => s.add_image(im),
             Flowable::Rule { thickness, color } => s.add_rule(*thickness, *color),
             Flowable::Toc(entries) => s.add_toc(entries, geom),
@@ -3104,6 +3239,17 @@ pub fn build(
             warns.push(format!("所选字体不可用，已使用中文后备字体：{selected}"));
         }
     }
+
+    // Embedded TrueType for everything WinAnsi cannot encode; ended below.
+    crate::pdf_fonts::begin(&selected);
+    struct EndFonts;
+    impl Drop for EndFonts {
+        fn drop(&mut self) {
+            // Only reached on an early return; the normal path calls finish().
+            let _ = crate::pdf_fonts::finish();
+        }
+    }
+    let guard = EndFonts;
 
     let mut geom = DocGeometry::from_style(style);
     geom.body_font = font.clone();
@@ -3160,12 +3306,16 @@ pub fn build(
         }
     }
 
+    std::mem::forget(guard);
+    let (embedded, font_warns) = crate::pdf_fonts::finish();
+    warns.extend(font_warns);
     Ok(RenderedDoc {
         geom,
         pages,
         outlines: out_doc.outlines.clone(),
         toc_entries: out_doc.toc_entries.clone(),
         producer_face: font,
+        embedded,
     })
 }
 
@@ -3182,7 +3332,7 @@ struct PdfOut {
 impl PdfOut {
     fn new() -> PdfOut {
         PdfOut {
-            bytes: b"%PDF-1.3\n%\xe7\xf7\xea\xd8\n".to_vec(),
+            bytes: b"%PDF-1.4\n%\xe7\xf7\xea\xd8\n".to_vec(),
             off: Vec::new(),
             next: 0,
         }
@@ -3217,6 +3367,39 @@ impl PdfOut {
         b.extend_from_slice(b"\nendstream");
         b
     }
+}
+
+/// zlib (`/FlateDecode`) compression for content, font and CMap streams.
+fn deflate(data: &[u8]) -> Vec<u8> {
+    use std::io::Write;
+    let mut e = flate2::write::ZlibEncoder::new(Vec::with_capacity(data.len() / 2 + 64), flate2::Compression::default());
+    let _ = e.write_all(data);
+    e.finish().unwrap_or_default()
+}
+
+/// Test helper: the PDF with every Flate stream inflated in place, as text.
+#[cfg(test)]
+pub fn tests_inflate_all(pdf: &[u8]) -> String {
+    use std::io::Read;
+    let mut out = String::new();
+    let mut i = 0usize;
+    while let Some(p) = find_bytes(&pdf[i..], b"stream\n").map(|p| p + i) {
+        out.push_str(&String::from_utf8_lossy(&pdf[i..p]));
+        let start = p + 7;
+        let end = find_bytes(&pdf[start..], b"endstream").map(|e| e + start).unwrap_or(pdf.len());
+        let mut raw = Vec::new();
+        if flate2::read::ZlibDecoder::new(&pdf[start..end]).read_to_end(&mut raw).is_ok() {
+            out.push_str(&String::from_utf8_lossy(&raw));
+        }
+        i = end;
+    }
+    out.push_str(&String::from_utf8_lossy(&pdf[i..]));
+    out
+}
+
+#[cfg(test)]
+fn find_bytes(h: &[u8], n: &[u8]) -> Option<usize> {
+    h.windows(n.len()).position(|w| w == n)
 }
 
 /// `(escaped literal string)` for a WinAnsi byte string.  Bytes above `0x7f` are
@@ -3308,6 +3491,14 @@ enum ImgKind {
         colors: u32,
         plte: Option<(u32, Vec<u8>)>,
     },
+    /// Decoded 8-bit samples (zlib, no predictor) with an optional soft mask.
+    Raw {
+        data: Vec<u8>,
+        w: u32,
+        h: u32,
+        colors: u32,
+        alpha: Option<Vec<u8>>,
+    },
 }
 
 fn load_image(src: &str) -> Option<ImgKind> {
@@ -3341,11 +3532,20 @@ fn load_image(src: &str) -> Option<ImgKind> {
             b"IEND" => break,
             _ => {}
         }
-        pos = end;
+        // Skip the 4-byte CRC after the chunk data.
+        pos = end + 4;
     }
     let (w, h, bpc, ct, interlace) = hdr?;
-    if interlace != 0 || w == 0 || h == 0 {
+    if idat.is_empty() {
         return None;
+    }
+    if w == 0 || h == 0 {
+        return None;
+    }
+    // Alpha, 16-bit and interlaced PNGs are decoded and re-packed as 8-bit
+    // colour + a separate soft mask; the rest pass through untouched.
+    if ct == 4 || ct == 6 || bpc == 16 || interlace != 0 {
+        return decode_png_rgba(&idat, w, h, bpc, ct, interlace, plte.as_deref());
     }
     let (colors, pal) = match ct {
         0 => (1u32, None),
@@ -3366,6 +3566,120 @@ fn load_image(src: &str) -> Option<ImgKind> {
         bpc,
         colors,
         plte: pal,
+    })
+}
+
+/// Full PNG decode to 8-bit samples: returns colour (Gray or RGB) plus an
+/// optional alpha plane, both zlib-compressed and unpredicted.
+fn decode_png_rgba(idat: &[u8], w: u32, h: u32, bpc: u32, ct: u32, interlace: u32, plte: Option<&[u8]>) -> Option<ImgKind> {
+    use std::io::Read;
+    const MAX_PIXELS: u64 = 60_000_000;
+    if (w as u64) * (h as u64) > MAX_PIXELS {
+        return None;
+    }
+    let channels: usize = match ct {
+        0 => 1,
+        2 => 3,
+        3 => 1,
+        4 => 2,
+        6 => 4,
+        _ => return None,
+    };
+    if ![1, 2, 4, 8, 16].contains(&bpc) {
+        return None;
+    }
+    let mut raw = Vec::new();
+    flate2::read::ZlibDecoder::new(idat).take(512 * 1024 * 1024).read_to_end(&mut raw).ok()?;
+    let bits_pp = channels * bpc as usize;
+    let bpp = bits_pp.div_ceil(8).max(1);
+    let (wu, hu) = (w as usize, h as usize);
+    // Output: one 8-bit sample per channel.
+    let mut px = vec![0u8; wu * hu * channels];
+    let passes: &[(usize, usize, usize, usize)] = if interlace != 0 {
+        &[(0, 0, 8, 8), (4, 0, 8, 8), (0, 4, 4, 8), (2, 0, 4, 4), (0, 2, 2, 4), (1, 0, 2, 2), (0, 1, 1, 2)]
+    } else {
+        &[(0, 0, 1, 1)]
+    };
+    let mut pos = 0usize;
+    for &(x0, y0, dx, dy) in passes {
+        if x0 >= wu || y0 >= hu {
+            continue;
+        }
+        let pw = (wu - x0).div_ceil(dx);
+        let ph = (hu - y0).div_ceil(dy);
+        let stride = (pw * bits_pp).div_ceil(8);
+        let mut prev = vec![0u8; stride];
+        for row in 0..ph {
+            let ft = *raw.get(pos)?;
+            let line = raw.get(pos + 1..pos + 1 + stride)?.to_vec();
+            pos += 1 + stride;
+            let mut cur = line;
+            for i in 0..stride {
+                let a = if i >= bpp { cur[i - bpp] as i32 } else { 0 };
+                let b = prev[i] as i32;
+                let c = if i >= bpp { prev[i - bpp] as i32 } else { 0 };
+                let v = cur[i] as i32;
+                cur[i] = match ft {
+                    0 => v,
+                    1 => v + a,
+                    2 => v + b,
+                    3 => v + (a + b) / 2,
+                    4 => {
+                        let p = a + b - c;
+                        let (pa, pb, pc) = ((p - a).abs(), (p - b).abs(), (p - c).abs());
+                        v + if pa <= pb && pa <= pc { a } else if pb <= pc { b } else { c }
+                    }
+                    _ => return None,
+                } as u8;
+            }
+            let y = y0 + row * dy;
+            for col in 0..pw {
+                let x = x0 + col * dx;
+                for ch in 0..channels {
+                    let s = match bpc {
+                        8 => cur[col * channels + ch],
+                        16 => cur[(col * channels + ch) * 2],
+                        _ => {
+                            let bit = (col * channels + ch) * bpc as usize;
+                            let byte = cur[bit / 8];
+                            let shift = 8 - bpc as usize - (bit % 8);
+                            let v = (byte >> shift) & ((1u8 << bpc) - 1);
+                            if ct == 3 { v } else { ((v as u32 * 255) / ((1u32 << bpc) - 1)) as u8 }
+                        }
+                    };
+                    px[(y * wu + x) * channels + ch] = s;
+                }
+            }
+            prev = cur;
+        }
+    }
+    let (colors, color_ch) = match ct {
+        0 | 4 => (1u32, 1usize),
+        _ => (3, 3),
+    };
+    let mut color = Vec::with_capacity(wu * hu * color_ch + hu);
+    let mut alpha: Vec<u8> = Vec::new();
+    let has_alpha = ct == 4 || ct == 6;
+    for i in 0..wu * hu {
+        let p = &px[i * channels..(i + 1) * channels];
+        if ct == 3 {
+            let idx = p[0] as usize * 3;
+            let pal = plte?;
+            color.extend_from_slice(pal.get(idx..idx + 3).unwrap_or(&[0, 0, 0]));
+        } else {
+            color.extend_from_slice(&p[..color_ch]);
+        }
+        if has_alpha {
+            alpha.push(p[channels - 1]);
+        }
+    }
+    let opaque = alpha.iter().all(|a| *a == 255);
+    Some(ImgKind::Raw {
+        data: deflate(&color),
+        w,
+        h,
+        colors,
+        alpha: if has_alpha && !opaque { Some(deflate(&alpha)) } else { None },
     })
 }
 
@@ -3437,6 +3751,9 @@ fn content_stream(
                 w!("/I{idx} Do\nQ\n");
             }
             DrawItem::Link { .. } => {}
+            DrawItem::Formula { x, y, f, color } => {
+                s.push_str(&f.draw(*x, *y, &color_ops(color)));
+            }
             DrawItem::Text { x, y, spans, .. } => {
                 w!("BT\n");
                 let mut pen = 0.0f64;
@@ -3499,7 +3816,55 @@ pub fn write_pdf(doc: &RenderedDoc) -> Vec<u8> {
     let mut font_ids: Vec<usize> = Vec::new();
     for f in faces.clone() {
         let id = o.alloc();
-        let body = if f.is_cid() {
+        let embedded_font = match f {
+            Face::Embedded(i) => doc
+                .embedded
+                .faces
+                .get(i as usize)
+                .and_then(|info| doc.embedded.fonts.get(info.slot).and_then(|x| x.as_ref())),
+            _ => None,
+        };
+        let body = if let Some(sf) = embedded_font {
+            let file_id = o.alloc();
+            let desc = o.alloc();
+            let cid = o.alloc();
+            let tu = o.alloc();
+            let packed = deflate(&sf.file);
+            let stream = o.stream_obj(
+                &format!("<< /Length {} /Length1 {} /Filter /FlateDecode >>", packed.len(), sf.file.len()),
+                &packed,
+            );
+            o.obj(file_id, &stream);
+            let [x0, y0, x1, y1] = sf.bbox;
+            o.obj(
+                desc,
+                format!(
+                    "<< /Type /FontDescriptor /FontName /{name} /Flags 4 /FontBBox [{x0} {y0} {x1} {y1}]                      /ItalicAngle 0 /Ascent {a} /Descent {d} /CapHeight {c} /StemV 80 /FontFile2 {file_id} 0 R >>",
+                    name = sf.base_name,
+                    a = sf.ascent,
+                    d = sf.descent,
+                    c = sf.cap_height
+                )
+                .as_bytes(),
+            );
+            o.obj(
+                cid,
+                format!(
+                    "<< /Type /Font /Subtype /CIDFontType2 /BaseFont /{name}                      /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >>                      /FontDescriptor {desc} 0 R /CIDToGIDMap /Identity /DW 1000 /W {w} >>",
+                    name = sf.base_name,
+                    w = crate::pdf_fonts::w_array(&sf.widths)
+                )
+                .as_bytes(),
+            );
+            let cmap = crate::pdf_fonts::to_unicode_cmap(&sf.unicode);
+            let cmap_z = deflate(cmap.as_bytes());
+            let tu_body = o.stream_obj(&format!("<< /Length {} /Filter /FlateDecode >>", cmap_z.len()), &cmap_z);
+            o.obj(tu, &tu_body);
+            format!(
+                "<< /Type /Font /Subtype /Type0 /BaseFont /{name} /Encoding /Identity-H                  /DescendantFonts [ {cid} 0 R ] /ToUnicode {tu} 0 R >>",
+                name = sf.base_name
+            )
+        } else if f.is_cid() {
             let desc = o.alloc();
             let cid = o.alloc();
             o.obj(
@@ -3589,11 +3954,39 @@ pub fn write_pdf(doc: &RenderedDoc) -> Vec<u8> {
                     &data,
                 )
             }
-            None => format!(
+            Some(ImgKind::Raw { data, w, h, colors, alpha }) => {
+                let cs = if colors == 1 { "/DeviceGray" } else { "/DeviceRGB" };
+                let smask = match alpha {
+                    Some(a) => {
+                        let sid = o.alloc();
+                        let body = o.stream_obj(
+                            &format!(
+                                "<< /Type /XObject /Subtype /Image /Width {w} /Height {h} /ColorSpace /DeviceGray \
+                                 /BitsPerComponent 8 /Filter /FlateDecode /Length {} >>",
+                                a.len()
+                            ),
+                            &a,
+                        );
+                        o.obj(sid, &body);
+                        format!(" /SMask {sid} 0 R")
+                    }
+                    None => String::new(),
+                };
+                o.stream_obj(
+                    &format!(
+                        "<< /Type /XObject /Subtype /Image /Width {w} /Height {h} /ColorSpace {cs} \
+                         /BitsPerComponent 8 /Filter /FlateDecode{smask} /Length {} >>",
+                        data.len()
+                    ),
+                    &data,
+                )
+            }
+            // Unreadable image: a 1×1 white pixel keeps the layout intact.
+            None => o.stream_obj(
                 "<< /Type /XObject /Subtype /Image /Width 1 /Height 1 /ColorSpace /DeviceGray \
-                 /BitsPerComponent 8 /Filter /ASCIIHexDecode /Length 6 >>\nstream 0000~~\nendstream"
-            )
-            .into_bytes(),
+                 /BitsPerComponent 8 /Length 1 >>",
+                &[255u8],
+            ),
         };
         o.obj(id, &body);
         image_ids.push(id);
@@ -3766,8 +4159,8 @@ pub fn write_pdf(doc: &RenderedDoc) -> Vec<u8> {
             content_ids[pi]
         );
         o.obj(page_ids[pi], body.as_bytes());
-        let cs = content_stream(doc, p, &faces, &images);
-        let csbody = o.stream_obj(&format!("<</Length {} >>", cs.len()), &cs);
+        let cs = deflate(&content_stream(doc, p, &faces, &images));
+        let csbody = o.stream_obj(&format!("<</Length {} /Filter /FlateDecode >>", cs.len()), &cs);
         o.obj(content_ids[pi], &csbody);
     }
 
@@ -4040,7 +4433,7 @@ mod tests {
         build(
             &Value::Array(blocks.to_vec()),
             style,
-            "T:/Programming/Project/codex/creator/readmd/scratch/rust_parity/s8_harness/tmp",
+            concat!(env!("CARGO_MANIFEST_DIR"), "/../../scratch/rust_parity/s8_harness/tmp"),
             &no_image,
             &mut warns,
         )
@@ -4093,9 +4486,9 @@ mod tests {
     #[test]
     fn default__empty_yields_zero_pages() {
         let d = render(&[], &style_for(json!({})));
-        assert_eq!(d.pages.len(), 0, "oracle: pages=0, 890 bytes, PDF 1.3");
+        assert_eq!(d.pages.len(), 0, "no pages for an empty document");
         let bytes = write_pdf(&d);
-        assert!(String::from_utf8_lossy(&bytes).starts_with("%PDF-1.3"));
+        assert!(String::from_utf8_lossy(&bytes).starts_with("%PDF-1.4"));
     }
 
     #[test]
@@ -4210,6 +4603,52 @@ Section 11"), "{:?}", d.pages[1].text);
         // the TOC entries carry the resolved page numbers of the second pass
         let pages: Vec<i64> = d.toc_entries.iter().map(|e| e.2).collect();
         assert!(pages.iter().all(|p| *p == 3), "toc pages {pages:?}");
+    }
+
+    /// Encode a tiny RGBA PNG (filter 0 rows) for the decoder tests.
+    fn rgba_png(w: u32, h: u32, px: &[[u8; 4]]) -> Vec<u8> {
+        use std::io::Write;
+        let mut raw = Vec::new();
+        for y in 0..h as usize {
+            raw.push(0u8);
+            for x in 0..w as usize {
+                raw.extend_from_slice(&px[y * w as usize + x]);
+            }
+        }
+        let mut z = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+        z.write_all(&raw).unwrap();
+        let idat = z.finish().unwrap();
+        let chunk = |t: &[u8], d: &[u8]| {
+            let mut c = (d.len() as u32).to_be_bytes().to_vec();
+            c.extend_from_slice(t);
+            c.extend_from_slice(d);
+            c.extend_from_slice(&[0, 0, 0, 0]); // CRC is not checked
+            c
+        };
+        let mut ihdr = w.to_be_bytes().to_vec();
+        ihdr.extend_from_slice(&h.to_be_bytes());
+        ihdr.extend_from_slice(&[8, 6, 0, 0, 0]);
+        let mut out = b"\x89PNG\r\n\x1a\n".to_vec();
+        out.extend(chunk(b"IHDR", &ihdr));
+        out.extend(chunk(b"IDAT", &idat));
+        out.extend(chunk(b"IEND", &[]));
+        out
+    }
+
+    #[test]
+    fn rgba_png_is_embedded_with_a_soft_mask() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("a.png");
+        std::fs::write(&p, rgba_png(2, 1, &[[255, 0, 0, 255], [0, 0, 255, 0]])).unwrap();
+        match load_image(p.to_str().unwrap()) {
+            Some(ImgKind::Raw { w, h, colors, alpha, .. }) => {
+                assert_eq!((w, h, colors), (2, 1, 3));
+                assert!(alpha.is_some(), "transparent pixel needs an SMask");
+            }
+            _ => panic!("RGBA PNG must decode"),
+        }
+        std::fs::write(&p, rgba_png(1, 1, &[[1, 2, 3, 255]])).unwrap();
+        assert!(matches!(load_image(p.to_str().unwrap()), Some(ImgKind::Raw { alpha: None, .. })));
     }
 
     #[test]

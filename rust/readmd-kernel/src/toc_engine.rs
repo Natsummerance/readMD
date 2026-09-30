@@ -14,7 +14,7 @@
 //! * the `ignore=[...]` attribute documented above is parsed by *nothing* —
 //!   [`process_toc_markers`] only reads `depth_from`, `depth_to` and the two
 //!   ordered-list spellings, exactly like `toc_engine.py:116-134`.  The MCP
-//!   server (`packages/mcp-server/readmd_mcp_server.py:854`) reaches
+//!   server (`readmd --mcp`, `mcp.rs`) reaches
 //!   [`generate_toc_markdown`] directly when it wants an ignore list.
 //! * [`slugify_heading`] never disambiguates duplicate anchors.  Two identical
 //!   headings produce two identical `#slug` targets, so this module is *not*

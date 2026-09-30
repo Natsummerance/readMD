@@ -1155,238 +1155,108 @@ pub fn export_html(
 // LaTeX Export
 // ============================================================================
 
+/// LaTeX export built on the shared AST ([`crate::md_ast`]) and
+/// [`crate::latex_writer`].
+///
+/// Local images are copied next to the `.tex` into `<stem>.assets/` so the
+/// output directory compiles as-is; remote / missing images are reported in
+/// `warns`.  The `.tex` itself is written atomically.
 pub fn export_tex(
     content: &str,
+    base_dir: &str,
     out_path: &str,
     options: &Value,
     source_name: &str,
 ) -> Result<ExportResult, String> {
-    let title = options.pointer("/meta/title")
-        .or_else(|| options.pointer("/tex/title"))
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .unwrap_or(source_name);
-    let title = if title.is_empty() { "Academic Document" } else { title };
+    let doc = crate::md_ast::parse(content);
+    let opt_str = |ptrs: &[&str]| -> Option<String> {
+        ptrs.iter()
+            .filter_map(|p| options.pointer(p).and_then(|v| v.as_str()))
+            .map(|s| s.trim().to_string())
+            .find(|s| !s.is_empty())
+    };
+    let title = opt_str(&["/meta/title", "/tex/title", "/latex/title"])
+        .or_else(|| doc.meta("title"))
+        .or_else(|| Some(source_name.trim().to_string()).filter(|s| !s.is_empty()))
+        .unwrap_or_else(|| "Document".to_string());
+    let author = opt_str(&["/meta/author", "/tex/author", "/latex/author"])
+        .or_else(|| doc.meta("author"))
+        .unwrap_or_default();
+    let tex_bool = |key: &str| -> Option<bool> {
+        options
+            .pointer(&format!("/tex/{key}"))
+            .or_else(|| options.pointer(&format!("/latex/{key}")))
+            .and_then(|v| v.as_bool())
+    };
+    let defaults = crate::latex_writer::LatexOptions::default();
+    let lopts = crate::latex_writer::LatexOptions {
+        title,
+        author,
+        date: doc.meta("date"),
+        doc_class: opt_str(&["/tex/docClass", "/latex/docClass"]).unwrap_or(defaults.doc_class),
+        font_size: opt_str(&["/tex/fontSize", "/latex/fontSize"]).unwrap_or(defaults.font_size),
+        paper: opt_str(&["/tex/paperSize", "/latex/paperSize"]).unwrap_or(defaults.paper),
+        margin: opt_str(&["/tex/margin", "/latex/margin"]).unwrap_or(defaults.margin),
+        use_ctex: tex_bool("useCtex"),
+        toc: tex_bool("toc").unwrap_or(false),
+    };
 
-    let author = options.pointer("/meta/author")
-        .or_else(|| options.pointer("/tex/author"))
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-
-    let mut tex = String::new();
-    tex.push_str(r#"\documentclass[11pt,a4paper]{article}
-\usepackage[utf8]{inputenc}
-\usepackage{amsmath,amssymb,amsfonts}
-\usepackage{graphicx}
-\usepackage{booktabs}
-\usepackage{hyperref}
-\usepackage{listings}
-\usepackage{xcolor}
-\usepackage{geometry}
-\geometry{a4paper, margin=1in}
-
-\lstset{
-  basicstyle=\ttfamily\small,
-  breaklines=true,
-  backgroundcolor=\color{black!5},
-  frame=single,
-  rulecolor=\color{black!20}
-}
-
-"#);
-
-    tex.push_str(&format!("\\title{{{}}}\n", escape_latex(title)));
-    if !author.is_empty() {
-        tex.push_str(&format!("\\author{{{}}}\n", escape_latex(author)));
-    }
-    tex.push_str("\\date{\\today}\n\n");
-    tex.push_str("\\begin{document}\n\\maketitle\n\n");
-
-    let lines: Vec<&str> = content.lines().collect();
-    let mut i = 0;
-    let mut in_code = false;
-    let mut code_buf: Vec<&str> = Vec::new();
-    let mut code_lang = String::new();
-
-    while i < lines.len() {
-        let line = lines[i];
-        let trimmed = line.trim();
-
-        if trimmed.starts_with("```") {
-            if in_code {
-                in_code = false;
-                let lang_arg = if !code_lang.is_empty() { format!("[language={}]", code_lang) } else { String::new() };
-                tex.push_str(&format!("\\begin{{lstlisting}}{}\n", lang_arg));
-                for cl in &code_buf {
-                    tex.push_str(cl);
-                    tex.push('\n');
-                }
-                tex.push_str("\\end{lstlisting}\n\n");
-                code_buf.clear();
-                code_lang.clear();
-            } else {
-                in_code = true;
-                code_lang = trimmed.trim_start_matches('`').trim().to_string();
-                code_buf.clear();
-            }
-            i += 1;
-            continue;
+    // `<stem>.assets/` beside the output, created only if an image is copied.
+    let out = Path::new(out_path);
+    let stem = out.file_stem().and_then(|s| s.to_str()).unwrap_or("document").to_string();
+    let assets_name = format!("{stem}.assets");
+    let assets_dir = out.parent().unwrap_or_else(|| Path::new(".")).join(&assets_name);
+    let resolver = std::cell::RefCell::new(HtmlImageResolver::new(base_dir));
+    let warns = std::cell::RefCell::new(Vec::<String>::new());
+    let copied = std::cell::RefCell::new(Vec::<(String, String)>::new());
+    let images = |src: &str| -> Option<String> {
+        if let Some((_, rel)) = copied.borrow().iter().find(|(s, _)| s == src) {
+            return Some(rel.clone());
         }
-
-        if in_code {
-            code_buf.push(line);
-            i += 1;
-            continue;
-        }
-
-        if trimmed.starts_with("$$") {
-            let mut math_lines = Vec::new();
-            if trimmed.len() > 4 && trimmed.ends_with("$$") {
-                let inner = &trimmed[2..trimmed.len() - 2];
-                tex.push_str(&format!("\\begin{{equation*}}\n{}\n\\end{{equation*}}\n\n", inner.trim()));
-                i += 1;
-                continue;
-            } else {
-                math_lines.push(trimmed.trim_start_matches('$').trim());
-                i += 1;
-                while i < lines.len() && !lines[i].trim().ends_with("$$") {
-                    math_lines.push(lines[i].trim());
-                    i += 1;
-                }
-                if i < lines.len() {
-                    let end_line = lines[i].trim();
-                    let clean = end_line.trim_end_matches('$').trim();
-                    if !clean.is_empty() {
-                        math_lines.push(clean);
+        let hit = resolver.borrow_mut().resolve(src, &mut warns.borrow_mut())?;
+        let (ext, bytes) = match hit {
+            Resolved::File(p) => {
+                let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("png").to_ascii_lowercase();
+                match fs::read(&p) {
+                    Ok(b) => (ext, b),
+                    Err(e) => {
+                        warns.borrow_mut().push(format!("图片读取失败，已跳过：{src}（{e}）"));
+                        return None;
                     }
-                    i += 1;
                 }
-                tex.push_str(&format!("\\begin{{equation*}}\n{}\n\\end{{equation*}}\n\n", math_lines.join("\n")));
-                continue;
             }
-        }
-
-        if trimmed.starts_with("# ") {
-            tex.push_str(&format!("\\section{{{}}}\n\n", format_inline_latex(&trimmed[2..])));
-        } else if trimmed.starts_with("## ") {
-            tex.push_str(&format!("\\subsection{{{}}}\n\n", format_inline_latex(&trimmed[3..])));
-        } else if trimmed.starts_with("### ") {
-            tex.push_str(&format!("\\subsubsection{{{}}}\n\n", format_inline_latex(&trimmed[4..])));
-        } else if trimmed.starts_with("- ") || trimmed.starts_with("* ") {
-            tex.push_str("\\begin{itemize}\n");
-            tex.push_str(&format!("  \\item {}\n", format_inline_latex(&trimmed[2..])));
-            while i + 1 < lines.len() && (lines[i + 1].trim().starts_with("- ") || lines[i + 1].trim().starts_with("* ")) {
-                i += 1;
-                tex.push_str(&format!("  \\item {}\n", format_inline_latex(&lines[i].trim()[2..])));
+            Resolved::Inline { mime, data } => {
+                (mime.rsplit('/').next().unwrap_or("png").replace("jpeg", "jpg"), data)
             }
-            tex.push_str("\\end{itemize}\n\n");
-        } else if trimmed.starts_with("> ") {
-            tex.push_str(&format!("\\begin{{quote}}\n{}\n\\end{{quote}}\n\n", format_inline_latex(&trimmed[2..])));
-        } else if !trimmed.is_empty() {
-            tex.push_str(&format!("{}\n\n", format_inline_latex(trimmed)));
+        };
+        if !matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "pdf" | "eps") {
+            warns.borrow_mut().push(format!("LaTeX 不支持该图片格式（{ext}），已跳过：{}", py_head80(src)));
+            return None;
         }
+        let n = copied.borrow().len() + 1;
+        let name = format!("img{n}.{ext}");
+        if let Err(e) = fs::create_dir_all(&assets_dir).and_then(|_| fs::write(assets_dir.join(&name), &bytes)) {
+            warns.borrow_mut().push(format!("图片复制失败，已跳过：{src}（{e}）"));
+            return None;
+        }
+        let rel = format!("{assets_name}/{name}");
+        copied.borrow_mut().push((src.to_string(), rel.clone()));
+        Some(rel)
+    };
+    let tex = crate::latex_writer::render_document(&doc, &lopts, &images);
 
-        i += 1;
-    }
-
-    tex.push_str("\\end{document}\n");
-
-    if let Some(parent) = Path::new(out_path).parent() {
-        let _ = fs::create_dir_all(parent);
-    }
-    fs::write(out_path, tex.as_bytes()).map_err(|e| format!("Failed to write TeX: {}", e))?;
+    crate::content::write_bytes_atomic(out, tex.as_bytes())
+        .map_err(|e| format!("Failed to write TeX: {}", e))?;
     let size = fs::metadata(out_path).map(|m| m.len()).unwrap_or(0);
 
     Ok(ExportResult {
         ok: true,
         path: Some(out_path.to_string()),
         size: Some(size),
-        warns: Some(Vec::new()),
+        warns: Some(warns.into_inner()),
         error: None,
         canceled: Some(false),
     })
-}
-
-fn escape_latex(s: &str) -> String {
-    s.replace('\\', "\\textbackslash{}")
-     .replace('&', "\\&")
-     .replace('%', "\\%")
-     .replace('$', "\\$")
-     .replace('#', "\\#")
-     .replace('_', "\\_")
-     .replace('{', "\\{")
-     .replace('}', "\\}")
-     .replace('~', "\\textasciitilde{}")
-     .replace('^', "\\textasciicircum{}")
-}
-
-fn format_inline_latex(s: &str) -> String {
-    let mut out = String::new();
-    let mut in_math = false;
-    let mut math_buf = String::new();
-
-    let chars: Vec<char> = s.chars().collect();
-    let mut idx = 0;
-
-    while idx < chars.len() {
-        let ch = chars[idx];
-        if ch == '$' {
-            if in_math {
-                in_math = false;
-                out.push('$');
-                out.push_str(&math_buf);
-                out.push('$');
-                math_buf.clear();
-            } else {
-                in_math = true;
-                math_buf.clear();
-            }
-            idx += 1;
-            continue;
-        }
-
-        if in_math {
-            math_buf.push(ch);
-            idx += 1;
-            continue;
-        }
-
-        // Bold **
-        if ch == '*' && idx + 1 < chars.len() && chars[idx + 1] == '*' {
-            if let Some(end) = s[idx + 2..].find("**") {
-                let inner = &s[idx + 2..idx + 2 + end];
-                out.push_str(&format!("\\textbf{{{}}}", format_inline_latex(inner)));
-                idx += 4 + end;
-                continue;
-            }
-        }
-
-        // Inline code `
-        if ch == '`' {
-            if let Some(end) = s[idx + 1..].find('`') {
-                let inner = &s[idx + 1..idx + 1 + end];
-                out.push_str(&format!("\\texttt{{{}}}", escape_latex(inner)));
-                idx += 2 + end;
-                continue;
-            }
-        }
-
-        match ch {
-            '&' => out.push_str("\\&"),
-            '%' => out.push_str("\\%"),
-            '#' => out.push_str("\\#"),
-            '_' => out.push_str("\\_"),
-            _ => out.push(ch),
-        }
-        idx += 1;
-    }
-
-    if in_math {
-        out.push('$');
-        out.push_str(&math_buf);
-    }
-
-    out
 }
 
 // ============================================================================
@@ -1468,837 +1338,6 @@ fn py_number_text(n: &serde_json::Number) -> String {
         }
         None => n.to_string(),
     }
-}
-
-// ---------------------------------------------------------------- inline AST
-
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) enum MdInline {
-    Text(String),
-    Code(String),
-    /// `{t:'bold'|'italic'|'strike', v:<raw markdown str>}`
-    Emph(String, String),
-    Link(Vec<MdInline>, String),
-    Image { alt: String, src: String },
-    Math(String),
-}
-
-#[derive(Debug, Clone)]
-pub(crate) enum MdBlock {
-    Paragraph(Vec<MdInline>),
-    Heading(usize, Vec<MdInline>),
-    Table { header: Vec<Vec<MdInline>>, rows: Vec<Vec<Vec<MdInline>>> },
-    List { items: Vec<Vec<MdInline>>, ordered: bool },
-    Quote(Vec<MdBlock>),
-    Code(String),
-    Math(String),
-    Hr,
-    PageBreak,
-}
-
-fn chars_of(s: &str) -> Vec<char> {
-    s.chars().collect()
-}
-
-/// `!\[([^\]]*)\]\(([^)\s]+)(?:\s+["']([^"']*)["'])?\)` anchored at `i`.
-/// Returns `(end, alt, src)`. Mirrors CPython backtracking: when the optional
-/// title cannot be followed by `)` the engine retries without the title, and
-/// only the *first* reachable `[`..`)` pairing is considered.
-fn match_image(s: &[char], i: usize, bang: bool) -> Option<(usize, String, String)> {
-    let mut j = i;
-    if bang {
-        if s.get(j) != Some(&'!') || s.get(j + 1) != Some(&'[') {
-            return None;
-        }
-        j += 2;
-    } else if s.get(j) != Some(&'[') {
-        return None;
-    } else {
-        j += 1;
-    }
-    let alt_start = j;
-    while j < s.len() && s[j] != ']' {
-        j += 1;
-    }
-    if j >= s.len() {
-        return None;
-    }
-    if !bang && j == alt_start {
-        return None; // `([^\]]+)` requires at least one character
-    }
-    let alt: String = s[alt_start..j].iter().collect();
-    j += 1; // ']'
-    if s.get(j) != Some(&'(') {
-        return None;
-    }
-    j += 1;
-    let src_start = j;
-    while j < s.len() && s[j] != ')' && !s[j].is_whitespace() {
-        j += 1;
-    }
-    if j == src_start {
-        return None;
-    }
-    let src: String = s[src_start..j].iter().collect();
-    // optional `\s+["']([^"']*)["']\)` then `\)`, with one fallback attempt.
-    let mut k = j;
-    let ws_start = k;
-    while k < s.len() && s[k].is_whitespace() {
-        k += 1;
-    }
-    if k > ws_start && matches!(s.get(k), Some('"') | Some('\'')) {
-        let title_start = k + 1;
-        let mut t = title_start;
-        while t < s.len() && s[t] != '"' && s[t] != '\'' {
-            t += 1;
-        }
-        // `["']([^"']*)["']` uses two *independent* classes: a `"…'` pair closes
-        // just as well as `"…"`, so only the following `)` decides the match.
-        if t < s.len() && s.get(t + 1) == Some(&')') {
-            return Some((t + 2, alt, src));
-        }
-    }
-    if s.get(j) == Some(&')') {
-        Some((j + 1, alt, src))
-    } else {
-        None
-    }
-}
-
-/// `` `([^`]+)` `` anchored at `i`.
-fn match_code(s: &[char], i: usize) -> Option<(usize, String)> {
-    if s.get(i) != Some(&'`') {
-        return None;
-    }
-    let mut j = i + 1;
-    while j < s.len() && s[j] != '`' {
-        j += 1;
-    }
-    if j >= s.len() || j == i + 1 {
-        return None;
-    }
-    Some((j + 1, s[i + 1..j].iter().collect()))
-}
-
-/// `\$([^$\n]+?)\$` anchored at `i` (lazy => stops at the first `$`).
-fn match_math(s: &[char], i: usize) -> Option<(usize, String)> {
-    if s.get(i) != Some(&'$') {
-        return None;
-    }
-    let mut j = i + 1;
-    while j < s.len() && s[j] != '$' && s[j] != '\n' {
-        j += 1;
-    }
-    if j >= s.len() || j == i + 1 {
-        return None;
-    }
-    Some((j + 1, s[i + 1..j].iter().collect()))
-}
-
-/// `\*\*([^*]+?)\*\*` / `__([^_]+?)__` / `~~([^~]+?)~~` anchored at `i`.
-fn match_wrapped(s: &[char], i: usize, marker: char) -> Option<(usize, String)> {
-    if s.get(i) != Some(&marker) || s.get(i + 1) != Some(&marker) {
-        return None;
-    }
-    let mut j = i + 2;
-    while j < s.len() && s[j] != marker {
-        j += 1;
-    }
-    if j >= s.len() || j == i + 2 {
-        return None;
-    }
-    if s.get(j + 1) != Some(&marker) {
-        return None;
-    }
-    Some((j + 2, s[i + 2..j].iter().collect()))
-}
-
-/// `\*([^*\n]+?)\*|_([^_\n]+?)_` anchored at `i`.
-fn match_em(s: &[char], i: usize) -> Option<(usize, String)> {
-    let marker = *s.get(i)?;
-    if marker != '*' && marker != '_' {
-        return None;
-    }
-    let mut j = i + 1;
-    while j < s.len() && s[j] != marker && s[j] != '\n' {
-        j += 1;
-    }
-    if j >= s.len() || j == i + 1 {
-        return None;
-    }
-    Some((j + 1, s[i + 1..j].iter().collect()))
-}
-
-/// `parser.parse_inline`
-pub(crate) fn md_parse_inline(text: &str) -> Vec<MdInline> {
-    let s = chars_of(text);
-    let mut nodes: Vec<MdInline> = Vec::new();
-    let mut buf: String = String::new();
-    let mut i = 0usize;
-    let n = s.len();
-    macro_rules! flush {
-        () => {
-            if !buf.is_empty() {
-                nodes.push(MdInline::Text(std::mem::take(&mut buf)));
-            }
-        };
-    }
-    while i < n {
-        if s[i] == '!' && i + 1 < n && s[i + 1] == '[' {
-            if let Some((end, alt, src)) = match_image(&s, i, true) {
-                flush!();
-                nodes.push(MdInline::Image { alt, src });
-                i = end;
-                continue;
-            }
-        }
-        if s[i] == '[' {
-            if let Some((end, _alt, href)) = match_image(&s, i, false) {
-                flush!();
-                nodes.push(MdInline::Link(md_parse_inline(&_alt), href));
-                i = end;
-                continue;
-            }
-        }
-        if s[i] == '`' {
-            if let Some((end, v)) = match_code(&s, i) {
-                flush!();
-                nodes.push(MdInline::Code(v));
-                i = end;
-                continue;
-            }
-        }
-        if s[i] == '$' {
-            if let Some((end, latex)) = match_math(&s, i) {
-                flush!();
-                nodes.push(MdInline::Math(latex));
-                i = end;
-                continue;
-            }
-        }
-        if i + 1 < n && s[i] == '*' && s[i + 1] == '*' {
-            if let Some((end, v)) = match_wrapped(&s, i, '*') {
-                flush!();
-                nodes.push(MdInline::Emph("bold".into(), v));
-                i = end;
-                continue;
-            }
-        }
-        if i + 1 < n && s[i] == '_' && s[i + 1] == '_' {
-            if let Some((end, v)) = match_wrapped(&s, i, '_') {
-                flush!();
-                nodes.push(MdInline::Emph("bold".into(), v));
-                i = end;
-                continue;
-            }
-        }
-        if i + 1 < n && s[i] == '~' && s[i + 1] == '~' {
-            if let Some((end, v)) = match_wrapped(&s, i, '~') {
-                flush!();
-                nodes.push(MdInline::Emph("strike".into(), v));
-                i = end;
-                continue;
-            }
-        }
-        if s[i] == '*' || s[i] == '_' {
-            if let Some((end, v)) = match_em(&s, i) {
-                flush!();
-                nodes.push(MdInline::Emph("italic".into(), v));
-                i = end;
-                continue;
-            }
-        }
-        buf.push(s[i]);
-        i += 1;
-    }
-    flush!();
-    nodes
-}
-
-// -------------------------------------------------------------- block helpers
-
-/// `str.strip()`.  Delegates to `py_strip`: CPython's whitespace set also covers
-/// the C0 separators `\x1c`-`\x1f` (FS/GS/RS/US), which `char::is_whitespace`
-/// (Unicode `White_Space`) does not, so `trim()` would treat a line holding only
-/// one of those as non-blank where Python skips it.
-fn strip_ws(s: &str) -> &str {
-    py_strip(s)
-}
-
-/// `^(#{1,6})\s+(.*)$` on the raw line -> `(level, rest)`.
-fn head_match(line: &str) -> Option<(usize, &str)> {
-    let hashes = line.chars().take_while(|c| *c == '#').count();
-    if hashes == 0 || hashes > 6 {
-        return None;
-    }
-    let rest = &line[hashes..];
-    let trimmed = rest.trim_start_matches(|c: char| c.is_whitespace());
-    if trimmed.len() == rest.len() {
-        return None; // `\s+` requires at least one whitespace
-    }
-    Some((hashes, trimmed))
-}
-
-/// `^\s*(?:---+|\*\*\*+|___+)\s*$` (applied to an already stripped line).
-fn is_hr(s: &str) -> bool {
-    for marker in ["-", "*", "_"] {
-        let ch = marker.chars().next().unwrap();
-        if s.len() >= 3 && s.chars().all(|c| c == ch) {
-            return true;
-        }
-    }
-    false
-}
-
-/// `^(\s*)([-*+]|\d+\.)\s+(.*)$` on the raw line -> `(indent, marker, rest)`.
-fn list_match(line: &str) -> Option<(usize, String, String)> {
-    let chars = chars_of(line);
-    let mut i = 0;
-    while i < chars.len() && chars[i].is_whitespace() {
-        i += 1;
-    }
-    let indent = chars[..i].iter().collect::<String>().chars().count();
-    let marker = if i < chars.len() && matches!(chars[i], '-' | '*' | '+') {
-        let m = chars[i].to_string();
-        i += 1;
-        m
-    } else {
-        let start = i;
-        while i < chars.len() && chars[i].is_ascii_digit() {
-            i += 1;
-        }
-        if i > start && i + 1 <= chars.len() && chars.get(i) == Some(&'.') {
-            let m: String = chars[start..=i].iter().collect();
-            i += 1;
-            m
-        } else {
-            return None;
-        }
-    };
-    let ws_start = i;
-    while i < chars.len() && chars[i].is_whitespace() {
-        i += 1;
-    }
-    if i == ws_start {
-        return None; // `\s+` requires whitespace after the marker
-    }
-    let rest = chars[i..].iter().collect::<String>();
-    Some((indent, marker, rest))
-}
-
-/// `^\[([ xX])\]\s+(.*)$` (used with `.match`, so `(.*)` swallows the tail).
-fn task_match(rest: &str) -> Option<(char, String)> {
-    let chars = chars_of(rest);
-    if chars.len() < 4 || chars[0] != '[' {
-        return None;
-    }
-    let flag = match chars[1] {
-        c @ (' ' | 'x' | 'X') => c,
-        _ => return None,
-    };
-    if chars[2] != ']' || !chars[3].is_whitespace() {
-        return None;
-    }
-    let mut i = 3;
-    while i < chars.len() && chars[i].is_whitespace() {
-        i += 1;
-    }
-    Some((flag, chars[i..].iter().collect()))
-}
-
-/// `^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$` on the raw line.
-fn table_sep_match(line: &str) -> bool {
-    let chars = chars_of(line);
-    let mut i = 0usize;
-    let skip_ws = |i: &mut usize, chars: &[char]| {
-        while *i < chars.len() && chars[*i].is_whitespace() {
-            *i += 1;
-        }
-    };
-    skip_ws(&mut i, &chars);
-    if chars.get(i) == Some(&'|') {
-        i += 1;
-    }
-    skip_ws(&mut i, &chars);
-    let mut cells = 0usize;
-    loop {
-        // one `:?-+:?` cell
-        let start = i;
-        if chars.get(i) == Some(&':') {
-            i += 1;
-        }
-        let dashes = i;
-        while i < chars.len() && chars[i] == '-' {
-            i += 1;
-        }
-        if i == dashes {
-            i = start;
-            break;
-        }
-        if chars.get(i) == Some(&':') {
-            i += 1;
-        }
-        skip_ws(&mut i, &chars);
-        cells += 1;
-        if chars.get(i) == Some(&'|') {
-            i += 1;
-            skip_ws(&mut i, &chars);
-            continue;
-        }
-        break;
-    }
-    if cells == 0 {
-        return false;
-    }
-    if chars.get(i) == Some(&'|') {
-        i += 1;
-    }
-    skip_ws(&mut i, &chars);
-    i == chars.len()
-}
-
-/// `parser._split_row`
-fn split_row(line: &str) -> Vec<String> {
-    let mut tokens: Vec<String> = Vec::new();
-    let mut token = String::new();
-    let mut bs = 0usize;
-    for ch in strip_ws(line).chars() {
-        if ch == '\\' {
-            bs += 1;
-            token.push(ch);
-        } else if ch == '|' {
-            if bs % 2 == 1 {
-                token.pop();
-                token.push('|');
-                bs = 0;
-            } else {
-                tokens.push(std::mem::take(&mut token));
-                bs = 0;
-            }
-        } else {
-            bs = 0;
-            token.push(ch);
-        }
-    }
-    tokens.push(token);
-    if tokens.first().map(|s| s.is_empty()).unwrap_or(false) {
-        tokens.remove(0);
-    }
-    if tokens.last().map(|s| s.is_empty()).unwrap_or(false) {
-        tokens.pop();
-    }
-    tokens.iter().map(|c| strip_ws(c).to_string()).collect()
-}
-
-/// `parser._split_align`
-fn split_align(line: &str) -> Vec<String> {
-    split_row(line)
-        .iter()
-        .map(|c| {
-            let c = strip_ws(c);
-            let l = c.starts_with(':');
-            let r = c.ends_with(':');
-            if l && r {
-                "center".to_string()
-            } else if r {
-                "right".to_string()
-            } else if l {
-                "left".to_string()
-            } else {
-                String::new()
-            }
-        })
-        .collect()
-}
-
-const PAGEBREAKS: [&str; 3] = ["<!-- pagebreak -->", "<!-- page-break -->", "\\newpage"];
-
-/// `parser._is_block_start`
-fn is_block_start(line: &str) -> bool {
-    let s = strip_ws(line);
-    if s.is_empty() {
-        return true;
-    }
-    if PAGEBREAKS.contains(&s) {
-        return true;
-    }
-    if s.starts_with("```") || s.starts_with("~~~") || s.starts_with("$$") {
-        return true;
-    }
-    if head_match(line).is_some() || is_hr(s) {
-        return true;
-    }
-    if s.starts_with('>') {
-        return true;
-    }
-    if list_match(line).is_some() {
-        return true;
-    }
-    if line.contains('|') && table_sep_match(line) {
-        return true;
-    }
-    false
-}
-
-const MAX_QUOTE_DEPTH: usize = 64;
-
-fn split_lines(text: &str) -> Vec<String> {
-    text.replace("\r\n", "\n").replace('\r', "\n").split('\n').map(|s| s.to_string()).collect()
-}
-
-/// `parser._FENCE_RE` on a stripped line -> `(fence, info)`.
-fn fence_open(stripped: &str) -> Option<(String, String)> {
-    let chars = chars_of(stripped);
-    let mut i = 0;
-    let run_char = if chars.first() == Some(&'`') {
-        '`'
-    } else if chars.first() == Some(&'~') {
-        '~'
-    } else {
-        return None;
-    };
-    while i < chars.len() && chars[i] == run_char {
-        i += 1;
-    }
-    if i < 3 {
-        return None;
-    }
-    Some((chars[..i].iter().collect(), strip_ws(&stripped[i..]).to_string()))
-}
-
-/// `^<fence char>{len,}[ \t]*$` fullmatch on a stripped line.
-fn fence_close(stripped: &str, fence: &str) -> bool {
-    let ch = fence.chars().next().unwrap();
-    let chars = chars_of(stripped);
-    let mut i = 0;
-    while i < chars.len() && chars[i] == ch {
-        i += 1;
-    }
-    if i < fence.len() {
-        return false;
-    }
-    chars[i..].iter().all(|c| *c == ' ' || *c == '\t')
-}
-
-/// `parser.parse`
-pub(crate) fn md_parse(md: &str, depth: usize) -> Vec<MdBlock> {
-    let lines = split_lines(md);
-    let mut blocks: Vec<MdBlock> = Vec::new();
-    let n = lines.len();
-    let mut i = 0usize;
-    while i < n {
-        let line = lines[i].clone();
-        let stripped = strip_ws(&line).to_string();
-        if stripped.is_empty() {
-            i += 1;
-            continue;
-        }
-        if PAGEBREAKS.contains(&stripped.as_str()) {
-            blocks.push(MdBlock::PageBreak);
-            i += 1;
-            continue;
-        }
-        if let Some((fence, _lang)) = fence_open(&stripped) {
-            let mut code: Vec<String> = Vec::new();
-            i += 1;
-            while i < n {
-                let cur = strip_ws(&lines[i]).to_string();
-                if fence_close(&cur, &fence) {
-                    i += 1;
-                    break;
-                }
-                code.push(lines[i].clone());
-                i += 1;
-            }
-            blocks.push(MdBlock::Code(code.join("\n")));
-            continue;
-        }
-        if stripped.starts_with("$$") {
-            // `^\$\$(.*?)\$\$$`: the trailing `$` anchors the closing `$$` to the
-            // end of the stripped line, so `$$a$$ b` is *not* a one-line formula.
-            if stripped.len() >= 4 && stripped.ends_with("$$") {
-                let inner = &stripped[2..stripped.len() - 2];
-                blocks.push(MdBlock::Math(strip_ws(inner).to_string()));
-                i += 1;
-                continue;
-            }
-            let mut buf: Vec<String> = Vec::new();
-            // `opening_content = stripped[2:].strip()`
-            let opening = strip_ws(&stripped[2..]);
-            if !opening.is_empty() {
-                buf.push(opening.to_string());
-            }
-            i += 1;
-            while i < n {
-                let cur = lines[i].clone();
-                if let Some(idx) = cur.find("$$") {
-                    let before = strip_ws(&cur[..idx]);
-                    if !before.is_empty() {
-                        buf.push(before.to_string());
-                    }
-                    i += 1;
-                    break;
-                }
-                buf.push(cur);
-                i += 1;
-            }
-            blocks.push(MdBlock::Math(strip_ws(&buf.join("\n")).to_string()));
-            continue;
-        }
-        if let Some((level, rest)) = head_match(&line) {
-            blocks.push(MdBlock::Heading(level, md_parse_inline(strip_ws(rest))));
-            i += 1;
-            continue;
-        }
-        if line.contains('|') && i + 1 < n && table_sep_match(&lines[i + 1]) {
-            let header = split_row(&line).iter().map(|c| md_parse_inline(c)).collect();
-            let _aligns = split_align(&lines[i + 1]);
-            let mut rows: Vec<Vec<Vec<MdInline>>> = Vec::new();
-            i += 2;
-            while i < n && lines[i].contains('|') && !strip_ws(&lines[i]).is_empty() && !is_block_start(&lines[i]) {
-                rows.push(split_row(&lines[i]).iter().map(|c| md_parse_inline(c)).collect());
-                i += 1;
-            }
-            blocks.push(MdBlock::Table { header, rows });
-            continue;
-        }
-        if is_hr(&stripped) {
-            blocks.push(MdBlock::Hr);
-            i += 1;
-            continue;
-        }
-        if stripped.starts_with('>') {
-            let mut q: Vec<String> = Vec::new();
-            while i < n && strip_ws(&lines[i]).starts_with('>') {
-                q.push(strip_quote_prefix(&lines[i]));
-                i += 1;
-            }
-            if depth >= MAX_QUOTE_DEPTH {
-                blocks.push(MdBlock::Paragraph(vec![MdInline::Text(q.join("\n"))]));
-            } else {
-                blocks.push(MdBlock::Quote(md_parse(&q.join("\n"), depth + 1)));
-            }
-            continue;
-        }
-        if let Some(_lm) = list_match(&line) {
-            let mut items: Vec<Vec<MdInline>> = Vec::new();
-            let mut ordered = false;
-            while i < n {
-                let lm = match list_match(&lines[i]) {
-                    Some(m) => m,
-                    None => break,
-                };
-                let mut rest = lm.2.clone();
-                if lm.1.starts_with(|c: char| c.is_ascii_digit()) && items.is_empty() {
-                    ordered = true;
-                }
-                if let Some((_flag, task_rest)) = task_match(&rest) {
-                    rest = task_rest;
-                }
-                items.push(md_parse_inline(strip_ws(&rest)));
-                i += 1;
-            }
-            blocks.push(MdBlock::List { items, ordered });
-            continue;
-        }
-        // paragraph, aggregated up to the next block start
-        let mut buf = vec![line.clone()];
-        i += 1;
-        while i < n && !strip_ws(&lines[i]).is_empty() && !is_block_start(&lines[i]) {
-            buf.push(lines[i].clone());
-            i += 1;
-        }
-        let joined = buf.iter().map(|l| strip_ws(l)).collect::<Vec<_>>().join(" ");
-        blocks.push(MdBlock::Paragraph(md_parse_inline(&joined)));
-    }
-    blocks
-}
-
-/// `parser.py` strips a `>` guard with `re.sub(r'^\s*>\s?', '', line)`.
-fn strip_quote_prefix(line: &str) -> String {
-    let chars = chars_of(line);
-    let mut i = 0;
-    while i < chars.len() && chars[i].is_whitespace() {
-        i += 1;
-    }
-    if chars.get(i) != Some(&'>') {
-        return line.to_string();
-    }
-    i += 1;
-    if i < chars.len() && chars[i].is_whitespace() {
-        i += 1;
-    }
-    chars[i..].iter().collect()
-}
-
-// ------------------------------------------------------- xhtml_render.render
-
-/// `xhtml_render.inline`
-fn xhtml_inline(nodes: &[MdInline]) -> String {
-    let mut out = String::new();
-    for node in nodes {
-        match node {
-            MdInline::Text(v) => out.push_str(&html_escape(v, false)),
-            MdInline::Code(v) => out.push_str(&format!("<code>{}</code>", html_escape(v, false))),
-            MdInline::Emph(kind, v) => {
-                let tag = match kind.as_str() {
-                    "bold" => "strong",
-                    "italic" => "em",
-                    _ => "del",
-                };
-                out.push_str(&format!(
-                    "<{t}>{body}</{t}>",
-                    t = tag,
-                    body = xhtml_inline(&md_parse_inline(v))
-                ));
-            }
-            MdInline::Link(nodes, href) => {
-                let lower = href.to_lowercase();
-                if lower.starts_with("javascript:") || lower.starts_with("data:") || lower.starts_with("vbscript:") {
-                    out.push_str(&xhtml_inline(nodes));
-                } else {
-                    out.push_str(&format!(
-                        "<a href=\"{href}\">{body}</a>",
-                        href = html_escape(href, true),
-                        body = xhtml_inline(nodes)
-                    ));
-                }
-            }
-            MdInline::Image { alt, src } => out.push_str(&format!(
-                "<img src=\"{src}\" alt=\"{alt}\"/>",
-                src = html_escape(src, true),
-                alt = html_escape(alt, true)
-            )),
-            MdInline::Math(latex) => out.push_str(&format!(
-                "<span class=\"math\">{}</span>",
-                html_escape(latex, false)
-            )),
-        }
-    }
-    out
-}
-
-/// `xhtml_render.render`
-pub(crate) fn xhtml_render(blocks: &[MdBlock]) -> String {
-    let mut out: Vec<String> = Vec::new();
-    for block in blocks {
-        match block {
-            MdBlock::Paragraph(text) => out.push(format!("<p>{}</p>", xhtml_inline(text))),
-            MdBlock::Heading(level, text) => {
-                out.push(format!("<h{lv}>{body}</h{lv}>", lv = level, body = xhtml_inline(text)))
-            }
-            MdBlock::Table { header, rows } => {
-                let head = header
-                    .iter()
-                    .map(|c| format!("<th>{}</th>", xhtml_inline(c)))
-                    .collect::<String>();
-                let body: String = rows
-                    .iter()
-                    .map(|r| {
-                        let cells = r.iter().map(|c| format!("<td>{}</td>", xhtml_inline(c))).collect::<String>();
-                        format!("<tr>{cells}</tr>")
-                    })
-                    .collect();
-                out.push(format!("<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"));
-            }
-            MdBlock::List { items, ordered } => {
-                let tag = if *ordered { "ol" } else { "ul" };
-                let body = items.iter().map(|i| format!("<li>{}</li>", xhtml_inline(i))).collect::<String>();
-                out.push(format!("<{tag}>{body}</{tag}>"));
-            }
-            MdBlock::Quote(inner) => out.push(format!("<blockquote>{}</blockquote>", xhtml_render(inner))),
-            MdBlock::Code(content) => out.push(format!(
-                "<pre><code>{}</code></pre>",
-                html_escape(content, false)
-            )),
-            MdBlock::Math(latex) => out.push(format!("<p class=\"math\">{}</p>", html_escape(latex, false))),
-            MdBlock::Hr => out.push("<hr/>".to_string()),
-            MdBlock::PageBreak => out.push("<div style=\"break-after:page\"></div>".to_string()),
-        }
-    }
-    out.join("\n")
-}
-
-// --------------------------------------------------------- epub_render parts
-
-/// `epub_render.split_into_chapters`
-pub(crate) fn epub_split_chapters(md: &str, split_level: &str) -> Vec<(String, String)> {
-    // `markdown_content.splitlines()` — a form feed or U+2028 starts a new line
-    // for CPython even though `parser.parse` normalises CR first.
-    let lines: Vec<String> = py_splitlines(md).into_iter().map(|s| s.to_string()).collect();
-    let mut chapters: Vec<(String, String)> = Vec::new();
-    let mut curr_title = "序言".to_string();
-    let mut curr_lines: Vec<String> = Vec::new();
-    let match_prefixes: Vec<&str> = if split_level == "h1" {
-        vec!["# "]
-    } else {
-        vec!["# ", "## "]
-    };
-    let mut fence: Option<String> = None;
-    for line in &lines {
-        if let Some((marker, rest)) = fence_open_within(line) {
-            fence = match &fence {
-                None => Some(marker),
-                Some(open) => {
-                    if marker.starts_with(open.chars().next().unwrap())
-                        && marker.chars().count() >= open.chars().count()
-                        && strip_ws(&rest).is_empty()
-                    {
-                        None
-                    } else {
-                        fence.clone()
-                    }
-                }
-            };
-            curr_lines.push(line.clone());
-            continue;
-        }
-        if fence.is_some() {
-            curr_lines.push(line.clone());
-            continue;
-        }
-        if match_prefixes.iter().any(|p| line.starts_with(p)) {
-            if !curr_lines.is_empty() {
-                chapters.push((curr_title.clone(), curr_lines.join("\n")));
-                curr_lines.clear();
-            }
-            curr_title = strip_ws(line.trim_start_matches('#')).to_string();
-            curr_lines.push(line.clone());
-        } else {
-            curr_lines.push(line.clone());
-        }
-    }
-    if !curr_lines.is_empty() {
-        chapters.push((curr_title, curr_lines.join("\n")));
-    }
-    chapters.into_iter().filter(|(_, c)| !strip_ws(c).is_empty()).collect()
-}
-
-/// `^\s{0,3}(`{3,}|~{3,})(.*)$` on a raw line.
-fn fence_open_within(line: &str) -> Option<(String, String)> {
-    let chars = chars_of(line);
-    let mut i = 0;
-    let mut ws = 0;
-    while i < chars.len() && ws < 3 && chars[i].is_whitespace() {
-        i += 1;
-        ws += 1;
-    }
-    let (marker_char, rest_start) = match chars.get(i) {
-        Some('`') => ('`', i),
-        Some('~') => ('~', i),
-        _ => return None,
-    };
-    let mut j = i;
-    while j < chars.len() && chars[j] == marker_char {
-        j += 1;
-    }
-    if j - i < 3 {
-        return None;
-    }
-    let marker: String = chars[i..j].iter().collect();
-    let rest: String = chars[j..].iter().collect();
-    let _ = rest_start;
-    Some((marker, rest))
 }
 
 /// `x = opts.get(key) or {}` followed by `x.get(...)` in Python.
@@ -2428,16 +1467,19 @@ th {{ background-color: #f8fafc; }}
     ))
 }
 
-/// `epub_render.export_epub` — returns the OCF container bytes.
+/// Build the OCF container; returns its bytes and the image warnings.
+/// `base_dir` resolves relative image paths (empty = working directory).
+#[allow(clippy::too_many_arguments)]
 pub fn epub_build_bytes(
     markdown: &Value,
+    base_dir: &str,
     options: &Value,
     title: &str,
     author: &str,
     language: &str,
     book_uuid: &str,
     mod_time: &str,
-) -> Result<Vec<u8>, String> {
+) -> Result<(Vec<u8>, Vec<String>), String> {
     // `markdown_content.splitlines()` requires a str: `None` (JSON null) and
     // every other non-str raise AttributeError in Python -> `export_failed`.
     let markdown = match markdown {
@@ -2507,17 +1549,66 @@ pub fn epub_build_bytes(
         .map(py_str)
         .unwrap_or_else(|| "h1".to_string());
 
-    let mut raw_chapters = epub_split_chapters(&markdown, &split_level);
-    if raw_chapters.is_empty() {
-        raw_chapters.push((book_title.clone(), markdown.clone()));
+    let custom_css = format!("{}\n{}", build_epub_css(&opts)?, crate::epub_writer::EXTRA_CSS);
+
+    // Local images are packaged once each as `OEBPS/images/img_N.ext`.
+    let mut warns: Vec<String> = Vec::new();
+    let mut resolver = HtmlImageResolver::new(base_dir);
+    let mut packaged: Vec<(String, String, Vec<u8>)> = Vec::new(); // (href, media type, bytes)
+    let mut by_src: std::collections::HashMap<String, Option<String>> = std::collections::HashMap::new();
+    let doc = crate::md_ast::parse(&markdown);
+    let chapters = {
+        let mut map = |src: &str| -> Option<String> {
+            if let Some(hit) = by_src.get(src) {
+                return hit.clone();
+            }
+            let got = match resolver.resolve(src, &mut warns) {
+                Some(Resolved::File(p)) => {
+                    let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
+                    match (epub_image_media_type(&ext), fs::read(&p)) {
+                        (Some(mt), Ok(data)) => Some((ext, mt.to_string(), data)),
+                        (None, _) => {
+                            warns.push(format!("EPUB 不支持该图片格式，已跳过：{src}"));
+                            None
+                        }
+                        (_, Err(e)) => {
+                            warns.push(format!("图片读取失败，已跳过：{src}（{e}）"));
+                            None
+                        }
+                    }
+                }
+                Some(Resolved::Inline { mime, data }) => {
+                    let ext = mime.rsplit('/').next().unwrap_or("png").replace("jpeg", "jpg");
+                    epub_image_media_type(&ext).map(|mt| (ext.clone(), mt.to_string(), data))
+                }
+                None => None,
+            };
+            let href = got.map(|(ext, mt, data)| {
+                let href = format!("images/img_{}.{}", packaged.len() + 1, ext);
+                packaged.push((href.clone(), mt, data));
+                href
+            });
+            by_src.insert(src.to_string(), href.clone());
+            href
+        };
+        crate::epub_writer::render_chapters(&doc, &split_level, &mut map)
+    };
+    let mut chapters = chapters;
+    if chapters.is_empty() {
+        chapters.push(crate::epub_writer::Chapter { title: book_title.clone(), body: String::new(), has_math: false });
     }
-    let custom_css = build_epub_css(&opts)?;
+    // A document without any split heading is one chapter named after the book.
+    if chapters.len() == 1 && chapters[0].title == "序言" {
+        chapters[0].title = book_title.clone();
+    }
+    let math_chapters: Vec<bool> = chapters.iter().map(|c| c.has_math).collect();
 
     let mut chapter_files: Vec<(String, String, String, String)> = Vec::new();
-    for (idx, (chap_title, chap_md)) in raw_chapters.iter().enumerate() {
+    for (idx, chap) in chapters.iter().enumerate() {
+        let chap_title = &chap.title;
         let chap_id = format!("chap_{}", idx + 1);
         let chap_filename = format!("chapter_{}.xhtml", idx + 1);
-        let chap_body = xhtml_render(&md_parse(chap_md, 0));
+        let chap_body = chap.body.clone();
         let chap_xhtml = format!(
             r#"<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html>
@@ -2602,12 +1693,16 @@ pub fn epub_build_bytes(
         "<item id=\"nav\" href=\"nav.xhtml\" media-type=\"application/xhtml+xml\" properties=\"nav\"/>".to_string(),
         "<item id=\"ncx\" href=\"toc.ncx\" media-type=\"application/x-dtbncx+xml\"/>".to_string(),
     ];
-    for (cid, fn_, _, _) in &chapter_files {
+    for (i, (cid, fn_, _, _)) in chapter_files.iter().enumerate() {
+        let props = if math_chapters.get(i).copied().unwrap_or(false) { " properties=\"mathml\"" } else { "" };
         manifest_items.push(format!(
-            "<item id=\"{cid}\" href=\"{f}\" media-type=\"application/xhtml+xml\"/>",
+            "<item id=\"{cid}\" href=\"{f}\" media-type=\"application/xhtml+xml\"{props}/>",
             cid = cid,
             f = fn_
         ));
+    }
+    for (i, (href, mt, _)) in packaged.iter().enumerate() {
+        manifest_items.push(format!("<item id=\"img_{}\" href=\"{href}\" media-type=\"{mt}\"/>", i + 1));
     }
     let mut spine_items = vec!["<itemref idref=\"nav\"/>".to_string()];
     for (cid, _, _, _) in &chapter_files {
@@ -2678,7 +1773,23 @@ pub fn epub_build_bytes(
     for (_, fn_, _, xhtml) in chapter_files {
         entries.push(ZipEntry { path: format!("OEBPS/{fn_}"), data: xhtml.into_bytes(), compress: true });
     }
-    write_zip(&entries)
+    for (href, _, data) in packaged {
+        // Already-compressed formats are stored.
+        let compress = href.ends_with(".svg");
+        entries.push(ZipEntry { path: format!("OEBPS/{href}"), data, compress });
+    }
+    Ok((write_zip(&entries)?, warns))
+}
+
+fn epub_image_media_type(ext: &str) -> Option<&'static str> {
+    Some(match ext {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "svg" => "image/svg+xml",
+        _ => return None,
+    })
 }
 
 /// Marker for "the Python interpreter would have raised TypeError/AttributeError".
@@ -2688,7 +1799,7 @@ pub(crate) const EPI_TYPE_ERROR: &str = "__python_type_error__";
 /// Signature kept for the Rust-only `/api/export` dispatcher.
 pub fn export_epub(
     content: &str,
-    _base_dir: &str,
+    base_dir: &str,
     out_path: &str,
     options: &Value,
     source_name: &str,
@@ -2709,8 +1820,9 @@ pub fn export_epub(
         .pointer("/epub/language")
         .and_then(|v| v.as_str())
         .unwrap_or("zh-CN");
-    let bytes = epub_build_bytes(
+    let (bytes, warns) = epub_build_bytes(
         &Value::String(content.to_string()),
+        base_dir,
         options,
         title,
         author,
@@ -2726,7 +1838,7 @@ pub fn export_epub(
         ok: true,
         path: Some(out_path.to_string()),
         size: Some(bytes.len() as u64),
-        warns: Some(Vec::new()),
+        warns: Some(warns),
         error: None,
         canceled: Some(false),
     })
@@ -2773,343 +1885,57 @@ fn civil_from_days(days: i64) -> (i64, u32, u32) {
 // DOCX Export (Native OpenXML Generator with Math OMML)
 // ============================================================================
 
+/// DOCX export built on the shared AST ([`crate::md_ast`]) and
+/// [`crate::docx_writer`], applying the sanitized export style.
 pub fn export_docx(
     content: &str,
-    _base_dir: &str,
+    base_dir: &str,
     out_path: &str,
-    _options: &Value,
-    _source_name: &str,
+    options: &Value,
+    source_name: &str,
 ) -> Result<ExportResult, String> {
-    let mut body_xml = String::new();
-
-    let lines: Vec<&str> = content.lines().collect();
-    let mut i = 0;
-    let mut in_code = false;
-    let mut code_buf: Vec<&str> = Vec::new();
-
-    while i < lines.len() {
-        let line = lines[i];
-        let trimmed = line.trim();
-
-        if trimmed.starts_with("```") {
-            if in_code {
-                in_code = false;
-                for cl in &code_buf {
-                    body_xml.push_str("<w:p><w:pPr><w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"F5F6F8\"/><w:spacing w:line=\"240\" w:lineRule=\"auto\"/></w:pPr>");
-                    body_xml.push_str("<w:r><w:rPr><w:rFonts w:ascii=\"Consolas\" w:hAnsi=\"Consolas\"/><w:sz w:val=\"19\"/></w:rPr>");
-                    body_xml.push_str("<w:t xml:space=\"preserve\">");
-                    body_xml.push_str(&docx_escape(cl));
-                    body_xml.push_str("</w:t></w:r></w:p>");
-                }
-                code_buf.clear();
-            } else {
-                in_code = true;
-                code_buf.clear();
-            }
-            i += 1;
-            continue;
-        }
-
-        if in_code {
-            code_buf.push(line);
-            i += 1;
-            continue;
-        }
-
-        // Display math $$...$$
-        if trimmed.starts_with("$$") {
-            let formula = if trimmed.len() > 4 && trimmed.ends_with("$$") {
-                &trimmed[2..trimmed.len() - 2]
-            } else {
-                let mut m_lines = Vec::new();
-                m_lines.push(trimmed.trim_start_matches('$').trim());
-                i += 1;
-                while i < lines.len() && !lines[i].trim().ends_with("$$") {
-                    m_lines.push(lines[i].trim());
-                    i += 1;
-                }
-                if i < lines.len() {
-                    let last = lines[i].trim().trim_end_matches('$').trim();
-                    if !last.is_empty() { m_lines.push(last); }
-                }
-                let joined = m_lines.join(" ");
-                body_xml.push_str(&docx_display_math(&joined));
-                i += 1;
-                continue;
-            };
-            body_xml.push_str(&docx_display_math(formula));
-            i += 1;
-            continue;
-        }
-
-        // Table
-        if trimmed.starts_with('|') && trimmed.ends_with('|') {
-            let mut tbl_rows = Vec::new();
-            while i < lines.len() && lines[i].trim().starts_with('|') && lines[i].trim().ends_with('|') {
-                let row_str = lines[i].trim();
-                if !row_str.contains("---") {
-                    let cells: Vec<String> = row_str[1..row_str.len() - 1]
-                        .split('|')
-                        .map(|c| c.trim().to_string())
-                        .collect();
-                    tbl_rows.push(cells);
-                }
-                i += 1;
-            }
-
-            if !tbl_rows.is_empty() {
-                body_xml.push_str(r#"<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders><w:top w:val="single" w:sz="6" w:space="0" w:color="C8CDD4"/><w:left w:val="single" w:sz="6" w:space="0" w:color="C8CDD4"/><w:bottom w:val="single" w:sz="6" w:space="0" w:color="C8CDD4"/><w:right w:val="single" w:sz="6" w:space="0" w:color="C8CDD4"/><w:insideH w:val="single" w:sz="6" w:space="0" w:color="C8CDD4"/><w:insideV w:val="single" w:sz="6" w:space="0" w:color="C8CDD4"/></w:tblBorders></w:tblPr>"#);
-                for (r_idx, row) in tbl_rows.iter().enumerate() {
-                    body_xml.push_str("<w:tr>");
-                    for cell in row {
-                        body_xml.push_str("<w:tc>");
-                        if r_idx == 0 {
-                            body_xml.push_str(r#"<w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="3B6EF5"/></w:tcPr><w:p><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/></w:rPr><w:t>"#);
-                        } else {
-                            body_xml.push_str("<w:p><w:r><w:t>");
-                        }
-                        body_xml.push_str(&docx_escape(cell));
-                        body_xml.push_str("</w:t></w:r></w:p></w:tc>");
+    let doc = crate::md_ast::parse(content);
+    let style = crate::export_styles::sanitize_options(Some(options));
+    let resolver = std::cell::RefCell::new(HtmlImageResolver::new(base_dir));
+    let warns = std::cell::RefCell::new(Vec::<String>::new());
+    let images = |src: &str| -> Option<(String, Vec<u8>)> {
+        let hit = resolver.borrow_mut().resolve(src, &mut warns.borrow_mut())?;
+        match hit {
+            Resolved::File(p) => {
+                let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("png").to_ascii_lowercase();
+                match fs::read(&p) {
+                    Ok(b) => Some((ext, b)),
+                    Err(e) => {
+                        warns.borrow_mut().push(format!("图片读取失败，已跳过：{src}（{e}）"));
+                        None
                     }
-                    body_xml.push_str("</w:tr>");
                 }
-                body_xml.push_str("</w:tbl>");
             }
-            continue;
+            Resolved::Inline { mime, data } => Some((mime.rsplit('/').next().unwrap_or("png").to_string(), data)),
         }
-
-        // Headings
-        if trimmed.starts_with("# ") {
-            body_xml.push_str("<w:p><w:pPr><w:pStyle w:val=\"Heading1\"/></w:pPr>");
-            body_xml.push_str(&format_docx_runs(&trimmed[2..]));
-            body_xml.push_str("</w:p>");
-        } else if trimmed.starts_with("## ") {
-            body_xml.push_str("<w:p><w:pPr><w:pStyle w:val=\"Heading2\"/></w:pPr>");
-            body_xml.push_str(&format_docx_runs(&trimmed[3..]));
-            body_xml.push_str("</w:p>");
-        } else if trimmed.starts_with("### ") {
-            body_xml.push_str("<w:p><w:pPr><w:pStyle w:val=\"Heading3\"/></w:pPr>");
-            body_xml.push_str(&format_docx_runs(&trimmed[4..]));
-            body_xml.push_str("</w:p>");
-        } else if trimmed.starts_with("#### ") {
-            body_xml.push_str("<w:p><w:pPr><w:pStyle w:val=\"Heading4\"/></w:pPr>");
-            body_xml.push_str(&format_docx_runs(&trimmed[5..]));
-            body_xml.push_str("</w:p>");
-        } else if trimmed.starts_with("> ") {
-            body_xml.push_str(r#"<w:p><w:pPr><w:pBdr><w:left w:val="single" w:sz="24" w:space="8" w:color="3B6EF5"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="F3F6FF"/><w:ind w:left="360"/></w:pPr>"#);
-            body_xml.push_str(&format_docx_runs(&trimmed[2..]));
-            body_xml.push_str("</w:p>");
-        } else if trimmed.starts_with("- ") || trimmed.starts_with("* ") {
-            body_xml.push_str("<w:p><w:pPr><w:ind w:left=\"360\"/></w:pPr>");
-            body_xml.push_str("<w:r><w:t>• </w:t></w:r>");
-            body_xml.push_str(&format_docx_runs(&trimmed[2..]));
-            body_xml.push_str("</w:p>");
-        } else if !trimmed.is_empty() {
-            body_xml.push_str("<w:p>");
-            body_xml.push_str(&format_docx_runs(trimmed));
-            body_xml.push_str("</w:p>");
-        }
-
-        i += 1;
-    }
-
-    let document_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-            xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math">
-  <w:body>
-    {body_xml}
-    <w:sectPr>
-      <w:pgSz w:w="11906" w:h="16838"/>
-      <w:pgMar w:top="1134" w:right="1020" w:bottom="1134" w:left="1020"/>
-    </w:sectPr>
-  </w:body>
-</w:document>"#);
-
-    let content_types = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="xml" ContentType="application/xml"/>
-  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
-</Types>"#;
-
-    let root_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-</Relationships>"#;
-
-    let doc_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-</Relationships>"#;
-
-    let styles_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:docDefaults>
-    <w:rPrDefault>
-      <w:rPr>
-        <w:rFonts w:ascii="Microsoft YaHei" w:hAnsi="Microsoft YaHei" w:eastAsia="Microsoft YaHei" w:cs="Microsoft YaHei"/>
-        <w:sz w:val="22"/>
-        <w:color w:val="262626"/>
-      </w:rPr>
-    </w:rPrDefault>
-  </w:docDefaults>
-  <w:style w:type="paragraph" w:default="1" w:styleId="Normal">
-    <w:name w:val="Normal"/>
-  </w:style>
-  <w:style w:type="paragraph" w:styleId="Heading1">
-    <w:name w:val="heading 1"/>
-    <w:basedOn w:val="Normal"/>
-    <w:pPr><w:spacing w:before="360" w:after="200"/></w:pPr>
-    <w:rPr><w:b/><w:sz w:val="40"/><w:color w:val="1A1A1A"/></w:rPr>
-  </w:style>
-  <w:style w:type="paragraph" w:styleId="Heading2">
-    <w:name w:val="heading 2"/>
-    <w:basedOn w:val="Normal"/>
-    <w:pPr><w:spacing w:before="280" w:after="160"/></w:pPr>
-    <w:rPr><w:b/><w:sz w:val="32"/><w:color w:val="1F2937"/></w:rPr>
-  </w:style>
-  <w:style w:type="paragraph" w:styleId="Heading3">
-    <w:name w:val="heading 3"/>
-    <w:basedOn w:val="Normal"/>
-    <w:pPr><w:spacing w:before="240" w:after="120"/></w:pPr>
-    <w:rPr><w:b/><w:sz w:val="28"/><w:color w:val="2D3748"/></w:rPr>
-  </w:style>
-  <w:style w:type="paragraph" w:styleId="Heading4">
-    <w:name w:val="heading 4"/>
-    <w:basedOn w:val="Normal"/>
-    <w:pPr><w:spacing w:before="200" w:after="120"/></w:pPr>
-    <w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="374151"/></w:rPr>
-  </w:style>
-</w:styles>"#;
-
-    let entries = vec![
-        ZipEntry { path: "[Content_Types].xml".to_string(), data: content_types.as_bytes().to_vec(), compress: true },
-        ZipEntry { path: "_rels/.rels".to_string(), data: root_rels.as_bytes().to_vec(), compress: true },
-        ZipEntry { path: "word/_rels/document.xml.rels".to_string(), data: doc_rels.as_bytes().to_vec(), compress: true },
-        ZipEntry { path: "word/styles.xml".to_string(), data: styles_xml.as_bytes().to_vec(), compress: true },
-        ZipEntry { path: "word/document.xml".to_string(), data: document_xml.as_bytes().to_vec(), compress: true },
-    ];
-
+    };
+    let pkg = crate::docx_writer::build(&doc, &style, source_name, &images);
+    let entries: Vec<ZipEntry> = pkg
+        .parts
+        .into_iter()
+        .map(|(path, data)| {
+            let compress = !path.starts_with("word/media/");
+            ZipEntry { path, data, compress }
+        })
+        .collect();
     let zip_bytes = write_zip(&entries)?;
-    if let Some(parent) = Path::new(out_path).parent() {
-        let _ = fs::create_dir_all(parent);
-    }
-    fs::write(out_path, &zip_bytes).map_err(|e| format!("Failed to write DOCX: {}", e))?;
-    let size = zip_bytes.len() as u64;
-
+    crate::content::write_bytes_atomic(Path::new(out_path), &zip_bytes)
+        .map_err(|e| format!("Failed to write DOCX: {}", e))?;
+    let mut all_warns = warns.into_inner();
+    all_warns.extend(pkg.warns);
     Ok(ExportResult {
         ok: true,
         path: Some(out_path.to_string()),
-        size: Some(size),
-        warns: Some(Vec::new()),
+        size: Some(zip_bytes.len() as u64),
+        warns: Some(all_warns),
         error: None,
         canceled: Some(false),
     })
-}
-
-fn docx_escape(s: &str) -> String {
-    s.replace('&', "&amp;")
-     .replace('<', "&lt;")
-     .replace('>', "&gt;")
-     .replace('"', "&quot;")
-}
-
-/// One display formula as its own DOCX paragraph.
-///
-/// Mirrors `docx_render.py:471-478` plus the AST that feeds it
-/// (`parser.py:215/232` store `….strip()`): the OMML is produced with
-/// `is_block=True` (`<m:oMathPara>`) and **only when the stripped latex is
-/// truthy** — an empty `$$ … $$` yields a bare paragraph, never an empty math
-/// box.  `py_strip` (not `trim`) is CPython's whitespace set.
-fn docx_display_math(latex: &str) -> String {
-    let mut p = String::from("<w:p>");
-    let latex = py_strip(latex);
-    if !latex.is_empty() {
-        p.push_str(&crate::latex2omml::latex_to_omml(latex, true));
-    }
-    p.push_str("</w:p>");
-    p
-}
-
-/// Emit the inline runs of one DOCX paragraph (`add_inline` in `docx_render.py`).
-///
-/// `idx` is a **byte** cursor and every slice below is a byte slice: the previous
-/// version kept a `Vec<char>` and fed its char index into `s[..]`, so a single
-/// non-ASCII character before an inline `$…$` panicked on a non-char boundary, and
-/// a marker without a closer (`"costs $5"`, a lone backtick, an unterminated `**`)
-/// made the text loop refuse to advance `idx` — an endless loop that wedges the
-/// export thread. Unclosed markers are now ordinary text, exactly like Python's
-/// tokenizer, which only ever yields a `math`/`code`/`bold` node when the closing
-/// delimiter is present.
-fn format_docx_runs(s: &str) -> String {
-    fn flush_text(out: &mut String, buf: &mut String) {
-        if !buf.is_empty() {
-            out.push_str("<w:r><w:t xml:space=\"preserve\">");
-            out.push_str(&docx_escape(buf));
-            out.push_str("</w:t></w:r>");
-            buf.clear();
-        }
-    }
-
-    let mut out = String::new();
-    let mut text_buf = String::new();
-    let mut idx = 0usize;
-
-    while idx < s.len() {
-        let rest = &s[idx..];
-
-        // Inline math $...$ — one oMath per delimited formula, never dropped.
-        // Guard mirrors CPython `_MATH_RE = \$([^$\n]+?)\$` (parser.py:15, 60-63):
-        // a `$` only opens a formula when at least one non-`$` character follows,
-        // so `$$x$$` inside a paragraph yields literal `$` + formula + literal `$`
-        // instead of two empty `<m:oMath>` runs.
-        if rest.starts_with('$') {
-            if let Some(close) = rest[1..].find('$') {
-                let formula = &rest[1..1 + close];
-                if !formula.is_empty() && !formula.contains('\n') {
-                    flush_text(&mut out, &mut text_buf);
-                    out.push_str(&crate::latex2omml::latex_to_omml(formula, false));
-                    idx += 2 + close;
-                    continue;
-                }
-            }
-        }
-
-        // Bold **...**
-        if rest.starts_with("**") {
-            if let Some(close) = rest[2..].find("**") {
-                flush_text(&mut out, &mut text_buf);
-                let inner = &rest[2..2 + close];
-                out.push_str("<w:r><w:rPr><w:b/></w:rPr><w:t>");
-                out.push_str(&docx_escape(inner));
-                out.push_str("</w:t></w:r>");
-                idx += 4 + close;
-                continue;
-            }
-        }
-
-        // Inline code `...`
-        if rest.starts_with('`') {
-            if let Some(close) = rest[1..].find('`') {
-                flush_text(&mut out, &mut text_buf);
-                let inner = &rest[1..1 + close];
-                out.push_str(r#"<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:shd w:val="clear" w:color="auto" w:fill="F5F6F8"/><w:color w:val="C7254E"/></w:rPr><w:t xml:space="preserve">"#);
-                out.push_str(&docx_escape(inner));
-                out.push_str("</w:t></w:r>");
-                idx += 2 + close;
-                continue;
-            }
-        }
-
-        let ch = rest.chars().next().unwrap_or('\u{0}');
-        text_buf.push(ch);
-        idx += ch.len_utf8().max(1);
-    }
-
-    flush_text(&mut out, &mut text_buf);
-    out
 }
 
 // ============================================================================
@@ -3181,166 +2007,6 @@ fn pdf_random_tail() -> String {
     out
 }
 
-// ------------------------------------------------------------- AST bridge
-//
-// `pdf_render` consumes the *JSON block AST* that Python's `parser.parse`
-// produces; this crate's port of that parser is `md_parse`, which hands back
-// `MdBlock`/`MdInline` enums.  The functions below are the projection between
-// them.  Values are built explicitly rather than through `json!` so the types
-// are the ones `pdf_render` reads (`Value::String` for text, `Value::Bool` for
-// the flags, `Value::Number` for the heading level).
-
-fn pdf_js_text(s: &str) -> Value {
-    Value::String(s.to_string())
-}
-
-fn pdf_js_obj(pairs: &[(&str, Value)]) -> Value {
-    let mut map = serde_json::Map::<String, Value>::new();
-    for (k, v) in pairs {
-        map.insert((*k).to_string(), (*v).clone());
-    }
-    Value::Object(map)
-}
-
-/// `MdInline::Emph` stores the *raw inner markdown*, and Python's
-/// `pdf_render.py:141-143` re-parses it at draw time
-/// (`_parser.parse_inline(nd['v'])`).  `pdf_render::normalize_inline` has no
-/// parser of its own, so this bridge does the re-parse here and hands over the
-/// node list Python's own parser would have produced — otherwise
-/// `` **a `code` b** `` would print its backticks literally.  The depth cap is
-/// the backstop the deleted 120 s browser watchdog used to be: it is what keeps
-/// a pathological source from recursing on this lane's own call stack, since
-/// the render is now in-process and bounded only by its own structure.
-const PDF_EMPH_DEPTH: usize = 16;
-
-/// `_parser.parse_inline()` node shapes (`{"t": .., ..}`).
-fn md_inline_to_ast(node: &MdInline, depth: usize) -> Value {
-    match node {
-        MdInline::Text(v) => pdf_js_obj(&[("t", pdf_js_text("text")), ("v", pdf_js_text(v))]),
-        MdInline::Code(v) => pdf_js_obj(&[("t", pdf_js_text("code")), ("v", pdf_js_text(v))]),
-        MdInline::Emph(kind, v) => {
-            let inner = if depth < PDF_EMPH_DEPTH {
-                md_inline_list_to_ast(&md_parse_inline(v), depth + 1)
-            } else {
-                pdf_js_text(v)
-            };
-            pdf_js_obj(&[("t", pdf_js_text(kind)), ("v", inner)])
-        }
-        MdInline::Link(children, href) => pdf_js_obj(&[
-            ("t", pdf_js_text("link")),
-            ("text", md_inline_list_to_ast(children, depth)),
-            ("href", pdf_js_text(href)),
-            ("title", pdf_js_text("")),
-        ]),
-        MdInline::Image { alt, src } => pdf_js_obj(&[
-            ("t", pdf_js_text("image")),
-            ("alt", pdf_js_text(alt)),
-            ("src", pdf_js_text(src)),
-            ("title", pdf_js_text("")),
-        ]),
-        // There is no formula rasteriser in this lane.  `fallback: true` is the
-        // exact marking `formula.prepare` applies when it cannot produce a PNG
-        // (`formula.py:156-158`), and `pdf_render` then lays the LaTeX out as a
-        // plain text run (`pdf_render.rs:1099-1108`) instead of dropping the
-        // node.  Losing the typeset formula is a known gap; losing the formula
-        // entirely is not acceptable, so the fallback rung is what is emitted —
-        // and `pdf_math_fallback_warns` below turns it into the warning CPython
-        // emits for the same rung.
-        MdInline::Math(latex) => pdf_js_obj(&[
-            ("t", pdf_js_text("math")),
-            ("latex", pdf_js_text(latex)),
-            ("display", Value::Bool(false)),
-            ("fallback", Value::Bool(true)),
-        ]),
-    }
-}
-
-fn md_inline_list_to_ast(nodes: &[MdInline], depth: usize) -> Value {
-    Value::Array(nodes.iter().map(|n| md_inline_to_ast(n, depth)).collect())
-}
-
-/// `_parser.parse()` block shapes (`{"type": .., ..}`), i.e. the `blocks`
-/// argument of `pdf_render.render`.
-fn md_block_to_ast(block: &MdBlock) -> Value {
-    match block {
-        MdBlock::Paragraph(nodes) => pdf_js_obj(&[
-            ("type", pdf_js_text("paragraph")),
-            ("text", md_inline_list_to_ast(nodes, 0)),
-        ]),
-        MdBlock::Heading(level, nodes) => pdf_js_obj(&[
-            ("type", pdf_js_text("heading")),
-            ("level", Value::from(*level as i64)),
-            ("text", md_inline_list_to_ast(nodes, 0)),
-        ]),
-        MdBlock::PageBreak => pdf_js_obj(&[("type", pdf_js_text("pagebreak"))]),
-        MdBlock::Hr => pdf_js_obj(&[("type", pdf_js_text("hr"))]),
-        MdBlock::List { items, ordered } => pdf_js_obj(&[
-            ("type", pdf_js_text("list")),
-            (
-                "items",
-                Value::Array(
-                    items
-                        .iter()
-                        .map(|it| {
-                            pdf_js_obj(&[
-                                ("text", md_inline_list_to_ast(it, 0)),
-                                // `md_parse` runs `task_match` and discards the
-                                // checkbox flag (`mdexport.rs`, the list arm),
-                                // so every item is emitted as an ordinary one.
-                                // Recorded as a capability gap.
-                                ("task", Value::Bool(false)),
-                                ("checked", Value::Bool(false)),
-                                ("ordered", Value::Bool(*ordered)),
-                            ])
-                        })
-                        .collect(),
-                ),
-            ),
-        ]),
-        MdBlock::Quote(inner) => pdf_js_obj(&[
-            ("type", pdf_js_text("quote")),
-            ("blocks", md_blocks_to_ast(inner)),
-        ]),
-        // `MdBlock::Code` keeps only the body; the fence info string Python
-        // stores as `lang` is not carried, so the renderer emits no LangTag run.
-        MdBlock::Code(content) => pdf_js_obj(&[
-            ("type", pdf_js_text("code")),
-            ("lang", pdf_js_text("")),
-            ("content", pdf_js_text(content)),
-        ]),
-        MdBlock::Math(latex) => pdf_js_obj(&[
-            ("type", pdf_js_text("math")),
-            ("display", Value::Bool(true)),
-            ("latex", pdf_js_text(latex)),
-            ("fallback", Value::Bool(true)),
-        ]),
-        // `aligns` is deliberately absent: `build_story` falls back to
-        // `style['table']['align']` for a missing key (`pdf_render.rs:2181`) and
-        // `md_parse` computes `split_align` then drops it, so the column markers
-        // are not recoverable here without changing the `MdBlock::Table` shape
-        // the HTML/DOCX/EPUB lanes also match on.  Recorded as a gap.
-        MdBlock::Table { header, rows } => pdf_js_obj(&[
-            ("type", pdf_js_text("table")),
-            (
-                "header",
-                Value::Array(header.iter().map(|c| md_inline_list_to_ast(c, 0)).collect()),
-            ),
-            (
-                "rows",
-                Value::Array(
-                    rows.iter()
-                        .map(|r| Value::Array(r.iter().map(|c| md_inline_list_to_ast(c, 0)).collect()))
-                        .collect(),
-                ),
-            ),
-        ]),
-    }
-}
-
-fn md_blocks_to_ast(blocks: &[MdBlock]) -> Value {
-    Value::Array(blocks.iter().map(md_block_to_ast).collect())
-}
-
 /// The warning half of `formula.prepare` (`formula.py:132-213`), which this lane
 /// cannot share with the rasterising half because there is no rasteriser.
 ///
@@ -3370,12 +2036,15 @@ fn pdf_math_warn_walk(v: &Value, out: &mut Vec<String>) {
             let is_block_math = map.get("type").and_then(|t| t.as_str()) == Some("math")
                 && map.get("display").and_then(|d| d.as_bool()) == Some(true);
             let is_inline_math = map.get("t").and_then(|t| t.as_str()) == Some("math");
-            if is_block_math || is_inline_math {
-                let latex = map
-                    .get("latex")
-                    .and_then(|l| l.as_str())
-                    .unwrap_or_default()
-                    .to_string();
+            let latex = map
+                .get("latex")
+                .and_then(|l| l.as_str())
+                .unwrap_or_default()
+                .to_string();
+            // Formulas the vector layout handles are drawn, not left as text.
+            let laid_out = (is_block_math || is_inline_math)
+                && crate::math_layout::layout(&latex, is_block_math, 10.0).is_some();
+            if (is_block_math || is_inline_math) && !laid_out {
                 // `latex[:60]` — CPython slices by code point, not by byte.
                 let head: String = latex.chars().take(60).collect();
                 out.push(format!("公式无法渲染，已按文本保留：{head}"));
@@ -3516,7 +2185,9 @@ pub fn export_pdf(
     // `page.orientation` / `page.margin{Top,Right,Bottom,Left}` keep driving the
     // output exactly as the `@page` rule they drove through the browser did
     // (`html_render.py:81`, `pdf_render::page_dimensions`).
-    let blocks = md_blocks_to_ast(&md_parse(content, 0));
+    // The shared AST carries fence languages, table alignment, task markers,
+    // list starts and nesting, which the old line parser dropped.
+    let blocks = crate::md_ast::to_render_json(&crate::md_ast::parse(content).blocks);
     let style = crate::export_styles::sanitize_options(Some(options));
 
     // `tmpdir = tempfile.mkdtemp(prefix='readmd-export-')`, dropped in `finally`.
@@ -3576,6 +2247,10 @@ pub fn export_pdf(
     // borrows the warning list mutably and the `Fn` callback cannot reach into
     // the same `Vec`.  Content is identical, interleaving is not.
     warns.extend(resolver.take_warns());
+    // The renderer and the resolver both report a missing image; one notice
+    // per distinct message is enough (first occurrence keeps its place).
+    let mut seen = std::collections::HashSet::new();
+    warns.retain(|w| seen.insert(w.clone()));
 
     let size = fs::metadata(out_path).map(|m| m.len()).unwrap_or(0);
     Ok(ExportResult {
@@ -3604,7 +2279,7 @@ pub fn export_document(
     let fmt = format.to_lowercase();
     match fmt.as_str() {
         "html" => export_html(content, base_dir, out_path, options, source_name, assets_dir),
-        "tex" | "latex" => export_tex(content, out_path, options, source_name),
+        "tex" | "latex" => export_tex(content, base_dir, out_path, options, source_name),
         "epub" => export_epub(content, base_dir, out_path, options, source_name),
         "docx" => export_docx(content, base_dir, out_path, options, source_name),
         "pdf" => export_pdf(content, base_dir, out_path, options, source_name, assets_dir),
@@ -5869,7 +4544,7 @@ mod tests {
         let temp_dir = tempfile::tempdir().unwrap();
         let out_tex = temp_dir.path().join("test.tex");
         let md = "# Academic Paper\n\nHere is $$E = mc^2$$.\n\n```python\nprint('hello')\n```";
-        let res = export_tex(md, out_tex.to_str().unwrap(), &serde_json::json!({}), "test")
+        let res = export_tex(md, "", out_tex.to_str().unwrap(), &serde_json::json!({}), "test")
             .expect("export_tex should succeed");
         assert!(res.ok);
         let content = fs::read_to_string(out_tex).unwrap();
@@ -6022,6 +4697,15 @@ mod tests {
         let md = "Inline $a+b$ then display:\n\n$$c \\times d$$\n\nA second one $e^2$.\n";
         let res = export_pdf(md, "", out.to_str().unwrap(), &serde_json::json!({}), "math", dir.path()).unwrap();
         let warns = res.warns.unwrap_or_default();
+        if crate::math_layout::available() {
+            // A math font exists: every formula is drawn as vector paths with
+            // its LaTeX as /ActualText, and nothing is reported as degraded.
+            assert!(!warns.iter().any(|w| w.starts_with("公式无法渲染")), "{warns:?}");
+            let bytes = fs::read(&out).unwrap();
+            let text = crate::pdf_render::tests_inflate_all(&bytes);
+            assert!(text.contains("/ActualText"), "formulas carry their source");
+            return;
+        }
         assert!(
             warns.contains(&"公式无法渲染，已按文本保留：a+b".to_string()),
             "inline math must warn: {warns:?}"
@@ -6135,8 +4819,7 @@ mod tests {
         // it at draw time (`pdf_render.py:141-143`).  `pdf_render::normalize_inline`
         // cannot, so the bridge must hand over nodes rather than the literal
         // ``a `code` b`` string.
-        let blocks = md_parse("**a `code` b**\n", 0);
-        let ast = md_blocks_to_ast(&blocks);
+        let ast = crate::md_ast::to_render_json(&crate::md_ast::parse("**a `code` b**\n").blocks);
         let text = ast[0].get("text").unwrap();
         assert_eq!(text[0].get("t").unwrap().as_str().unwrap(), "bold");
         let inner = text[0].get("v").unwrap();
@@ -6182,58 +4865,34 @@ mod tests {
         out
     }
 
-    // ---- D1: parser.py:213 `^\$\$(.*?)\$\$$` is end-anchored -----------------
-
     #[test]
-    fn test_math_block_requires_end_anchor() {
-        // `$$a$$ b` does NOT end in `$$`, so Python treats the whole rest of the
-        // document as one display formula; the old Rust split it at the first `$$`
-        // and dropped " b".
-        let blocks = md_parse("$$a$$ b\ntext\n", 0);
-        assert_eq!(blocks.len(), 1, "one math block swallows the tail");
-        assert!(
-            matches!(&blocks[0], MdBlock::Math(s) if s == "a$$ b\ntext"),
-            "got {:?}",
-            blocks[0]
-        );
-
-        // A line that *does* end with `$$` keeps its inner text verbatim,
-        // including a nested `$$` (lazy group + end anchor => unique split).
-        let blocks = md_parse("$$ x $$ y $$\n", 0);
-        assert!(matches!(&blocks[0], MdBlock::Math(s) if s == "x $$ y"), "got {:?}", blocks[0]);
-
-        // `$$$$` is the empty formula; `$$$` is not one-liner material at all.
-        let blocks = md_parse("$$$$\n", 0);
-        assert!(matches!(&blocks[0], MdBlock::Math(s) if s.is_empty()), "got {:?}", blocks[0]);
-        let blocks = md_parse("$$$\nrest\n$$$\n", 0);
-        assert!(matches!(&blocks[0], MdBlock::Math(s) if s == "$\nrest"), "got {:?}", blocks[0]);
-    }
-
-    // ---- D2: _IMG_RE / _LINK_RE use two independent ["'] classes ------------
-
-    #[test]
-    fn test_link_title_allows_mismatched_quote() {
-        // Python matches `[a](b "c')` as a link with href `b`; the extra
-        // same-quote check used to leak the markup as literal text.
-        let nodes = md_parse_inline("[a](b \"c')");
-        assert_eq!(nodes.len(), 1, "got {:?}", nodes);
-        match &nodes[0] {
-            MdInline::Link(inner, href) => {
-                assert_eq!(href, "b");
-                assert_eq!(inner, &vec![MdInline::Text("a".to_string())]);
-            }
-            other => panic!("expected a link, got {:?}", other),
-        }
-        assert_eq!(
-            xhtml_inline(&nodes),
-            "<a href=\"b\">a</a>",
-            "mismatched-quote title must still render as an anchor"
-        );
-        // The matched pair still works.
-        assert_eq!(
-            xhtml_inline(&md_parse_inline("[a](b \"c\")")),
-            "<a href=\"b\">a</a>"
-        );
+    fn test_epub_packages_images_and_declares_mathml() {
+        let dir = tempfile::tempdir().unwrap();
+        let png = b"\x89PNG\r\n\x1a\n0000";
+        fs::create_dir_all(dir.path().join("img")).unwrap();
+        fs::write(dir.path().join("img").join("a.png"), png).unwrap();
+        let out = dir.path().join("book.epub");
+        let md = "# One\n\n![pic](img/a.png) and again ![pic](img/a.png)\n\n![gone](missing.png)\n\n# Two\n\n$$\\frac{1}{2}$$\n";
+        let res = export_epub(md, dir.path().to_str().unwrap(), out.to_str().unwrap(), &serde_json::json!({}), "b").unwrap();
+        let warns = res.warns.unwrap();
+        assert!(warns.iter().any(|w| w.contains("missing.png")), "{warns:?}");
+        let bytes = fs::read(&out).unwrap();
+        let got = local_entries(&bytes);
+        let names: Vec<&str> = got.iter().map(|e| e.0.as_str()).collect();
+        assert_eq!(names.iter().filter(|n| n.starts_with("OEBPS/images/")).count(), 1, "{names:?}");
+        let img = got.iter().find(|e| e.0 == "OEBPS/images/img_1.png").unwrap();
+        assert_eq!(img.1, 0, "images are stored");
+        assert_eq!(img.5, png);
+        let text = |name: &str| {
+            let e = got.iter().find(|e| e.0 == name).unwrap();
+            inflate(&e.5)
+        };
+        let opf = text("OEBPS/content.opf");
+        assert!(opf.contains("href=\"images/img_1.png\" media-type=\"image/png\""), "{opf}");
+        assert!(opf.contains("href=\"chapter_2.xhtml\" media-type=\"application/xhtml+xml\" properties=\"mathml\""), "{opf}");
+        assert!(!opf.contains("href=\"chapter_1.xhtml\" media-type=\"application/xhtml+xml\" properties"), "{opf}");
+        assert!(text("OEBPS/chapter_1.xhtml").contains("src=\"images/img_1.png\""));
+        assert!(text("OEBPS/chapter_2.xhtml").contains("<math"));
     }
 
     // ---- ZIP container invariants measured against CPython 3.11.15 ----------
@@ -6399,41 +5058,6 @@ mod tests {
         );
     }
 
-    // ---- D6: parser.py:186 `line.strip()` uses CPython's whitespace set -----
-
-    #[test]
-    fn test_c0_separators_are_stripped_like_python() {
-        // Measured against `parser.parse("\x1c# Title\n\nbody\n")`:
-        //   [paragraph "# Title", paragraph "body"]
-        // A leading C0 separator does *not* start a heading (Python matches
-        // `_HEAD_RE` against the raw line), but `str.strip()` — unlike Rust's
-        // `trim()` — does remove it from the paragraph text.
-        for sep in ['\u{1c}', '\u{1d}', '\u{1e}', '\u{1f}'] {
-            let blocks = md_parse(&format!("{sep}# Title\n\nbody\n"), 0);
-            assert_eq!(blocks.len(), 2, "sep {:?} => {:?}", sep, blocks);
-            assert!(
-                matches!(&blocks[0], MdBlock::Paragraph(inl)
-                    if matches!(inl.first(), Some(MdInline::Text(t)) if t == "# Title")),
-                "sep {:?} => {:?}",
-                sep,
-                blocks[0]
-            );
-        }
-        // A line holding nothing but C0 separators is blank for Python, so it
-        // ends a paragraph exactly like an empty line does: 2 blocks, not 1.
-        let blocks = md_parse("a\n\u{1c}\nb\n", 0);
-        assert_eq!(blocks.len(), 2, "got {:?}", blocks);
-        // \v is whitespace for `trim()` *and* `strip()`: guards against the fix
-        // having narrowed the set instead of widening it.
-        let blocks = md_parse("\u{b}# Title\n", 0);
-        assert!(
-            matches!(&blocks[0], MdBlock::Paragraph(inl)
-                if matches!(inl.first(), Some(MdInline::Text(t)) if t == "# Title")),
-            "got {:?}",
-            blocks[0]
-        );
-    }
-
     // ---- D7: presentation_render.py:56 iterates `raw_yaml.splitlines()` ----
 
     #[test]
@@ -6454,28 +5078,6 @@ mod tests {
         assert_eq!(meta_get(&meta, "title"), Some("X"), "got {:?}", meta);
         assert_eq!(meta_get(&meta, "theme"), Some("dark"), "got {:?}", meta);
         assert_eq!(body, "\r\nbody\r\n");
-    }
-
-    // ---- D8: epub_render.py:211 `split_into_chapters` iterates splitlines() --
-
-    #[test]
-    fn test_split_chapters_uses_cpython_splitlines() {
-        // `# Second` only becomes a *line* because CPython breaks on the form
-        // feed; the old normalised-LF splitter kept it inside the first line and
-        // produced a single chapter.
-        let ch = epub_split_chapters("intro\n\u{c}# Second\n\ntext\n", "h1");
-        assert_eq!(ch.len(), 2, "got {:?}", ch.iter().map(|c| &c.0).collect::<Vec<_>>());
-        assert_eq!(ch[0].0, "序言");
-        assert_eq!(ch[1].0, "Second");
-        assert_eq!(ch[1].1, "# Second\n\ntext");
-        // U+2028 is a break for splitlines() too.
-        let ch = epub_split_chapters("intro\u{2028}# Two\n", "h1");
-        assert_eq!(ch.len(), 2, "got {:?}", ch);
-        // CRLF documents still split into the same chapters as LF ones.
-        assert_eq!(
-            epub_split_chapters("# A\r\ntext\r\n# B\r\nmore\r\n", "h1").len(),
-            epub_split_chapters("# A\ntext\n# B\nmore\n", "h1").len()
-        );
     }
 
     // ---- G7: ZIP empty-entry shape, byte-identical to CPython 3.11.15 -------
@@ -6579,54 +5181,6 @@ mod tests {
         );
     }
 
-    // ---- G7: DOCX inline-run scanner (the $...$ formula call site) ---------
-
-    #[test]
-    fn test_docx_inline_runs_keep_every_formula_after_multibyte_text() {
-        // (1) `chars[idx]` used as a byte offset into `s`: any non-ASCII before
-        //     an inline formula panicked on a non-char boundary.
-        let xml = format_docx_runs("中文公式 $a+b$ 结尾");
-        assert!(
-            xml.contains(&crate::latex2omml::latex_to_omml("a+b", false)),
-            "formula dropped: {xml}"
-        );
-        assert!(xml.contains("中文公式") && xml.contains("结尾"), "text lost: {xml}");
-        assert!(!xml.contains("oMathPara"), "inline must use is_block=false: {xml}");
-
-        // (2) Several formulas in one paragraph: none dropped, none duplicated.
-        let x = crate::latex2omml::latex_to_omml("x", false);
-        let xml = format_docx_runs("$x$ 与 $y$ 与 `z` **w** $x$");
-        assert_eq!(xml.matches(&x).count(), 2, "two `$x$` => two oMath: {xml}");
-        assert!(xml.contains(&crate::latex2omml::latex_to_omml("y", false)), "y lost: {xml}");
-        assert!(xml.contains("<w:r><w:rPr><w:b/></w:rPr><w:t>w</w:t></w:r>"), "bold lost: {xml}");
-        assert!(xml.contains(">z</w:t>"), "code lost: {xml}");
-
-        // (3) A marker without its closer is plain text for Python (`_MATH_RE`
-        //     just fails to match).  The old scanner never advanced `idx`.
-        assert_eq!(
-            format_docx_runs("costs $5"),
-            "<w:r><w:t xml:space=\"preserve\">costs $5</w:t></w:r>"
-        );
-        assert_eq!(
-            format_docx_runs("a ` b"),
-            "<w:r><w:t xml:space=\"preserve\">a ` b</w:t></w:r>"
-        );
-        assert_eq!(
-            format_docx_runs("a ** b"),
-            "<w:r><w:t xml:space=\"preserve\">a ** b</w:t></w:r>"
-        );
-
-        // (4) `$$…$$` *inside* a paragraph follows `\$([^$\n]+?)\$`: literal `$`,
-        //     one real formula, literal `$` — not two empty math boxes.
-        let xml = format_docx_runs("here $$E=mc^2$$.");
-        assert_eq!(
-            xml.matches(&crate::latex2omml::latex_to_omml("E=mc^2", false)).count(),
-            1,
-            "{xml}"
-        );
-        assert!(xml.contains("here $") && xml.contains("$."), "stray dollars lost: {xml}");
-    }
-
     #[test]
     fn test_docx_export_cjk_document_with_display_and_inline_math() {
         let temp_dir = tempfile::tempdir().unwrap();
@@ -6638,16 +5192,17 @@ mod tests {
 
         let zip = fs::read(&out).unwrap();
         let got = local_entries(&zip);
-        assert_eq!(
-            got.iter().map(|e| e.0.as_str()).collect::<Vec<_>>(),
-            vec![
-                "[Content_Types].xml",
-                "_rels/.rels",
-                "word/_rels/document.xml.rels",
-                "word/styles.xml",
-                "word/document.xml"
-            ]
-        );
+        let names: Vec<&str> = got.iter().map(|e| e.0.as_str()).collect();
+        for part in [
+            "[Content_Types].xml",
+            "_rels/.rels",
+            "word/_rels/document.xml.rels",
+            "word/styles.xml",
+            "word/numbering.xml",
+            "word/document.xml",
+        ] {
+            assert!(names.contains(&part), "missing {part}: {names:?}");
+        }
         let doc = got.iter().find(|e| e.0 == "word/document.xml").expect("document.xml");
         let xml = inflate(&doc.5);
         assert_eq!(xml.matches("<m:oMathPara").count(), 1, "one display formula: {xml}");

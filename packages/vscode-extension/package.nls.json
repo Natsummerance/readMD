@@ -26,7 +26,6 @@
   "view.containerTitle": "ReadMD Toolbox",
   "view.toolboxName": "ReadMD Quick Tools",
   "configuration.title": "ReadMD",
-  "configuration.pythonPath": "Python executable path (leave empty to detect the active environment)",
-  "configuration.customCssPath": "Absolute path to a user custom.css file",
-  "configuration.mcpServerPath": "Optional ReadMD Core/MCP server path (empty uses the packaged server)"
+  "configuration.executablePath": "ReadMD executable (leave empty to use the installed desktop app or `readmd` on PATH); it serves the core via `readmd --mcp`",
+  "configuration.customCssPath": "Absolute path to a user custom.css file"
 }

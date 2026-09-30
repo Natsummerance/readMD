@@ -1,20 +1,20 @@
 # ReadMD native desktop-pet host
 
-`readmd-pet-rust` is the production independent desktop runtime. ReadMD's
-Python `PetRuntimeOrchestrator` starts this executable first and gives it the
-existing renderer bundle from `renderer/`. Electron remains an explicit
+`readmd-pet-rust` is the production independent desktop runtime. The ReadMD
+Rust kernel's pet runtime orchestrator starts this executable first and gives
+it the existing renderer bundle from `renderer/`. Electron remains an explicit
 compatibility fallback.
 
 The process topology is:
 
 ```text
-ReadMD -> Python PetRuntimeOrchestrator -> readmd-pet-rust -> Tao native window -> WRY WebView -> existing renderer
+ReadMD (Rust kernel) -> pet runtime orchestrator -> readmd-pet-rust -> Tao native window -> WRY WebView -> existing renderer
 ```
 
-Build a signed-by-hash package from the repository root with:
+Build a signed-by-hash package from the `rust/` directory with:
 
 ```text
-python packages/readmd-pet-rust/scripts/build-package.py
+cargo xtask pet-package [--platform windows|macos|linux] [--arch x86_64|aarch64] [--skip-build] [--output DIR]
 ```
 
 The generated `ReadMD-Pet-Rust.zip` contains the executable, renderer, sprite

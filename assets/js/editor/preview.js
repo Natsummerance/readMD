@@ -467,6 +467,32 @@ async function saveEdit(options = {}) {
       }
       ok = await r.json();
     }
+    // The file's original encoding cannot hold a character that was typed:
+    // offer to switch the document to UTF-8 instead of replacing it silently.
+    if (ok && ok.error_code === 'encoding_unrepresentable') {
+      busy(false);
+      const switchToUtf8 = await confirmAction({
+        title: _t('dialog.encodingTitle') || '无法按原编码保存',
+        message: _t('dialog.encodingMessage', { encoding: ok.encoding || state.encoding, char: ok.char || '' })
+          || `当前文件编码（${ok.encoding || state.encoding}）无法表示字符“${ok.char || ''}”。是否改为 UTF-8 保存？`,
+        confirmText: _t('dialog.encodingUseUtf8') || '改用 UTF-8 保存',
+        cancelText: _t('common.cancel') || '取消',
+      });
+      if (!switchToUtf8) return false;
+      state.encoding = 'utf-8';
+      const activeTab = getActiveTab();
+      if (activeTab) activeTab.encoding = 'utf-8';
+      busy(true);
+      if (hasPy) {
+        ok = await py.save_file(state.file, content, 'utf-8', state.mtime || null);
+      } else {
+        const r2 = await apiFetch('/api/save', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: state.file, content, encoding: 'utf-8', expected_mtime: state.mtime || null }),
+        });
+        ok = await r2.json();
+      }
+    }
     if (ok && ok.ok !== false) {
       syncSavedTab(state.file, content);
       applySavedMtime(ok);

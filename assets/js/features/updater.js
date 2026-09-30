@@ -101,6 +101,9 @@ function isUpdateDownloading() {
   return isUpdating === true;
 }
 
+// Esc must not dismiss the dialog while a download is running.
+if (window.ReadMDModal) window.ReadMDModal.setGuard('update-modal', () => { if (isUpdating) { closeUpdateModal(); return false; } return true; });
+
 function closeUpdateModal() {
   if (isUpdating) {
     const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;

@@ -16,6 +16,12 @@ path = "src/lib.rs"
 name = "readmd"
 path = "src/main.rs"
 
+[features]
+default = ["desktop"]
+# tao + wry window.  `--no-default-features` builds the same kernel as a
+# browser/headless server only.
+desktop = ["dep:tao", "dep:wry"]
+
 [dependencies]
 rusqlite = { version = "=0.40.2", features = ["bundled"] }
 serde = { version = "=1.0.229", features = ["derive"] }
@@ -31,14 +37,19 @@ sha2 = "=0.10.9"
 percent-encoding = "=2.3.2"
 walkdir = "=2.5.0"
 thiserror = "=2.0.20"
-tao = "=0.37.0"
-wry = { version = "=0.57.0", features = ["os-webview"] }
+# Native window; optional so a headless server (Docker, CI) builds without
+# GTK/WebKitGTK.  See [features].
+tao = { version = "=0.37.0", optional = true }
+wry = { version = "=0.57.0", features = ["os-webview"], optional = true }
 time = { version = "=0.3.44", features = ["serde-human-readable"] }
 uuid = { version = "=1.18.0", features = ["v4", "serde"] }
 flate2 = "=1.1.0"
 base64 = "=0.22.1"
 ureq = { version = "=2.12.1", features = ["json"] }
 regex = "=1.11.1"
+# GB18030/GBK/Big5/Windows-1252 encoders for encoding-preserving saves; already
+# in Cargo.lock (lopdf dependency), so the offline build is unaffected.
+encoding_rs = "=0.8.41"
 lazy_static = "=1.5.0"
 dunce = "=1.0.5"
 log = "=0.4.28"
@@ -46,12 +57,30 @@ getrandom = "=0.3.4"
 tempfile = "=3.26.0"
 pdf-extract = "0.12.1"
 lopdf = "0.42.0"
-# Fernet (`src/readmd_modules/crypto.py`) is AES-128-CBC + HMAC-SHA256, not GCM:
+# The credential vault (`src/crypto.rs`) speaks Fernet, AES-128-CBC + HMAC-SHA256, not GCM:
 # these two are already in Cargo.lock as lopdf's transitive deps and vendored in
 # ~/.cargo, so the offline build stays intact.  HMAC is hand-rolled on `sha2`
 # because `hmac` is not in the tree at all.
 aes = "=0.8.4"
 cbc = "=0.1.2"
+# TrueType parsing for PDF font subsetting and vector math; already in Cargo.lock
+# (pulled in by the webview stack), so the offline build is unaffected.
+ttf-parser = "=0.25.1"
+
+# Windows.Media.Ocr / Windows.Data.Pdf for native OCR; the same version wry
+# already pulls in, so Cargo.lock gains no new package.
+[target.'cfg(windows)'.dependencies]
+windows = { version = "=0.62.2", features = [
+    "Foundation",
+    "Foundation_Collections",
+    "Globalization",
+    "Graphics_Imaging",
+    "Media_Ocr",
+    "Storage",
+    "Storage_Streams",
+    "Data_Pdf",
+    "Win32_System_WinRT",
+] }
 
 [dev-dependencies]
 tempfile = "=3.26.0"

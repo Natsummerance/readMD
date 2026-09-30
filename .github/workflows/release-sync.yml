@@ -46,6 +46,8 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - uses: dtolnay/rust-toolchain@stable
+
       - name: Stage and switch release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -53,7 +55,7 @@ jobs:
         run: |
           set -euo pipefail
           tag="v$(tr -d '\n' < VERSION)"
-          python tools/release_asset_sync.py \
+          cargo run --quiet --manifest-path rust/Cargo.toml -p xtask -- release-asset-sync \
             --assets-dir release-assets \
             --tag "v$(tr -d '\n' < VERSION)" \
             --commit "${{ github.event.workflow_run.head_sha }}" \

@@ -7,7 +7,9 @@
 
 use std::path::{Path, PathBuf};
 use std::process::exit;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+#[cfg(feature = "desktop")]
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -75,6 +77,7 @@ advanced / daemon options:
   --assets <dir>          frontend assets directory
   --require-token         require the instance token on /api calls
   --print-token           include the instance token in the boot banner
+  --mcp                   serve the Model Context Protocol on stdin/stdout
   -h, --help              show this help
   -V, --version           print version
 
@@ -122,6 +125,8 @@ struct Options {
     startup_probe_timeout: f64,
     check: Option<Check>,
     print_token: bool,
+    /// `--mcp`: serve the Model Context Protocol on stdio instead of a UI.
+    mcp: bool,
 }
 
 impl Default for Options {
@@ -146,6 +151,7 @@ impl Default for Options {
             startup_probe_timeout: 20.0,
             check: None,
             print_token: false,
+            mcp: false,
         }
     }
 }
@@ -306,6 +312,11 @@ const KERNEL_ONLY: &[Action] = &[
         strings: &["--print-token"],
         takes_value: false,
         dest: "print-token",
+    },
+    Action {
+        strings: &["--mcp"],
+        takes_value: false,
+        dest: "mcp",
     },
 ];
 
@@ -819,6 +830,7 @@ fn parse_commandline(argv: &[String]) -> Result<Parsed, String> {
                         std::env::set_var("READMD_REQUIRE_TOKEN", "1");
                     }
                     "print-token" => opts.print_token = true,
+                    "mcp" => opts.mcp = true,
                     other => return Err(format!("unrecognized arguments: --{}", other)),
                 }
             }
@@ -851,6 +863,23 @@ fn parse_commandline(argv: &[String]) -> Result<Parsed, String> {
         }
         if opts.startup_probe_timeout <= 0.0 {
             return Err("--startup-probe-timeout 必须大于 0".to_string());
+        }
+        // stdout belongs to the protocol under `--mcp`, so every mode that
+        // prints to it or owns the UI is rejected.
+        if opts.mcp {
+            let clash = [
+                (opts.browser, "--browser"),
+                (opts.startup_probe, "--startup-probe"),
+                (opts.selftest, "--selftest"),
+                (opts.webview_selftest, "--webview-selftest"),
+                (opts.share, "--share"),
+                (opts.mods, "--mods"),
+                (opts.assoc, "--assoc"),
+                (opts.print_token, "--print-token"),
+            ];
+            if let Some((_, flag)) = clash.iter().find(|(on, _)| *on) {
+                return Err(format!("--mcp 不能与 {flag} 同时使用"));
+            }
         }
     }
     Ok(Parsed::Options(opts))
@@ -1208,6 +1237,19 @@ mod cli_tests {
         );
         prints_version(&["--version"]);
         prints_version(&["-V"]);
+    }
+
+    #[test]
+    fn mcp_flag_is_exact_only_and_exclusive() {
+        assert!(boots(&["--mcp"]).mcp);
+        assert!(boots(&["--mcp", "--data-dir", "d"]).mcp);
+        // `--m` stays python's unique prefix of `--mods`.
+        assert!(boots(&["--m"]).mods && !boots(&["--m"]).mcp);
+        assert_eq!(fails(&["--mcp", "--browser"]), "--mcp 不能与 --browser 同时使用");
+        assert_eq!(fails(&["--mcp", "--selftest"]), "--mcp 不能与 --selftest 同时使用");
+        assert_eq!(fails(&["--mcp", "--share"]), "--mcp 不能与 --share 同时使用");
+        assert_eq!(fails(&["--mcp", "--startup-probe"]), "--mcp 不能与 --startup-probe 同时使用");
+        assert_eq!(fails(&["--mcp", "--webview-selftest"]), "--mcp 不能与 --webview-selftest 同时使用");
     }
 
     #[test]
@@ -2264,6 +2306,7 @@ fn open_in_default_browser(url: &str) {
 /// Standalone browser-app window used only when the native webview cannot be
 /// built — the Rust mirror of `windows_native.launch_browser_app(url)`, which
 /// Python also only reaches from that same failure branch (`readmd.py:6658-6672`).
+#[cfg_attr(not(feature = "desktop"), allow(dead_code))]
 fn launch_browser_app(url: &str) {
     #[cfg(target_os = "windows")]
     {
@@ -2311,6 +2354,7 @@ fn launch_browser_app(url: &str) {
 
 struct ProbeInner {
     started: Instant,
+    #[cfg_attr(not(feature = "desktop"), allow(dead_code))]
     timeout: Duration,
     milestones: Vec<(&'static str, u64)>,
     timed_out: bool,
@@ -2946,6 +2990,45 @@ fn browser_app_candidate() -> Option<String> {
     .map(|cand| cand.to_string())
 }
 
+/// The native window (tao + wry).  Compiled only with the default `desktop`
+/// feature; a `--no-default-features` build is a headless server that treats a
+/// window request as `--browser`.
+#[cfg(feature = "desktop")]
+mod desktop {
+use super::*;
+
+/// Native drag-and-drop payloads waiting to be handed to the page
+/// (`window.__readmdNativeDrop`), already serialised as JSON.
+static NATIVE_DROPS: Mutex<std::collections::VecDeque<String>> = Mutex::new(std::collections::VecDeque::new());
+
+/// Wakes the `ControlFlow::Wait` loop when a drop is queued.
+#[derive(Debug, Clone, Copy)]
+enum HostEvent {
+    Drop,
+}
+
+fn drop_payload(event: &wry::DragDropEvent) -> Option<String> {
+    match event {
+        wry::DragDropEvent::Enter { paths, .. } if !paths.is_empty() => Some(r#"{"state":"enter"}"#.to_string()),
+        wry::DragDropEvent::Leave => Some(r#"{"state":"leave"}"#.to_string()),
+        wry::DragDropEvent::Drop { paths, .. } if !paths.is_empty() => {
+            let items: Vec<serde_json::Value> = paths
+                .iter()
+                .map(|p| {
+                    let p = dunce::simplified(p);
+                    serde_json::json!({
+                        "path": p.to_string_lossy(),
+                        "name": p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
+                        "isDir": p.is_dir(),
+                    })
+                })
+                .collect();
+            Some(serde_json::json!({ "paths": items }).to_string())
+        }
+        _ => None,
+    }
+}
+
 /// Native-fullscreen request encoding carried in [`SIGNALS`] slot 3.
 const FULLSCREEN_IDLE: usize = 0;
 const FULLSCREEN_ENTER: usize = 1;
@@ -2976,9 +3059,21 @@ fn build_webview<'a>(
     quit: Arc<AtomicBool>,
     show: Arc<AtomicBool>,
     fullscreen: Arc<AtomicUsize>,
+    proxy: tao::event_loop::EventLoopProxy<HostEvent>,
 ) -> wry::WebViewBuilder<'a> {
     wry::WebViewBuilder::new_with_web_context(web_context)
         .with_url(url.to_string())
+        // OS file drops carry real paths (the DOM only sees nameless blobs),
+        // so opened files can be saved back in place.  Returning `false` for
+        // path-less drags lets tab dragging and text drops stay in the DOM.
+        .with_drag_drop_handler(move |event| {
+            let has_paths = matches!(&event, wry::DragDropEvent::Drop { paths, .. } | wry::DragDropEvent::Enter { paths, .. } if !paths.is_empty());
+            if let Some(json) = drop_payload(&event) {
+                NATIVE_DROPS.lock().unwrap_or_else(|e| e.into_inner()).push_back(json);
+                let _ = proxy.send_event(HostEvent::Drop);
+            }
+            has_paths
+        })
         .with_initialization_script(init_script.to_string())
         // `window.events.loaded += _on_loaded` (`readmd.py:6572-6584`), i.e. the
         // `window_loaded` milestone.
@@ -3010,13 +3105,14 @@ fn build_webview<'a>(
 fn run_window(url: String, data_dir: PathBuf, probe: Option<Probe>, probe_json: Option<String>) -> ! {
     use tao::dpi::LogicalSize;
     use tao::event::{Event, WindowEvent};
-    use tao::event_loop::{ControlFlow, EventLoop};
+    use tao::event_loop::ControlFlow;
     use tao::window::WindowBuilder;
     // Only `WebContext` is named unqualified here; `build_webview` refers to
     // `wry::WebViewBuilder` and `wry::PageLoadEvent` by full path.
     use wry::WebContext;
 
-    let event_loop = EventLoop::new();
+    let event_loop = tao::event_loop::EventLoopBuilder::<HostEvent>::with_user_event().build();
+    let drop_proxy = event_loop.create_proxy();
     // `webview.create_window('ReadMD', url, width=1160, height=820,
     // min_size=(720,480), ..., background_color='#f7f7f5')`
     // (`readmd.py:6546-6549`).
@@ -3344,12 +3440,12 @@ fn run_window(url: String, data_dir: PathBuf, probe: Option<Probe>, probe_json: 
                         return await res.json();
                     } catch(e) { return { ok: false, error: e.message }; }
                 },
-                export_epub: async function(content, out_path, meta, options) {
+                export_epub: async function(content, out_path, meta, options, baseDir) {
                     try {
                         const res = await fetch('/api/export/epub', {
                             method: 'POST',
                             headers: bridgeHeaders(true),
-                            body: JSON.stringify({ confirm: true, content: content, out_path: out_path, meta: meta, options: options })
+                            body: JSON.stringify({ confirm: true, content: content, out_path: out_path, meta: meta, options: options, baseDir: baseDir || '' })
                         });
                         return await res.json();
                     } catch(e) { return { ok: false, error: e.message }; }
@@ -3839,14 +3935,34 @@ fn run_window(url: String, data_dir: PathBuf, probe: Option<Probe>, probe_json: 
                         return await res.json();
                     } catch(e) { return { ok: false, error: e.message }; }
                 },
-                get_export_presets: async function() { return {}; },
-                save_export_presets: async function() { return true; },
-                open_path: function(path) {
-                    fetch('/api/system/open-path', {
-                        method: 'POST',
-                        headers: bridgeHeaders(true),
-                        body: JSON.stringify({ path: path })
-                    }).catch(() => {});
+                get_export_presets: async function() {
+                    try {
+                        const res = await fetch('/api/export/presets', { headers: bridgeHeaders(false) });
+                        return await res.json();
+                    } catch(e) { return {}; }
+                },
+                save_export_presets: async function(patch) {
+                    try {
+                        const res = await fetch('/api/export/presets', {
+                            method: 'POST',
+                            headers: bridgeHeaders(true),
+                            body: JSON.stringify(patch || {})
+                        });
+                        const d = await res.json();
+                        return !!(d && d.ok);
+                    } catch(e) { return false; }
+                },
+                // Resolves to `{ok, error_code?}` so callers can report a
+                // missing file instead of failing silently.
+                open_path: async function(path) {
+                    try {
+                        const res = await fetch('/api/system/open-path', {
+                            method: 'POST',
+                            headers: bridgeHeaders(true),
+                            body: JSON.stringify({ path: path })
+                        });
+                        return await res.json();
+                    } catch(e) { return { ok: false, error_code: 'open_failed' }; }
                 },
                 // `Api.open_external(self, url)` (`readmd.py:4966`) never hands
                 // the OS launcher an unchecked string: it first runs
@@ -3878,12 +3994,15 @@ fn run_window(url: String, data_dir: PathBuf, probe: Option<Probe>, probe_json: 
                         return true;
                     } catch(e) { return false; }
                 },
-                reveal_path: function(path) {
-                    fetch('/api/system/reveal-path', {
-                        method: 'POST',
-                        headers: bridgeHeaders(true),
-                        body: JSON.stringify({ path: path })
-                    }).catch(() => {});
+                reveal_path: async function(path) {
+                    try {
+                        const res = await fetch('/api/system/reveal-path', {
+                            method: 'POST',
+                            headers: bridgeHeaders(true),
+                            body: JSON.stringify({ path: path })
+                        });
+                        return await res.json();
+                    } catch(e) { return { ok: false, error_code: 'open_failed' }; }
                 },
                 open_dir: function(path) {
                     fetch('/api/system/open-path', {
@@ -3974,6 +4093,7 @@ fn run_window(url: String, data_dir: PathBuf, probe: Option<Probe>, probe_json: 
         quit_flag.clone(),
         show_flag.clone(),
         fullscreen_flag.clone(),
+        drop_proxy.clone(),
     );
     #[cfg(not(target_os = "linux"))]
     let webview = builder.build(&window);
@@ -4009,6 +4129,7 @@ fn run_window(url: String, data_dir: PathBuf, probe: Option<Probe>, probe_json: 
                 quit_flag.clone(),
                 show_flag.clone(),
                 fullscreen_flag.clone(),
+                drop_proxy.clone(),
             );
             #[cfg(not(target_os = "linux"))]
             let res = fb_builder.build(&window);
@@ -4061,6 +4182,17 @@ fn run_window(url: String, data_dir: PathBuf, probe: Option<Probe>, probe_json: 
         );
         if !closing && !matches!(event, Event::MainEventsCleared) {
             return;
+        }
+        // Hand queued native drops to the page.  The payload is serde_json
+        // output, which is a valid JS expression — no string splicing of paths.
+        loop {
+            let next = NATIVE_DROPS.lock().unwrap_or_else(|e| e.into_inner()).pop_front();
+            let Some(json) = next else { break };
+            if let Some(webview) = webview.as_ref() {
+                let _ = webview.evaluate_script(&format!(
+                    "window.__readmdNativeDrop && window.__readmdNativeDrop({json});"
+                ));
+            }
         }
         // `Api.show_window()` (`readmd.py:5972`) is `window.show()` +
         // `window.restore()`.  Python reaches it from the tray and from the
@@ -4139,6 +4271,11 @@ fn run_window(url: String, data_dir: PathBuf, probe: Option<Probe>, probe_json: 
         let code = shutdown(&done, &data_dir, &probe, &probe_json, timed_out, false);
         *control_flow = ControlFlow::ExitWithCode(code);
     });
+}
+
+pub(super) fn run(url: String, data_dir: PathBuf, probe: Option<Probe>, probe_json: Option<String>) -> ! {
+    run_window(url, data_dir, probe, probe_json)
+}
 }
 
 /// `readmd.py:6502-6508`: `--share` turns the LAN share on straight after boot.
@@ -4234,6 +4371,12 @@ fn main() {
     }
     if opts.mods {
         exit(run_mods(app.clone()));
+    }
+    // `--mcp`: no listener, no window, no single-instance hand-off; stdio only.
+    if opts.mcp {
+        eprintln!("readmd {} MCP server on stdio", server::VERSION);
+        readmd_kernel::mcp::run_stdio(app.clone());
+        exit(0);
     }
 
     // ------------------------------------------------------ single instance
@@ -4344,5 +4487,17 @@ fn main() {
 
     // `run_window` never returns: tao's `EventLoop::run` is `-> !` and exits the
     // process with the code its handler leaves in `ControlFlow`.
-    run_window(url, app.paths.data_dir.clone(), probe, opts.startup_probe_json.clone());
+    #[cfg(feature = "desktop")]
+    desktop::run(url, app.paths.data_dir.clone(), probe, opts.startup_probe_json.clone());
+
+    // Headless build (`--no-default-features`, e.g. the Docker image): no
+    // window toolkit is linked, so a window request is served like `--browser`.
+    #[cfg(not(feature = "desktop"))]
+    {
+        eprintln!("readmd: built without the desktop window; serving at {url} (open it in a browser)");
+        open_in_default_browser(&url);
+        park_until_quit();
+        static HEADLESS_BROWSER_TAIL: AtomicBool = AtomicBool::new(false);
+        exit(shutdown(&HEADLESS_BROWSER_TAIL, &app.paths.data_dir, &probe, &opts.startup_probe_json, false, false));
+    }
 }

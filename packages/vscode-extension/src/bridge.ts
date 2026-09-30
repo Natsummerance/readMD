@@ -1,9 +1,7 @@
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
-import * as path from 'path';
-import * as fs from 'fs';
 import { StringDecoder } from 'string_decoder';
-import { findPythonPath } from './pythonFinder';
+import { findReadmdBinary } from './binaryFinder';
 
 export interface FixResult {
   ok: boolean;
@@ -18,7 +16,8 @@ export interface WebResult {
   title: string;
   markdown: string;
   url: string;
-  images_count: number;
+  engine?: string;
+  warnings?: string[];
 }
 
 export class ReadMDBridge {
@@ -46,15 +45,13 @@ export class ReadMDBridge {
     this.extensionPath = context.extensionPath;
   }
 
-  private getMcpServerPath(): string {
-    const configured = vscode.workspace.getConfiguration('readmd').get<string>('mcpServerPath', '');
-    if (configured) return configured;
-    const packaged = path.join(this.extensionPath, 'core', 'mcp-server', 'readmd_mcp_server.py');
-    if (fs.existsSync(packaged)) return packaged;
-    return path.join(this.extensionPath, '..', 'mcp-server', 'readmd_mcp_server.py');
-  }
+  private resolvedBinary?: string;
 
-  public getServerPath(): string { return this.getMcpServerPath(); }
+  /** The ReadMD executable; `readmd --mcp` is the MCP server (no Python). */
+  public async getServerCommand(): Promise<string> {
+    if (!this.resolvedBinary) this.resolvedBinary = await findReadmdBinary(this.extensionPath);
+    return this.resolvedBinary;
+  }
 
   public onDisconnected(listener: () => void): vscode.Disposable {
     this.disconnectedListeners.add(listener);
@@ -78,11 +75,10 @@ export class ReadMDBridge {
     if (this.proc && this.procSpawned && !this.proc.killed) return;
     if (this.starting) return this.starting;
     this.starting = (async () => {
-      const pythonExe = await findPythonPath();
-      const serverScript = this.getMcpServerPath();
-      const proc = cp.spawn(pythonExe, [serverScript], {
-        env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
+      const binary = await this.getServerCommand();
+      const proc = cp.spawn(binary, ['--mcp'], {
         stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: true,
       });
       this.proc = proc;
       this.procSpawned = false;
@@ -93,6 +89,8 @@ export class ReadMDBridge {
       });
       proc.stderr.on('data', chunk => { /* protocol responses stay on stdout */ void chunk; });
       proc.on('error', err => {
+        // A binary that vanished (uninstall/upgrade) is looked up again next time.
+        this.resolvedBinary = undefined;
         if (this.proc === proc) this.failProcess(err);
       });
       proc.on('close', code => {

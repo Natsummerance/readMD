@@ -82,30 +82,39 @@ lazy_static! {
     static ref CACHE: Mutex<EngineCache> = Mutex::new(EngineCache { engine: None });
 }
 
-/// Python `_pick_engine()`。Rust 内核不桥接宿主 OCR，恒为 `None`（并缓存）。
+/// 引擎探测：Windows 10+ 走系统自带的 `Windows.Media.Ocr`（[`crate::ocr_winrt`]），
+/// 其他平台暂无原生引擎。结果缓存，避免每次请求重新探测。
 pub fn pick_engine() -> Option<OcrEngine> {
     let mut cache = CACHE.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(engine) = cache.engine.clone() {
         return engine;
     }
-    let engine: Option<OcrEngine> = None;
+    let engine: Option<OcrEngine> = if crate::ocr_winrt::available() { Some(OcrEngine::WinRt) } else { None };
     cache.engine = Some(engine.clone());
     engine
 }
 
-/// Python `ocr.load()`：`readmd.py` 用它决定 `ocr` 模块是 `ready` 还是 `error`。
+/// 无引擎时的统一提示（不涉及任何 Python 依赖）。
+pub const OCR_NO_ENGINE_MESSAGE: &str = "ocr-no-engine：当前平台暂无可用的 OCR 引擎";
+
+/// `ocr` 模块是 `ready` 还是 `error`。
 pub fn load() -> Result<(), String> {
     if pick_engine().is_none() {
-        return Err("ocr-no-engine：无可用 OCR 引擎".to_string());
+        return Err(OCR_NO_ENGINE_MESSAGE.to_string());
     }
     Ok(())
 }
 
-/// Python `_ocr_bytes()`：没有引擎时抛错，而不是静默返回空串。
-pub fn ocr_bytes(_data: &[u8], _language: Option<&str>) -> Result<String, OcrError> {
-    Err(OcrError::engine(
-        "ocr-no-engine：无可用 OCR 引擎。Windows 需要 WinRT，macOS 需要 PyObjC，其他平台需要 RapidOCR 插件或 Tesseract。",
-    ))
+/// 识别一张图片的字节；没有引擎时报错，而不是静默返回空串。
+pub fn ocr_bytes(data: &[u8], _language: Option<&str>) -> Result<String, OcrError> {
+    if pick_engine().is_none() {
+        return Err(OcrError::engine(OCR_NO_ENGINE_MESSAGE));
+    }
+    match crate::ocr_winrt::ocr_image_bytes(data) {
+        Ok(lines) => Ok(lines.join("\n")),
+        Err(e) if e == "ocr_no_engine" => Err(OcrError::engine(OCR_NO_ENGINE_MESSAGE)),
+        Err(e) => Err(OcrError { code: e, error_code: OcrErrorCode::OcrProcessFailed }),
+    }
 }
 
 /// Python `_ocr_cascade()`：每一层都用 try/except 包住，失败即降级为空串。
@@ -447,7 +456,45 @@ pub fn splitext_lower(path: &str) -> String {
 /// 栅格化与识别引擎，这些页同样得到空文本并被跳过——与 Python 在无引擎机器上
 /// 的逐页结果一致。
 pub fn ocr_pdf_to_md(path: &str, max_pages: usize) -> Result<String, OcrError> {
-    let pages = pdf_page_texts(path)?;
+    let (mut pages, read_err) = match pdf_page_texts(path) {
+        Ok(p) => (p, None),
+        // Text-layer readers failed but the system renderer may still open it.
+        Err(e) => {
+            if pick_engine().is_none() {
+                return Err(e);
+            }
+            (Vec::new(), Some(e))
+        }
+    };
+    // Pages without a text layer (scans) are rendered and recognised natively.
+    if pick_engine().is_some() {
+        // A page whose text layer is only a page number / running header is a scan too.
+        let thin = |t: &str| t.chars().filter(|c| !c.is_whitespace()).count() < 16;
+        let blank: Vec<usize> = pages.iter().enumerate().filter(|(_, t)| thin(t)).map(|(i, _)| i).collect();
+        let want = if pages.is_empty() { None } else { Some(blank.clone()) };
+        if pages.is_empty() || !blank.is_empty() {
+            if let Ok(bytes) = fs::read(path) {
+                static NEVER: fn() -> bool = || false;
+                if let Ok(done) = crate::ocr_winrt::ocr_pdf_bytes(&bytes, max_pages, want, &NEVER) {
+                    for (idx, lines) in done {
+                        if pages.len() <= idx {
+                            pages.resize(idx + 1, String::new());
+                        }
+                        let text = lines.join("\n");
+                        if text.trim().chars().count() > pages[idx].trim().chars().count() {
+                            pages[idx] = text;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // Neither the text readers nor the renderer could open it: still unreadable.
+    if let Some(e) = read_err {
+        if pages.iter().all(|p| p.trim().is_empty()) {
+            return Err(e);
+        }
+    }
     let total = pages.len();
     let used = if total > max_pages { max_pages } else { total };
     let mut parts: Vec<String> = Vec::new();
@@ -1141,11 +1188,18 @@ mod tests {
 
 
     #[test]
-    fn engine_ladder_is_empty_so_load_reports_the_python_message() {
-        assert!(pick_engine().is_none());
-        assert_eq!(load().unwrap_err(), "ocr-no-engine：无可用 OCR 引擎");
+    fn engine_state_is_reported_honestly() {
+        // Garbage bytes are never "recognised", with or without an engine.
         assert!(ocr_bytes(b"png", None).is_err());
         assert_eq!(ocr_cascade(b"png", None), "");
+        match pick_engine() {
+            Some(_) => assert!(load().is_ok()),
+            None => {
+                let e = load().unwrap_err();
+                assert_eq!(e, OCR_NO_ENGINE_MESSAGE);
+                assert!(!e.to_lowercase().contains("python") && !e.contains("PyObjC"));
+            }
+        }
     }
 
     #[test]

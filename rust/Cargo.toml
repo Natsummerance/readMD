@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["readmd-kernel"]
+members = ["readmd-kernel", "xtask"]
 
 [workspace.package]
 version = "2.4.0"

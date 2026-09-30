@@ -5064,6 +5064,22 @@ mod tests {
         crate::mdexport::write_zip(&entries).expect("zip writer")
     }
 
+    /// Release check: `READMD_PET_ZIP=<cargo xtask pet-package output>` must
+    /// be accepted by the managed installer as-is.
+    #[test]
+    #[ignore = "needs a built pet package; set READMD_PET_ZIP"]
+    fn xtask_pet_package_installs() {
+        let Ok(archive) = std::env::var("READMD_PET_ZIP") else { return };
+        let root = std::env::temp_dir().join(format!("readmd-pet-pkg-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let installer = RuntimeTree::rust_at(&root);
+        match install_zip(&installer, Path::new(&archive), true) {
+            PetOutcome::Returned(v) => assert_eq!(v["ok"], json!(true), "{v}"),
+            PetOutcome::Raised => panic!("installer raised"),
+        }
+        let _ = fs::remove_dir_all(&root);
+    }
+
     fn bundle_zip() -> Vec<u8> {
         let (manifest, exe, html) = bundle_parts();
         zip_of(&[

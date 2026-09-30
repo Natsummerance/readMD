@@ -13,6 +13,8 @@ let batchDocsDone = false;
 let batchOcrDone = false;
 let batchFinished = false;
 let batchCount = { ok: 0, skipped: 0, error: 0, canceled: 0 };
+/** 文件夹批量时所选的根目录；“打开结果目录”优先用它。 */
+let batchFolderRoot = '';
 const batchRowsBySrc = Object.create(null);
 
 function batchT(k, p) {
@@ -21,11 +23,13 @@ function batchT(k, p) {
 
 function openBatchModal() {
   stopBatchPoll();
+  setBatchTriggersBusy(false);
   batchJobId = null;
   batchCancelRequested = false;
   batchOcrCanceled = false;
   batchFinished = false;
   batchCount = { ok: 0, skipped: 0, error: 0, canceled: 0 };
+  batchFolderRoot = '';
   for (const k in batchRowsBySrc) delete batchRowsBySrc[k];
   const modal = $('convert-modal');
   if (modal) modal.classList.remove('hidden');
@@ -41,6 +45,8 @@ function openBatchModal() {
 
 function closeBatchModal() {
   stopBatchPoll();
+  // Polling stops with the surface, so the lock must not outlive it.
+  setBatchTriggersBusy(false);
   $('convert-modal').classList.add('hidden');
 }
 
@@ -107,6 +113,7 @@ async function enqueueBatchFiles(paths, overwrite) {
   batchDocsDone = docs.length === 0;
   batchOcrDone = images.length === 0;
   batchFinished = false;
+  setBatchTriggersBusy(true);
   $('batch-cancel').classList.remove('hidden');
   $('convert-status').textContent = batchT('batch.preparing') || '';
   if (docs.length) runBatchDocsLane(docs, overwrite);
@@ -176,7 +183,7 @@ function renderBatchProgress(d) {
     if (!row) return;
     const status = it.status || 'queued';
     if (status !== 'queued') {
-      if (status === 'ok' && it.out) row.dataset.out = it.out;
+      if ((status === 'ok' || status === 'skipped') && it.out) row.dataset.out = it.out;
       setBatchRow(row, status, it.error || '');
       countBatchRow(row, status);
     }
@@ -204,11 +211,26 @@ async function runBatchOcrLane(items) {
     }
     setBatchRow(row, 'running');
     try {
-      const r = await apiFetch('/api/ocr?p=' + encodeURIComponent(path));
+      const overwrite = $('convert-overwrite') && $('convert-overwrite').checked;
+      const r = await apiFetch('/api/ocr?p=' + encodeURIComponent(path) + '&save=1&on_exists=' + (overwrite ? 'overwrite' : 'skip'));
       const d = await r.json().catch(() => ({}));
-      const ok = r.ok && d.content;
-      setBatchRow(row, ok ? 'ok' : 'error', ok ? '' : (d.error_code || 'ocr_failed'));
-      countBatchRow(row, ok ? 'ok' : 'error');
+      if (r.ok && d.empty) {
+        // 识别成功但没有文字：不写文件，标注“无文字”。
+        setBatchRow(row, 'skipped', batchT('batch.ocrNoText') || '');
+        const st = row.querySelector('.batch-state');
+        if (st) st.textContent = batchT('batch.ocrNoText') || '无文字';
+        countBatchRow(row, 'skipped');
+      } else if (r.ok && d.content) {
+        if (d.out && (d.saved || d.skipped)) row.dataset.out = d.out;
+        const status = d.skipped ? 'skipped' : 'ok';
+        setBatchRow(row, status);
+        countBatchRow(row, status);
+      } else {
+        const code = d.error_code || 'ocr_failed';
+        const msg = batchT('batch.err.' + code);
+        setBatchRow(row, 'error', msg && msg !== 'batch.err.' + code ? msg : (d.error || code));
+        countBatchRow(row, 'error');
+      }
     } catch (e) {
       setBatchRow(row, 'error', e && e.message);
       countBatchRow(row, 'error');
@@ -218,9 +240,68 @@ async function runBatchOcrLane(items) {
   maybeFinishBatch();
 }
 
+/** 最长公共父目录；没有公共部分时取第一个输出所在目录。 */
+function commonOutputDir(paths) {
+  const dirs = paths.map(p => p.replace(/\\/g, '/').replace(/\/[^/]*$/, ''));
+  if (!dirs.length) return '';
+  const split = dirs.map(d => d.split('/'));
+  const first = split[0];
+  let n = first.length;
+  for (const s of split.slice(1)) {
+    let i = 0;
+    while (i < n && i < s.length && s[i].toLowerCase() === first[i].toLowerCase()) i++;
+    n = i;
+  }
+  const common = first.slice(0, n).join('/');
+  return common && !/^[A-Za-z]:$/.test(common) ? common : dirs[0];
+}
+
+function showBatchOpenDir() {
+  const btn = $('convert-open-dir');
+  if (!btn) return;
+  const outs = Array.from($('convert-list').querySelectorAll('.batch-item'))
+    .map(r => r.dataset.out).filter(Boolean);
+  if (!outs.length) { btn.classList.add('hidden'); return; }
+  const dir = (typeof batchFolderRoot === 'string' && batchFolderRoot) || commonOutputDir(outs);
+  btn.classList.remove('hidden');
+  btn.onclick = async () => {
+    try {
+      const r = await apiFetch('/api/system/open-path', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: dir }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || d.ok === false) {
+        showToast(d.error_code === 'path_not_found'
+          ? (batchT('toast.pathNotFound') || '路径不存在')
+          : (batchT('toast.openFailed') || '无法打开：') + dir);
+      }
+    } catch (e) { showToast((batchT('toast.openFailed') || '无法打开：') + dir); }
+  };
+}
+
+/** True from enqueue until both lanes have finished. */
+let batchActive = false;
+function isBatchRunning() {
+  return batchActive;
+}
+
+/** The pickers stay disabled while a batch is running (no parallel jobs). */
+function setBatchTriggersBusy(on) {
+  batchActive = on;
+  ['convert-files', 'convert-folder'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.disabled = on;
+    if (on) el.setAttribute('aria-busy', 'true'); else el.removeAttribute('aria-busy');
+  });
+}
+
 function maybeFinishBatch() {
   if (batchFinished || !batchDocsDone || !batchOcrDone) return;
   batchFinished = true;
+  setBatchTriggersBusy(false);
+  showBatchOpenDir();
   const c = batchCount;
   let text = batchT('batch.summary', { ok: c.ok, skipped: c.skipped, failed: c.error })
     || '';

@@ -1,0 +1,55 @@
+name: ReadMD desktop pet Rust quality
+
+on:
+  pull_request:
+    paths:
+      - 'packages/readmd-pet-rust/**'
+      - 'packages/readmd-hermes-pet-adapter/**'
+      - 'src/readmd_modules/pet/**'
+      - '.github/workflows/pet-rust-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'packages/readmd-pet-rust/**'
+      - 'packages/readmd-hermes-pet-adapter/**'
+      - 'src/readmd_modules/pet/**'
+      - '.github/workflows/pet-rust-quality.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: Rust ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Install Linux WebKit/GTK development libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
+      - name: Cargo format
+        working-directory: packages/readmd-pet-rust
+        run: cargo fmt --check
+      - name: Cargo check
+        working-directory: packages/readmd-pet-rust
+        run: cargo check --all-targets
+      - name: Cargo tests
+        working-directory: packages/readmd-pet-rust
+        run: cargo test --all-targets
+      - name: Cargo clippy
+        working-directory: packages/readmd-pet-rust
+        run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: Cargo release build
+        working-directory: packages/readmd-pet-rust
+        run: cargo build --release

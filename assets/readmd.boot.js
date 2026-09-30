@@ -70,6 +70,384 @@ if(__exports != exports)module.exports = exports;return module.exports}));
 
 ;
 'use strict';
+
+/*
+ * Modal layer manager.
+ *
+ * Every `[role="dialog"]` overlay in index.html is shown and hidden by toggling
+ * the `hidden` class, from dozens of call sites.  Instead of rewriting each
+ * opener, this module observes that class and maintains a layer stack:
+ *
+ *  - the most recently shown dialog is the top layer;
+ *  - Tab / Shift+Tab wrap inside the top layer (focus can never escape);
+ *  - everything outside the stack is `inert` while any layer is open
+ *    (reference counted, so nested layers restore correctly);
+ *  - one global Esc handler closes exactly the top layer, wherever focus is,
+ *    and ignores Esc while an IME composition is active;
+ *  - closing a layer returns focus to the element that opened it.
+ *
+ * Esc runs the dialog's own close path: an explicit `data-modal-close`
+ * element, else the first close/cancel button in the dialog, else the
+ * `hidden` class is simply added.  Dialogs that must not close on Esc (a
+ * running update download, for example) set `data-modal-esc="off"` or
+ * register a guard with `ReadMDModal.setGuard(id, fn)`.
+ */
+(function () {
+  const stack = [];                       // [{ el, opener }]
+  let lastOutside = null;                 // last focused element while no layer was open
+  const guards = new Map();               // id -> () => boolean (true = may close)
+  const FOCUSABLE = [
+    'a[href]', 'area[href]', 'button:not([disabled])', 'input:not([disabled]):not([type="hidden"])',
+    'select:not([disabled])', 'textarea:not([disabled])', 'iframe', 'audio[controls]', 'video[controls]',
+    '[contenteditable]:not([contenteditable="false"])', '[tabindex]:not([tabindex="-1"])',
+  ].join(',');
+
+  const isShown = el => el.isConnected && !el.classList.contains('hidden') && getComputedStyle(el).display !== 'none';
+
+  function focusables(root) {
+    return [...root.querySelectorAll(FOCUSABLE)].filter(el => {
+      if (el.closest('[inert]') && !root.contains(el.closest('[inert]'))) return false;
+      if (el.closest('.hidden')) return false;
+      const rect = el.getClientRects();
+      return rect.length > 0 && getComputedStyle(el).visibility !== 'hidden';
+    });
+  }
+
+  /** Top-level siblings that must go inert while `el` is a layer. */
+  function backgroundOf(el) {
+    const out = [];
+    let node = el;
+    while (node && node !== document.body && node.parentElement) {
+      for (const sib of node.parentElement.children) {
+        if (sib === node || sib.tagName === 'SCRIPT' || sib.tagName === 'STYLE') continue;
+        out.push(sib);
+      }
+      node = node.parentElement;
+    }
+    return out;
+  }
+
+  function refreshInert() {
+    // Recomputed from the stack on every change: everything outside the top
+    // layer's ancestry is inert.  Only nodes this module marked are released,
+    // so an `inert` set elsewhere is never cleared by accident.
+    document.querySelectorAll('[data-rm-inert]').forEach(n => { n.removeAttribute('inert'); n.removeAttribute('data-rm-inert'); });
+    const top = stack[stack.length - 1];
+    if (!top) return;
+    for (const n of backgroundOf(top.el)) {
+      if (n.hasAttribute('inert')) continue;
+      n.setAttribute('inert', '');
+      n.setAttribute('data-rm-inert', '');
+    }
+  }
+
+  function initialFocus(el) {
+    const explicit = el.querySelector('[autofocus], [data-modal-initial]');
+    if (explicit && focusables(el).includes(explicit)) return explicit;
+    // Prefer the first form field, then the first non-close control.
+    const list = focusables(el);
+    const field = list.find(n => n.matches('input, select, textarea, [contenteditable]'));
+    if (field) return field;
+    const nonClose = list.find(n => !isCloseControl(n));
+    return nonClose || list[0] || null;
+  }
+
+  function isCloseControl(n) {
+    const id = n.id || '';
+    return n.hasAttribute('data-modal-close') || /(^|-)(close|close-x)$/.test(id);
+  }
+
+  function push(el) {
+    if (stack.some(l => l.el === el)) return;
+    const active = document.activeElement;
+    let opener = active instanceof HTMLElement && active !== document.body ? active : null;
+    // The first layer returns to the last focus outside every layer, even if
+    // the opener already moved focus into the dialog before we observed it.
+    if (!stack.length && (!opener || el.contains(opener))) opener = lastOutside && lastOutside.isConnected ? lastOutside : null;
+    stack.push({ el, opener });
+    refreshInert();
+    // Let the opener's own focus logic run first; only step in if focus is outside.
+    requestAnimationFrame(() => {
+      if (stack[stack.length - 1]?.el !== el) return;
+      if (!el.contains(document.activeElement)) {
+        const target = initialFocus(el);
+        if (target) target.focus({ preventScroll: true });
+        else { el.setAttribute('tabindex', '-1'); el.focus({ preventScroll: true }); }
+      }
+    });
+  }
+
+  function pop(el) {
+    const at = stack.findIndex(l => l.el === el);
+    if (at < 0) return;
+    const [layer] = stack.splice(at, 1);
+    refreshInert();
+    const next = stack[stack.length - 1];
+    const back = layer.opener;
+    const target = back && back.isConnected && !back.closest('[inert]') ? back : (next ? initialFocus(next.el) : null);
+    if (target && (!next || next.el.contains(target))) target.focus({ preventScroll: true });
+    else if (next) { const f = initialFocus(next.el); if (f) f.focus({ preventScroll: true }); }
+  }
+
+  function sync(el) {
+    if (isShown(el)) push(el);
+    else pop(el);
+  }
+
+  function closeTop() {
+    const top = stack[stack.length - 1];
+    if (!top) return false;
+    const el = top.el;
+    if (el.dataset.modalEsc === 'off') return true;
+    const guard = guards.get(el.id);
+    if (guard && guard() === false) return true;
+    const closer = el.querySelector('[data-modal-close]') ||
+      [...el.querySelectorAll('button')].find(b => /(^|-)(close|close-x|cancel)$/.test(b.id) && !b.disabled && !b.closest('.hidden'));
+    if (closer) closer.click();
+    // No close button (e.g. choice-modal builds its buttons at runtime): every
+    // promise-based dialog treats a click on its own backdrop as "cancel".
+    else el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    // Anything that is still open after its close path gets hidden directly.
+    if (isShown(el) && stack[stack.length - 1]?.el === el) {
+      el.classList.add('hidden');
+      sync(el);
+    }
+    return true;
+  }
+
+  function onKeyDown(event) {
+    const top = stack[stack.length - 1];
+    if (!top) return;
+    if (event.key === 'Escape') {
+      // Esc inside an IME composition cancels the composition only: keep the
+      // browser default, but no dialog handler may treat it as "close".
+      if (event.isComposing || event.keyCode === 229) { event.stopImmediatePropagation(); return; }
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeTop();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const list = focusables(top.el);
+    if (!list.length) { event.preventDefault(); return; }
+    const first = list[0];
+    const last = list[list.length - 1];
+    const cur = document.activeElement;
+    if (!top.el.contains(cur)) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    } else if (event.shiftKey && cur === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && cur === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function onFocusIn(event) {
+    const top = stack[stack.length - 1];
+    if (!top) {
+      // Remember where focus was before any layer opened: an opener that
+      // moves focus itself (e.g. into a search box) runs before the observer.
+      const t = event.target;
+      let inLayer = false;
+      for (let p = t instanceof Element ? t : null; p && !inLayer; p = p.parentElement) inLayer = !!p.__rmModal;
+      if (t instanceof HTMLElement && t !== document.body && !inLayer) lastOutside = t;
+      return;
+    }
+    if (top.el.contains(event.target)) return;
+    // Something outside (e.g. a toast) grabbed focus: pull it back.
+    const f = initialFocus(top.el);
+    if (f) f.focus({ preventScroll: true });
+  }
+
+  function watch(el) {
+    if (el.__rmModal) return;
+    el.__rmModal = true;
+    if (!el.hasAttribute('aria-modal')) el.setAttribute('aria-modal', 'true');
+    new MutationObserver(() => sync(el)).observe(el, { attributes: true, attributeFilter: ['class', 'style'] });
+    if (isShown(el)) push(el);
+  }
+
+  function scan(root = document) {
+    root.querySelectorAll('[role="dialog"]').forEach(el => {
+      // Only full-screen overlays are layers; inline role=dialog popovers are not.
+      if (el.id && /-modal$/.test(el.id)) watch(el);
+      else if (el.classList.contains('modal-overlay') || el.dataset.modalLayer === 'on') watch(el);
+    });
+  }
+
+  // Capture phase: runs before the legacy per-modal Esc listeners, so exactly
+  // one layer closes per key press.
+  document.addEventListener('keydown', onKeyDown, true);
+  document.addEventListener('focusin', onFocusIn);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => scan());
+  else scan();
+  // Runtime-built overlays (presentation, knowledge graph) are appended to <body>;
+  // watching only its direct children keeps preview re-renders out of this path.
+  const watchBody = () => new MutationObserver(records => {
+    for (const r of records) for (const n of r.addedNodes) {
+      if (n.nodeType !== 1) continue;
+      if (n.matches('[role="dialog"]')) { if (n.id && /-modal$/.test(n.id)) watch(n); }
+      else scan(n);
+    }
+  }).observe(document.body, { childList: true });
+  if (document.body) watchBody();
+  else document.addEventListener('DOMContentLoaded', watchBody);
+
+  const api = {
+    /** Show a dialog element (by id or node). */
+    open(target) { const el = typeof target === 'string' ? document.getElementById(target) : target; if (!el) return; watch(el); el.classList.remove('hidden'); sync(el); },
+    /** Hide a dialog element (by id or node). */
+    close(target) { const el = typeof target === 'string' ? document.getElementById(target) : target; if (!el) return; el.classList.add('hidden'); sync(el); },
+    /** `fn()` returning false vetoes an Esc close of dialog `id`. */
+    setGuard(id, fn) { if (fn) guards.set(id, fn); else guards.delete(id); },
+    top() { return stack[stack.length - 1]?.el || null; },
+    depth() { return stack.length; },
+    closeTop,
+  };
+  if (typeof window !== 'undefined') window.ReadMDModal = api;
+})();
+
+;
+'use strict';
+
+/*
+ * Single-flight task runner for long operations (export, conversion, OCR).
+ *
+ *   ReadMDTask.run('export', fn, { trigger, status })
+ *
+ * - A second call with the same key while one is running is ignored (no
+ *   duplicate request reaches the server, however fast the user clicks).
+ * - `trigger` buttons are disabled and marked `aria-busy` while running.
+ * - `status` (an element) shows "working… 12 s", switching to a stalled hint
+ *   after 120 s without `progress()` calls, and is cleared on completion.
+ * - `cancel: { id, button, onState }` shows `button` while running; a click
+ *   posts `/api/task/cancel {id}` once and reports the kernel's answer
+ *   (`cancelling` | `finished` | `unknown`) to `onState`.
+ * - State is idle → running → (succeeded | failed | cancelled); exactly one
+ *   terminal state.
+ */
+(function () {
+  const STALL_MS = 120000;
+  const running = new Map(); // key -> { startedAt, lastProgress, timer, triggers, status }
+
+  const tr = (k, p, fallback) => {
+    const text = window.i18n ? window.i18n.t(k, p) : k;
+    return text && text !== k ? text : fallback;
+  };
+
+  function paint(key) {
+    const job = running.get(key);
+    if (!job || !job.status) return;
+    const now = Date.now();
+    const secs = Math.floor((now - job.startedAt) / 1000);
+    const stalled = now - job.lastProgress >= STALL_MS;
+    job.status.classList.toggle('is-stalled', stalled);
+    job.painted = stalled
+      ? tr('task.stalled', null, 'Still working — this is taking longer than usual')
+      : (job.label || tr('task.running', { seconds: secs }, `Working… ${secs} s`)).replace('{seconds}', String(secs));
+    job.status.textContent = job.painted;
+  }
+
+  function setBusy(els, on) {
+    for (const el of els) {
+      if (!el) continue;
+      if (on) {
+        el.dataset.taskWasDisabled = el.disabled ? '1' : '';
+        el.disabled = true;
+        el.setAttribute('aria-busy', 'true');
+        el.classList.add('is-busy');
+      } else {
+        el.disabled = el.dataset.taskWasDisabled === '1';
+        delete el.dataset.taskWasDisabled;
+        el.removeAttribute('aria-busy');
+        el.classList.remove('is-busy');
+      }
+    }
+  }
+
+  const byId = t => (typeof t === 'string' ? document.getElementById(t) : t);
+
+  // Ask the kernel to cancel a task registered with `task_id` (or a batch job).
+  async function requestCancel(id) {
+    if (!id) return 'unknown';
+    try {
+      const fetcher = typeof apiFetch === 'function' ? apiFetch : fetch;
+      const r = await fetcher('/api/task/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      const d = await r.json().catch(() => ({}));
+      return d.state || 'unknown';
+    } catch (e) {
+      return 'unknown';
+    }
+  }
+
+  function newTaskId(prefix) {
+    const rand = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
+    return (prefix || 'task') + '-' + rand;
+  }
+
+  async function run(key, fn, opts = {}) {
+    if (running.has(key)) return undefined;
+    const triggers = [].concat(opts.trigger || []).map(byId).filter(Boolean);
+    const status = typeof opts.status === 'string' ? document.getElementById(opts.status) : opts.status || null;
+    const cancelBtn = opts.cancel ? byId(opts.cancel.button) : null;
+    const job = { startedAt: Date.now(), lastProgress: Date.now(), triggers, status, label: opts.label || '', cancelled: false };
+    running.set(key, job);
+    setBusy(triggers, true);
+    const onCancel = async () => {
+      if (job.cancelled) return;
+      job.cancelled = true;
+      cancelBtn.disabled = true;
+      const state = await requestCancel(opts.cancel.id);
+      if (opts.cancel.onState) opts.cancel.onState(state);
+    };
+    if (cancelBtn) {
+      cancelBtn.disabled = false;
+      cancelBtn.classList.remove('hidden');
+      cancelBtn.addEventListener('click', onCancel);
+    }
+    if (status) {
+      status.classList.remove('hidden', 'ok', 'err');
+      status.classList.add('is-running');
+      status.setAttribute('role', 'status');
+      status.setAttribute('aria-live', 'polite');
+      paint(key);
+      job.timer = setInterval(() => paint(key), 1000);
+    }
+    try {
+      return await fn({
+        progress: label => { job.lastProgress = Date.now(); if (label) job.label = label; paint(key); },
+        isCancelled: () => job.cancelled,
+      });
+    } finally {
+      clearInterval(job.timer);
+      if (cancelBtn) {
+        cancelBtn.removeEventListener('click', onCancel);
+        cancelBtn.classList.add('hidden');
+      }
+      if (status) {
+        status.classList.remove('is-running', 'is-stalled');
+        // Leave a result the task wrote; only clear our own progress text.
+        if (status.textContent === job.painted) status.textContent = '';
+      }
+      setBusy(triggers, false);
+      running.delete(key);
+    }
+  }
+
+  const api = { run, isRunning: key => running.has(key), newTaskId, requestCancel, STALL_MS };
+  if (typeof window !== 'undefined') window.ReadMDTask = api;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+})();
+
+;
+'use strict';
 /* ============================================================
    ReadMD Core - State & Basic Utilities
    ============================================================ */
@@ -185,6 +563,34 @@ function showToast(msg, ms) {
   showToast._t = setTimeout(() => t.classList.add('hidden'), ms || 2600);
 }
 
+
+/* 接口消息本地化：error.<code> → note.<code> → 服务端原文 → fallbackKey。
+   i18n.t 找不到键时原样返回键名，所以要和键名比较。 */
+function apiMessage(d, fallbackKey) {
+  const t = (k, p) => (window.i18n ? window.i18n.t(k, p) : k);
+  const tr = (k, p) => { const s = t(k, p); return s && s !== k ? s : ''; };
+  d = d || {};
+  if (d.error_code) {
+    const s = tr('error.' + d.error_code) || (d.reason ? tr('convert.reason.' + d.reason) : '');
+    if (s) return s;
+  }
+  if (d.note_code) { const s = tr('note.' + d.note_code); if (s) return s; }
+  if (typeof d.error === 'string' && d.error) return d.error;
+  if (typeof d.note === 'string' && d.note) return d.note;
+  return fallbackKey ? (tr(fallbackKey) || '') : '';
+}
+
+/* 导出警告：优先按 warn_items 的代码本地化，否则用原文。 */
+function warnMessages(d) {
+  const t = (k, p) => (window.i18n ? window.i18n.t(k, p) : k);
+  const items = Array.isArray(d && d.warn_items) ? d.warn_items : null;
+  if (!items) return ((d && d.warns) || []).map(String);
+  return items.map(w => {
+    const k = 'warn.' + w.code;
+    const s = w.code && w.code !== 'other' ? t(k, w.params || {}) : '';
+    return s && s !== k ? s : String(w.text || '');
+  });
+}
 
 function setProgress(p) {
   const el = $('progress');
@@ -763,20 +1169,56 @@ function applySettings() {
   document.body.style.setProperty('--fs', (state.fontSize / 100).toFixed(2));
   document.body.style.setProperty('--line-width', state.lineWidth + 'px');
   document.body.style.setProperty('--ai-panel-width', state.aiPanelWidth + 'px');
-  $('btn-theme').textContent = theme === 'dark' ? '\u2600' : '\u263E';
-  if (prevTheme && prevTheme !== theme && typeof reloadAllDiagrams === 'function') {
-    reloadAllDiagrams();
+  updateThemeButton();
+  if (prevTheme && prevTheme !== theme) {
+    if (typeof reloadAllDiagrams === 'function') reloadAllDiagrams();
+    if (typeof applyCmTheme === 'function') applyCmTheme();
   }
 }
 
+/* \u4E3B\u9898\u5FAA\u73AF\uFF1Aauto \u2192 light \u2192 dark \u2192 sepia \u2192 auto\u3002state.theme \u5B58\u7528\u6237\u7684\u9009\u62E9\uFF08\u542B 'auto'\uFF09\uFF0C
+   body[data-theme] \u6C38\u8FDC\u662F\u5B9E\u9645\u751F\u6548\u7684 light / dark / sepia\u3002 */
+const THEME_ORDER = ['auto', 'light', 'dark', 'sepia'];
+const THEME_ICONS = {
+  auto: '<svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg>',
+  light: '<svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  dark: '<svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',
+  sepia: '<svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/><path d="M8 7h8M8 11h6"/></svg>',
+};
+
+function updateThemeButton() {
+  const btn = $('btn-theme');
+  if (!btn) return;
+  const choice = THEME_ORDER.includes(state.theme) ? state.theme : 'auto';
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const name = _t('theme.' + choice);
+  const label = _t('theme.current', { name }) + ' (Ctrl+D)';
+  if (btn.dataset.themeIcon !== choice) {
+    btn.innerHTML = THEME_ICONS[choice];
+    btn.dataset.themeIcon = choice;
+  }
+  btn.title = label;
+  btn.setAttribute('aria-label', label);
+}
+
 function toggleTheme() {
-  const cur = document.body.dataset.theme;
-  const next = cur === 'dark' ? 'sepia' : (cur === 'sepia' ? 'light' : 'dark');
-  state.theme = next;
+  const i = THEME_ORDER.indexOf(state.theme);
+  state.theme = THEME_ORDER[(i + 1) % THEME_ORDER.length];
   applySettings();
   saveSettings();
   applyCmTheme();
+  if (typeof showToast === 'function' && window.i18n) {
+    showToast(window.i18n.t('theme.current', { name: window.i18n.t('theme.' + state.theme) }), 1400);
+  }
 }
+
+if (window.matchMedia) {
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  const onScheme = () => { if (state.theme === 'auto') applySettings(); };
+  if (mq.addEventListener) mq.addEventListener('change', onScheme);
+  else if (mq.addListener) mq.addListener(onScheme);
+}
+window.addEventListener('readmd:language-changed', () => updateThemeButton());
 
 function zoom(delta) {
   state.fontSize = Math.max(70, Math.min(180, state.fontSize + delta));
@@ -1559,6 +2001,53 @@ function promptDirtyClose(tabName) {
   });
 }
 
+/**
+ * 通用多选一对话框。choices: [{id, label, kind?: 'accent'|'danger'}]；
+ * Esc / 点击遮罩返回 'cancel'。焦点困在对话框内，关闭后还给触发元素。
+ */
+function askChoice(title, desc, choices) {
+  return new Promise(resolve => {
+    const modal = $('choice-modal');
+    const actions = $('choice-actions');
+    if (!modal || !actions) { resolve('cancel'); return; }
+    const opener = document.activeElement;
+    $('choice-title').textContent = title || '';
+    $('choice-desc').textContent = desc || '';
+    actions.innerHTML = '';
+    const buttons = choices.map(c => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tb-btn' + (c.kind ? ' ' + c.kind : '');
+      b.textContent = c.label;
+      b.onclick = () => done(c.id);
+      actions.appendChild(b);
+      return b;
+    });
+    const onKey = e => {
+      if (e.key === 'Escape') { e.preventDefault(); done('cancel'); return; }
+      if (e.key === 'Tab' && buttons.length) {
+        const i = buttons.indexOf(document.activeElement);
+        const next = e.shiftKey ? (i <= 0 ? buttons.length - 1 : i - 1) : (i + 1) % buttons.length;
+        e.preventDefault();
+        buttons[next].focus();
+      }
+    };
+    const onBackdrop = e => { if (e.target === modal) done('cancel'); };
+    function done(id) {
+      modal.classList.add('hidden');
+      modal.removeEventListener('click', onBackdrop);
+      document.removeEventListener('keydown', onKey, true);
+      actions.innerHTML = '';
+      if (opener && typeof opener.focus === 'function') opener.focus();
+      resolve(id);
+    }
+    modal.addEventListener('click', onBackdrop);
+    document.addEventListener('keydown', onKey, true);
+    modal.classList.remove('hidden');
+    setTimeout(() => (buttons[0] || modal).focus(), 30);
+  });
+}
+
 
 async function closeTab(tabId, force = false) {
   const tab = state.tabs.find(t => t.id === tabId);
@@ -2137,6 +2626,123 @@ function installAssoc() {
 /* ---------------- 全局拖拽与标签交互支持 ---------------- */
 
 let dragCounter = 0;
+let lastNativeDropAt = 0;
+
+/** 拖放条目的分类：zip / folder / binary（走转换） / text（直接打开）。 */
+function classifyDroppedEntry(entry) {
+  const name = entry.name || '';
+  if (entry.isDir) return 'folder';
+  if (/\.zip$/i.test(name)) return 'zip';
+  const binary = (typeof CONVERT_BINARY_RE !== 'undefined' && CONVERT_BINARY_RE.test(name))
+    || (typeof IMG_RE !== 'undefined' && IMG_RE.test(name));
+  return binary ? 'binary' : 'text';
+}
+
+async function extractDroppedZip(entry) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  let res;
+  try {
+    if (entry.path) {
+      const resp = await apiFetch('/api/batch/extract-zip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: entry.path, confirm: true })
+      });
+      res = await resp.json().catch(() => ({ ok: false, error_code: 'server_error' }));
+    } else {
+      const resp = await apiFetch('/api/batch/extract-zip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/zip', 'X-ReadMD-Confirm': 'true' },
+        body: entry.file
+      });
+      res = await resp.json().catch(() => ({ ok: false, error_code: 'server_error' }));
+    }
+  } catch (err) {
+    res = { ok: false, error_code: 'server_error' };
+  }
+  if (!res || res.ok === false) {
+    const code = (res && res.error_code) || 'server_error';
+    const kind = /corrupt|invalid|bad/.test(code) ? 'zip_corrupt'
+      : /large|limit|size/.test(code) ? 'zip_too_large'
+      : /unsupported|encrypt/.test(code) ? 'zip_unsupported' : 'server_error';
+    showToast(_t('batch.zipFailed', { name: entry.name, reason: _t('batch.zipReason.' + kind) }) || `无法解压 ${entry.name}`);
+    return { paths: [], skipped: 0 };
+  }
+  return { paths: Array.isArray(res.paths) ? res.paths : [], skipped: Number(res.skipped) || 0 };
+}
+
+/**
+ * 统一的拖放分派。条目形如 {name, path?, file?, isDir?}：
+ * 有 path 时直接按原路径打开（可写回原文件），没有 path 时上传副本。
+ */
+async function handleDroppedEntries(entries) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const groups = { zip: [], folder: [], binary: [], text: [] };
+  for (const en of entries || []) groups[classifyDroppedEntry(en)].push(en);
+
+  if (groups.folder.length && typeof listFolder === 'function') {
+    await listFolder(groups.folder[0].path);
+  }
+
+  if (groups.zip.length) {
+    showToast(_t('batch.extractingZip') || '正在解压压缩包...');
+    const extracted = [];
+    let skipped = 0;
+    for (const zf of groups.zip) {
+      const r = await extractDroppedZip(zf);
+      extracted.push(...r.paths);
+      skipped += r.skipped;
+    }
+    if (skipped > 0) showToast(_t('batch.zipSkipped', { count: skipped }) || `已跳过 ${skipped} 个不支持的文件`);
+    if (extracted.length && typeof enqueueBatchFiles === 'function') enqueueBatchFiles(extracted, false);
+  }
+
+  for (const f of groups.text) {
+    const path = f.path ? f.path : await uploadFile(f.file);
+    if (path) await loadFile(path, { browserCopy: !f.path });
+  }
+
+  if (groups.binary.length) {
+    const paths = [];
+    for (const f of groups.binary) {
+      const path = f.path ? f.path : await uploadFile(f.file);
+      if (path) paths.push(path);
+    }
+    if (paths.length === 1 && typeof convertOrOcr === 'function') {
+      convertOrOcr(paths[0], 'convert');
+    } else if (paths.length && typeof enqueueBatchFiles === 'function') {
+      enqueueBatchFiles(paths, !!($('convert-overwrite') && $('convert-overwrite').checked));
+    }
+  }
+}
+
+/** 桌面宿主（WRY）原生拖放入口：payload 为 {paths:[{path,name,isDir}]} 或 {state:'enter'|'leave'}。 */
+window.__readmdNativeDrop = function (payload) {
+  const overlay = $('drag-overlay');
+  if (!payload) return;
+  if (payload.state === 'enter') {
+    if (overlay) {
+      const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+      overlay.classList.remove('hidden');
+      const title = $('drag-title');
+      const desc = $('drag-desc');
+      if (title) title.textContent = _t('dialog.dropTitle') || '松开以导入文档';
+      if (desc) desc.textContent = _t('dialog.dropDesc') || 'Markdown 文件将在新标签页中打开；Word/PDF 等将自动导入转换';
+    }
+    return;
+  }
+  if (payload.state === 'leave') {
+    dragCounter = 0;
+    if (overlay) overlay.classList.add('hidden');
+    return;
+  }
+  if (Array.isArray(payload.paths) && payload.paths.length) {
+    lastNativeDropAt = Date.now();
+    dragCounter = 0;
+    if (overlay) overlay.classList.add('hidden');
+    handleDroppedEntries(payload.paths.map(p => ({ name: p.name || '', path: p.path || '', isDir: !!p.isDir })));
+  }
+};
 
 function bindGlobalDragAndDrop() {
   const overlay = $('drag-overlay');
@@ -2208,78 +2814,9 @@ function bindGlobalDragAndDrop() {
 
     // 1. 处理文件拖拽（万物皆可开：代码/配置/脚本/文本直接开，Office/PDF 走转换，ZIP 自动解压）
     if (dt.files && dt.files.length > 0) {
-      const files = Array.from(dt.files);
-      const zipFiles = files.filter(f => /\.zip$/i.test(f.name || ''));
-      const otherFiles = files.filter(f => !/\.zip$/i.test(f.name || ''));
-
-      if (zipFiles.length > 0) {
-        showToast((window.i18n ? window.i18n.t('batch.extractingZip') : '') || '正在解压压缩包...');
-        const extractedPaths = [];
-        let totalSkipped = 0;
-        for (const zf of zipFiles) {
-          try {
-            let res;
-            if (hasPy && py.extract_zip_batch && zf.path) {
-              res = await py.extract_zip_batch(zf.path);
-            } else {
-              if (zf.path) {
-                const resp = await apiFetch('/api/batch/extract-zip', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ path: zf.path, confirm: true })
-                });
-                res = await resp.json();
-              } else {
-                const resp = await apiFetch('/api/batch/extract-zip', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/zip', 'X-ReadMD-Confirm': 'true' },
-                  body: zf
-                });
-                res = await resp.json();
-              }
-            }
-            if (res && res.ok && Array.isArray(res.paths)) {
-              if (res.paths.length > 0) extractedPaths.push(...res.paths);
-              if (res.skipped) totalSkipped += Number(res.skipped) || 0;
-            }
-          } catch (err) {
-            console.error('Extract zip error:', err);
-          }
-        }
-        if (totalSkipped > 0) {
-          const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-          showToast(_t('batch.zipSkipped', { count: totalSkipped }) || `已跳过 ${totalSkipped} 个不支持的文件`);
-        }
-        if (extractedPaths.length > 0) {
-          enqueueBatchFiles(extractedPaths, false);
-        }
-      }
-
-      if (otherFiles.length > 0) {
-        const binaryConvertFiles = otherFiles.filter(f => (typeof CONVERT_BINARY_RE !== 'undefined' ? CONVERT_BINARY_RE.test(f.name || '') : false) || IMG_RE.test(f.name || ''));
-        const textAndCodeFiles = otherFiles.filter(f => !binaryConvertFiles.includes(f));
-
-        if (textAndCodeFiles.length > 0) {
-          for (const f of textAndCodeFiles) {
-            const path = f.path ? f.path : await uploadFile(f);
-            if (path) await loadFile(path, { browserCopy: !f.path });
-          }
-        }
-        if (binaryConvertFiles.length > 0) {
-          const paths = [];
-          for (const f of binaryConvertFiles) {
-            const path = f.path ? f.path : await uploadFile(f);
-            if (path) paths.push(path);
-          }
-          if (paths.length) {
-            if (paths.length === 1 && typeof convertOrOcr === 'function') {
-              convertOrOcr(paths[0], 'convert');
-            } else if (typeof enqueueBatchFiles === 'function') {
-              enqueueBatchFiles(paths, true);
-            }
-          }
-        }
-      }
+      // 桌面端的原生拖放会直接送来真实路径（__readmdNativeDrop），DOM 这里只是兜底。
+      if (Date.now() - lastNativeDropAt < 1500) return;
+      await handleDroppedEntries(Array.from(dt.files).map(f => ({ name: f.name || '', path: f.path || '', file: f })));
       return;
     }
 
@@ -3724,7 +4261,7 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
     const r = await apiFetch('/api/file?p=' + encodeURIComponent(path));
     if (!r.ok) {
       const d = await r.json().catch(() => ({}));
-      showToast((_t('toast.openFailed') || '无法打开：') + (d.error || r.status));
+      showToast((_t('toast.openFailed') || '无法打开：') + (apiMessage(d) || r.status));
       setProgress(0);
       return;
     }
@@ -3959,7 +4496,7 @@ function transformWikilinks(src) {
     const fullTarget = cleanHeading ? `${rawTarget}#${cleanHeading}` : rawTarget;
     const safeTarget = escapeHtml(fullTarget);
     const safeDisplay = escapeHtml(displayText);
-    return `<a class="wikilink" data-target="${safeTarget}" href="javascript:void(0)" title="双链跳转: ${safeTarget}">${safeDisplay}</a>`;
+    return `<a class="wikilink" data-target="${safeTarget}" href="javascript:void(0)" title="${escapeHtml((window.i18n ? window.i18n.t('wikilink.jump', { target: fullTarget }) : '双链跳转: ' + fullTarget))}">${safeDisplay}</a>`;
   });
 
   return replaced.replace(/\x00WIKICODE(\d+)\x00/g, (_, idx) => codeBlocks[Number(idx)] || '');
@@ -4004,7 +4541,7 @@ async function navigateWikilink(target, allHeadings) {
   } else if (targetPath && hasPy && py.open_file) {
     py.open_file(targetPath);
   } else {
-    showToast('正在打开文档：' + docName, 1500);
+    showToast((window.i18n ? window.i18n.t('toast.openingDoc', { name: docName }) : '正在打开文档：' + docName), 1500);
   }
 }
 
@@ -4849,10 +5386,10 @@ async function renderContent(content, name) {
           <span class="code-doc-size">${sizeKb} KB</span>
         </div>
         <div class="code-doc-actions">
-          <button class="btn btn-sm btn-primary" id="btn-code-to-md" data-i18n="codebar.aiToMd" title="转换为结构化 Markdown 文档">${_t('codebar.aiToMd') || 'AI 结构化转 MD'}</button>
-          <button class="btn btn-sm" id="btn-code-edit" data-i18n="codebar.edit" title="进入源码编辑器 (Ctrl+E)">${_t('codebar.edit') || '编辑源码 (Ctrl+E)'}</button>
-          <button class="btn btn-sm" id="btn-code-ai-explain" data-i18n="codebar.aiExplain" title="调用 AI 进行深度解析与排错">${_t('codebar.aiExplain') || 'AI 深度解析'}</button>
-          <button class="btn btn-sm" id="btn-code-copy" data-i18n="codebar.copyCode" title="复制代码正文">${_t('codebar.copyCode') || '复制代码'}</button>
+          <button class="btn btn-sm btn-primary" id="btn-code-to-md" data-i18n="codebar.aiToMd" title="${escapeHtml(_t('codebar.aiToMdTip') || '转换为结构化 Markdown 文档')}">${_t('codebar.aiToMd') || 'AI 结构化转 MD'}</button>
+          <button class="btn btn-sm" id="btn-code-edit" data-i18n="codebar.edit" title="${escapeHtml(_t('codebar.editTip') || '进入源码编辑器 (Ctrl+E)')}">${_t('codebar.edit') || '编辑源码 (Ctrl+E)'}</button>
+          <button class="btn btn-sm" id="btn-code-ai-explain" data-i18n="codebar.aiExplain" title="${escapeHtml(_t('codebar.aiExplainTip') || '调用 AI 进行深度解析与排错')}">${_t('codebar.aiExplain') || 'AI 深度解析'}</button>
+          <button class="btn btn-sm" id="btn-code-copy" data-i18n="codebar.copyCode" title="${escapeHtml(_t('codebar.copyCodeTip') || '复制代码正文')}">${_t('codebar.copyCode') || '复制代码'}</button>
         </div>
       </div>`;
 
@@ -6013,8 +6550,8 @@ function renderAllDiagrams(container) {
               const isZh = window.i18n ? ((window.i18n.currentLang || window.i18n.locale || '').startsWith('zh')) : true;
               const netSpan = document.createElement('span');
               netSpan.className = 'diagram-network-indicator';
-              netSpan.textContent = isZh ? ' · 在线代理' : ' · Online Proxy';
-              netSpan.setAttribute('aria-label', isZh ? '在线代理渲染' : 'Rendered via online proxy');
+              netSpan.textContent = ' · ' + (window.i18n ? window.i18n.t('diagram.onlineProxy') : (isZh ? '在线代理' : 'Online Proxy'));
+              netSpan.setAttribute('aria-label', window.i18n ? window.i18n.t('diagram.onlineProxyAria') : (isZh ? '在线代理渲染' : 'Rendered via online proxy'));
               badge.appendChild(netSpan);
             }
           }
@@ -6609,28 +7146,47 @@ async function ensureModule(name, timeoutMs) {
   return false;
 }
 
-async function convertFile(path) {
+async function convertFile(path, onExists) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!(await ensureModule('convert'))) return;
   busy(true);
+  let d;
   try {
-    const r = await apiFetch('/api/convert?p=' + encodeURIComponent(path) + '&overwrite=1');
-    const d = await r.json();
+    const q = '/api/convert?p=' + encodeURIComponent(path) + '&on_exists=' + encodeURIComponent(onExists || 'skip');
+    const r = await apiFetch(q);
+    d = await r.json().catch(() => ({}));
     if (r.status === 409) { showToast(d.error || (_t('toast.moduleLoading') || '模块加载中…')); return; }
-    if (!r.ok) { showToast(d.error || (_t('toast.convertFailed') || '转换失败')); return; }
-    if (!d.content) { showToast(d.note || (_t('toast.convertNoContent') || '未提取到内容')); return; }
-    showConvertWarns(d.warns);
-    if (d.saved && d.out) {
-      showToast((_t('toast.savedPrefix') || '已保存：') + d.out);
-      await loadFile(d.out);
-    } else if (d.skipped) {
-      showToast(_t('toast.skippedExistsNotice') || '已存在同名 .md，跳过保存（可在批量转换中勾选“覆盖已存在”）', 3400);
-      renderVirtual('convert', d.name, d.dir, d.content, d.fixes);
-    } else {
-      renderVirtual('convert', d.name, d.dir, d.content, d.fixes);
+    if (!r.ok) {
+      const why = d.reason ? _t('convert.reason.' + d.reason) : '';
+      showToast((why && why !== 'convert.reason.' + d.reason ? why : apiMessage(d, 'toast.convertFailed')) || '转换失败', 4200);
+      return;
     }
-  } catch (e) { showToast((_t('toast.convertFailPrefix') || '转换失败：') + e.message); }
+    if (!d.content) { showToast(apiMessage(d, 'toast.convertNoContent') || '未提取到内容', 4200); return; }
+    showConvertWarns(d.warns);
+  } catch (e) { showToast((_t('toast.convertFailPrefix') || '转换失败：') + e.message); return; }
   finally { busy(false); }
+
+  if (d.saved && d.out) {
+    showToast((_t('toast.savedPrefix') || '已保存：') + d.out);
+    await loadFile(d.out);
+    return;
+  }
+  if (d.skipped && !onExists) {
+    // 已存在同名 .md：让用户决定，而不是静默覆盖或静默丢弃。
+    const name = (d.out || '').split(/[\\/]/).pop();
+    const choice = await askChoice(
+      _t('convert.existsTitle') || '已存在同名 Markdown 文件',
+      _t('convert.existsDesc', { name }) || `「${name}」已存在，要怎么处理这次转换结果？`,
+      [
+        { id: 'rename', label: _t('convert.existsRename') || '另存为新文件', kind: 'accent' },
+        { id: 'overwrite', label: _t('convert.existsOverwrite') || '覆盖', kind: 'danger' },
+        { id: 'preview', label: _t('convert.existsPreview') || '仅预览' },
+      ]
+    );
+    if (choice === 'rename' || choice === 'overwrite') { await convertFile(path, choice); return; }
+    if (choice === 'cancel') return;
+  }
+  renderVirtual('convert', d.name, d.dir, d.content, d.fixes);
 }
 
 function showConvertWarns(warns) {
@@ -7135,6 +7691,32 @@ async function saveEdit(options = {}) {
         return false;
       }
       ok = await r.json();
+    }
+    // The file's original encoding cannot hold a character that was typed:
+    // offer to switch the document to UTF-8 instead of replacing it silently.
+    if (ok && ok.error_code === 'encoding_unrepresentable') {
+      busy(false);
+      const switchToUtf8 = await confirmAction({
+        title: _t('dialog.encodingTitle') || '无法按原编码保存',
+        message: _t('dialog.encodingMessage', { encoding: ok.encoding || state.encoding, char: ok.char || '' })
+          || `当前文件编码（${ok.encoding || state.encoding}）无法表示字符“${ok.char || ''}”。是否改为 UTF-8 保存？`,
+        confirmText: _t('dialog.encodingUseUtf8') || '改用 UTF-8 保存',
+        cancelText: _t('common.cancel') || '取消',
+      });
+      if (!switchToUtf8) return false;
+      state.encoding = 'utf-8';
+      const activeTab = getActiveTab();
+      if (activeTab) activeTab.encoding = 'utf-8';
+      busy(true);
+      if (hasPy) {
+        ok = await py.save_file(state.file, content, 'utf-8', state.mtime || null);
+      } else {
+        const r2 = await apiFetch('/api/save', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: state.file, content, encoding: 'utf-8', expected_mtime: state.mtime || null }),
+        });
+        ok = await r2.json();
+      }
     }
     if (ok && ok.ok !== false) {
       syncSavedTab(state.file, content);
@@ -7750,6 +8332,331 @@ async function exportAndInsertImg() {
 ;
 'use strict';
 /* ============================================================
+   ReadMD Editor - Markdown syntax transforms
+   Pure functions (no DOM, no CodeMirror): the toolbar asks
+   computeSyntaxEdit(doc, from, to, kind, ph) for ONE change and the
+   resulting selection, so every toolbar action is a single undo step.
+   ============================================================ */
+
+(function (root) {
+  const LIST_RE = /^(?:[-*+][ \t]+\[[ xX]\](?:[ \t]+|$)|[-*+](?:[ \t]+|$)|\d{1,9}[.)](?:[ \t]+|$))/;
+  const HEADING_RE = /^#{1,6}(?:[ \t]+|$)/;
+  const WORD_RE = /[A-Za-z0-9_À-ɏͰ-ϿЀ-ӿ]/;
+
+  const INLINE = {
+    bold:   { ch: '*', test: r => r >= 2, rm: () => 2, open: () => '**' },
+    italic: { ch: '*', test: r => r % 2 === 1, rm: () => 1, open: () => '*' },
+    strike: { ch: '~', test: r => r >= 2, rm: () => 2, open: () => '~~' },
+    code:   { ch: '`', test: r => r >= 1, rm: r => r, open: s => '`'.repeat(maxRun(s, '`') + 1) },
+    math:   { ch: '$', test: r => r === 1, rm: () => 1, open: () => '$' },
+  };
+
+  function lineAt(doc, pos) {
+    const from = doc.lastIndexOf('\n', pos - 1) + 1;
+    let to = doc.indexOf('\n', pos);
+    if (to < 0) to = doc.length;
+    return { from, to, text: doc.slice(from, to) };
+  }
+
+  function isBlank(s) { return !s || s.trim() === ''; }
+
+  function maxRun(s, ch) {
+    let best = 0, cur = 0;
+    for (const c of s) { cur = c === ch ? cur + 1 : 0; if (cur > best) best = cur; }
+    return best;
+  }
+
+  function runLeft(doc, pos, ch) { let n = 0; while (pos - n > 0 && doc[pos - n - 1] === ch) n++; return n; }
+  function runRight(doc, pos, ch) { let n = 0; while (pos + n < doc.length && doc[pos + n] === ch) n++; return n; }
+
+  /* Lines touched by [from, to]; a selection ending at column 0 does not include that line. */
+  function blockRange(doc, from, to) {
+    const first = lineAt(doc, from);
+    let end = to;
+    if (to > from && doc[to - 1] === '\n') end = to - 1;
+    const last = lineAt(doc, Math.max(end, first.from));
+    return { from: first.from, to: last.to };
+  }
+
+  function edit(from, to, insert, anchor, head) {
+    return { changes: { from, to, insert }, selection: { anchor, head: head === undefined ? anchor : head } };
+  }
+
+  /* ---------------- 块级：标题 / 引用 / 列表 ---------------- */
+
+  function listKind(body) {
+    const m = LIST_RE.exec(body);
+    if (!m) return null;
+    if (/^[-*+][ \t]+\[[ xX]\]/.test(m[0])) return 'task';
+    return /^\d/.test(m[0]) ? 'ordered' : 'list';
+  }
+
+  function lineEdit(doc, from, to, kind, ph) {
+    const range = blockRange(doc, from, to);
+    const lines = doc.slice(range.from, range.to).split('\n');
+    const parts = lines.map(t => { const ind = /^[ \t]*/.exec(t)[0]; return { ind, body: t.slice(ind.length) }; });
+    const content = parts.filter(p => !isBlank(p.body));
+    const numbers = new Map();
+    const prefix = (ind) => {
+      if (kind === 'h2') return '## ';
+      if (kind === 'quote') return '> ';
+      if (kind === 'list') return '- ';
+      if (kind === 'task') return '- [ ] ';
+      const n = (numbers.get(ind) || 0) + 1;
+      numbers.set(ind, n);
+      return n + '. ';
+    };
+
+    if (!content.length) {
+      const p = parts[0];
+      const line = lineAt(doc, from);
+      const pre = p.ind + prefix(p.ind);
+      const at = line.from + pre.length;
+      return edit(line.from, line.to, pre + ph, at, at + ph.length);
+    }
+
+    const has = p => {
+      if (kind === 'h2') return /^##(?:[ \t]+|$)/.test(p.body);
+      if (kind === 'quote') return p.body.startsWith('>');
+      return listKind(p.body) === kind;
+    };
+    const strip = body => {
+      if (kind === 'h2') return body.replace(HEADING_RE, '');
+      if (kind === 'quote') return body.replace(/^>[ \t]?/, '');
+      return body.replace(LIST_RE, '');
+    };
+    const remove = content.every(has);
+
+    const out = parts.map(p => {
+      if (isBlank(p.body)) {
+        if (kind === 'quote' && !remove && lines.length > 1) return { text: p.ind + '>', pre: p.ind.length + 1 };
+        return { text: p.ind + p.body, pre: p.ind.length + p.body.length };
+      }
+      if (remove) return { text: p.ind + strip(p.body), pre: p.ind.length };
+      const pre = p.ind + prefix(p.ind);
+      const body = kind === 'quote' ? p.body : strip(p.body);
+      return { text: pre + body, pre: pre.length };
+    });
+    const insert = out.map(o => o.text).join('\n');
+
+    if (from === to && lines.length === 1) {
+      // 保持光标相对行尾的位置，但不落进新前缀里
+      const fromEnd = range.to - from;
+      const col = Math.max(out[0].pre, out[0].text.length - fromEnd);
+      return edit(range.from, range.to, insert, range.from + col);
+    }
+    return edit(range.from, range.to, insert, range.from, range.from + insert.length);
+  }
+
+  /* ---------------- 独占行的块：分隔线 / 代码块 / 公式块 / 表格 ---------------- */
+
+  /* Place `block` so it sits on its own lines with a blank line on both sides
+     (except at the very start / end of the document). */
+  function placeBlock(doc, rFrom, rTo, block, selFrom, selTo) {
+    let lead = '', trail = '';
+    if (rFrom > 0 && doc[rFrom - 1] !== '\n') {
+      lead = '\n\n';
+    } else if (rFrom > 0 && !isBlank(lineAt(doc, rFrom - 1).text)) {
+      lead = '\n';
+    }
+    if (rTo < doc.length && !isBlank(lineAt(doc, rTo + 1).text)) trail = '\n';
+    const base = rFrom + lead.length;
+    return edit(rFrom, rTo, lead + block + trail, base + selFrom, base + selTo);
+  }
+
+  function targetRange(doc, from, to) {
+    if (from !== to) return blockRange(doc, from, to);
+    const line = lineAt(doc, from);
+    return isBlank(line.text) ? { from: line.from, to: line.to } : { from: line.to, to: line.to };
+  }
+
+  function hrEdit(doc, from, to) {
+    const line = lineAt(doc, to > from && doc[to - 1] === '\n' ? to - 1 : to);
+    const r = isBlank(line.text) ? { from: line.from, to: line.to } : { from: line.to, to: line.to };
+    const res = placeBlock(doc, r.from, r.to, '---', 3, 3);
+    const after = res.changes.from + res.changes.insert.length;
+    // 光标落到分隔线之后的空行（如果有），方便继续输入
+    const cur = res.changes.insert.endsWith('\n') ? after : res.selection.anchor;
+    res.selection = { anchor: cur, head: cur };
+    return res;
+  }
+
+  function fencedEdit(doc, from, to, kind, ph) {
+    const math = kind === 'mathblock';
+    const r = targetRange(doc, from, to);
+    const text = from === to ? '' : doc.slice(r.from, r.to);
+    const lines = text.split('\n');
+    if (text && lines.length >= 2) {
+      const a = lines[0].trim(), z = lines[lines.length - 1].trim();
+      const fenced = math
+        ? a === '$$' && z === '$$'
+        : /^(`{3,}|~{3,})/.test(a) && z.length >= 3 && z[0] === a[0] && /^(`+|~+)$/.test(z);
+      if (fenced) {
+        const inner = lines.slice(1, -1).join('\n');
+        return edit(r.from, r.to, inner, r.from, r.from + inner.length);
+      }
+    }
+    const body = text || (math ? 'x^2' : ph);
+    const fence = math ? '$$' : '`'.repeat(Math.max(3, maxRun(body, '`') + 1));
+    const block = fence + '\n' + body + '\n' + fence;
+    return placeBlock(doc, r.from, r.to, block, fence.length + 1, fence.length + 1 + body.length);
+  }
+
+  function tableEdit(doc, from, to, ph) {
+    const r = targetRange(doc, from, to);
+    const text = from === to ? '' : doc.slice(r.from, r.to);
+    const rows = text ? text.split('\n').filter(l => !isBlank(l)) : [];
+    const esc = c => c.trim().replace(/\|/g, '\\|');
+    if (rows.length && rows.every(l => l.includes('\t'))) {
+      const cells = rows.map(l => l.split('\t').map(esc));
+      const cols = Math.max(...cells.map(c => c.length));
+      const fmt = c => '| ' + Array.from({ length: cols }, (_, i) => c[i] || '').join(' | ') + ' |';
+      const block = [fmt(cells[0]), '| ' + Array(cols).fill('---').join(' | ') + ' |', ...cells.slice(1).map(fmt)].join('\n');
+      return placeBlock(doc, r.from, r.to, block, 0, block.length);
+    }
+    const head = '| Col 1 | Col 2 |\n| --- | --- |\n';
+    if (rows.length > 1) {
+      const block = head + rows.map(l => '| ' + esc(l) + ' |  |').join('\n');
+      return placeBlock(doc, r.from, r.to, block, 0, block.length);
+    }
+    const cell = rows.length ? esc(rows[0]) : ph;
+    const block = head + '| ' + cell + ' |  |';
+    return placeBlock(doc, r.from, r.to, block, head.length + 2, head.length + 2 + cell.length);
+  }
+
+  /* ---------------- 行内：加粗 / 斜体 / 删除线 / 行内代码 / 公式 ---------------- */
+
+  function innerWrapped(s, spec) {
+    let l = 0; while (l < s.length && s[l] === spec.ch) l++;
+    let r = 0; while (r < s.length && s[s.length - 1 - r] === spec.ch) r++;
+    if (l + r > s.length || l + r === s.length && l < 2 * spec.rm(l)) return 0;
+    if (!spec.test(l) || !spec.test(r)) return 0;
+    if (spec.ch === '`' && l !== r) return 0;
+    const n = spec.rm(l);
+    return s.length >= 2 * n ? n : 0;
+  }
+
+  function wrapText(s, spec) {
+    const open = spec.open(s);
+    const pad = spec.ch === '`' && (s.startsWith('`') || s.endsWith('`')) ? ' ' : '';
+    return { text: open + pad + s + pad + open, lead: open.length + pad.length };
+  }
+
+  function inlineEdit(doc, from, to, kind, ph) {
+    const spec = INLINE[kind];
+    if (from === to) {
+      // 空包裹 **|** → 取消
+      const l = runLeft(doc, from, spec.ch), r = runRight(doc, from, spec.ch);
+      if (l && r && spec.test(l) && spec.test(r) && (spec.ch !== '`' || l === r)) {
+        const n = spec.rm(l);
+        return edit(from - n, from + n, '', from - n);
+      }
+      // 光标在单词内部时作用于整个单词
+      let a = from, b = from;
+      while (a > 0 && WORD_RE.test(doc[a - 1])) a--;
+      while (b < doc.length && WORD_RE.test(doc[b])) b++;
+      if (a < b && a < from && from < b) return inlineEdit(doc, a, b, kind, ph);
+      const w = wrapText(ph, spec);
+      return edit(from, to, w.text, from + w.lead, from + w.lead + ph.length);
+    }
+
+    const s = doc.slice(from, to);
+    if (s.includes('\n')) {
+      const segs = s.split('\n');
+      const unwrap = segs.filter(x => !isBlank(x)).every(x => innerWrapped(x.trim(), spec));
+      const out = segs.map(x => {
+        if (isBlank(x)) return x;
+        const lw = /^\s*/.exec(x)[0], tw = /\s*$/.exec(x)[0];
+        const core = x.slice(lw.length, x.length - tw.length);
+        if (unwrap) { const n = innerWrapped(core, spec); return lw + core.slice(n, core.length - n) + tw; }
+        return lw + (innerWrapped(core, spec) ? core : wrapText(core, spec).text) + tw;
+      }).join('\n');
+      return edit(from, to, out, from, from + out.length);
+    }
+
+    // 只包裹去掉首尾空白后的部分（`** x**` 不是加粗）
+    const a = from + /^\s*/.exec(s)[0].length;
+    const b = to - /\s*$/.exec(s)[0].length;
+    if (a >= b) return inlineEdit(doc, from, from, kind, ph);
+    const core = doc.slice(a, b);
+
+    const inner = innerWrapped(core, spec);
+    if (inner) {
+      const t = core.slice(inner, core.length - inner);
+      return edit(a, b, t, a, a + t.length);
+    }
+    const l = runLeft(doc, a, spec.ch), r = runRight(doc, b, spec.ch);
+    if (l && r && spec.test(l) && spec.test(r) && (spec.ch !== '`' || l === r)) {
+      const n = spec.rm(l);
+      return edit(a - n, b + n, core, a - n, b - n);
+    }
+    const w = wrapText(core, spec);
+    return edit(a, b, w.text, a + w.lead, a + w.lead + core.length);
+  }
+
+  /* ---------------- 链接 / 图片 ---------------- */
+
+  function linkEdit(doc, from, to, kind, ph) {
+    const s = doc.slice(from, to).trim();
+    const bang = kind === 'image' ? '!' : '';
+    const label = ph.desc && kind === 'image' ? ph.desc : ph.text;
+    if (/^(https?:\/\/|www\.|\.{0,2}\/)\S*$/i.test(s)) {
+      const text = bang + '[' + label + '](' + s + ')';
+      const at = from + bang.length + 1;
+      return edit(from, to, text, at, at + label.length);
+    }
+    const shown = s.replace(/\n+/g, ' ') || label;
+    const text = bang + '[' + shown + '](url)';
+    const at = from + bang.length + shown.length + 3;
+    return edit(from, to, text, at, at + 3);
+  }
+
+  const DEFAULT_PH = { text: 'text', code: 'code', heading: 'Heading', quote: 'Quote', item: 'Item', task: 'Task', desc: 'image' };
+
+  /**
+   * @param {string} doc   whole document ("\n" line breaks)
+   * @param {number} from  selection start
+   * @param {number} to    selection end
+   * @param {string} kind  toolbar command
+   * @param {object} [ph]  localised placeholders
+   * @returns {{changes:{from:number,to:number,insert:string}, selection:{anchor:number,head:number}}|null}
+   */
+  function computeSyntaxEdit(doc, from, to, kind, ph) {
+    doc = String(doc == null ? '' : doc);
+    from = Math.max(0, Math.min(from | 0, doc.length));
+    to = Math.max(0, Math.min(to == null ? from : to | 0, doc.length));
+    if (to < from) { const t = from; from = to; to = t; }
+    const p = Object.assign({}, DEFAULT_PH, ph || {});
+    switch (kind) {
+      case 'h2': return lineEdit(doc, from, to, kind, p.heading);
+      case 'quote': return lineEdit(doc, from, to, kind, p.quote);
+      case 'list': case 'ordered': return lineEdit(doc, from, to, kind, p.item);
+      case 'task': return lineEdit(doc, from, to, kind, p.task);
+      case 'bold': case 'italic': case 'strike': return inlineEdit(doc, from, to, kind, p.text);
+      case 'code': return inlineEdit(doc, from, to, kind, p.code);
+      case 'math': return inlineEdit(doc, from, to, kind, 'x^2');
+      case 'hr': return hrEdit(doc, from, to);
+      case 'codeblock': case 'mathblock': return fencedEdit(doc, from, to, kind, p.code);
+      case 'table': return tableEdit(doc, from, to, p.text);
+      case 'link': case 'image': return linkEdit(doc, from, to, kind, p);
+      default: return null;
+    }
+  }
+
+  /* Apply an edit to a string (for tests and non-CodeMirror fallbacks). */
+  function applySyntaxEdit(doc, e) {
+    if (!e) return doc;
+    return doc.slice(0, e.changes.from) + e.changes.insert + doc.slice(e.changes.to);
+  }
+
+  const api = { computeSyntaxEdit, applySyntaxEdit };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  if (root) root.ReadMDTransforms = api;
+})(typeof window !== 'undefined' ? window : null);
+
+;
+'use strict';
+/* ============================================================
    ReadMD Editor - CodeMirror 6 & Command Palette
    ============================================================ */
 
@@ -7786,7 +8693,6 @@ function createEditor(doc) {
   if (!window.ReadMDCodeMirror) return false;
   const CM = window.ReadMDCodeMirror;
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const dark = document.body.dataset.theme === 'dark';
   cmThemeCompartment = new CM.Compartment();
   const st = CM.EditorState.create({
     doc: doc,
@@ -7807,12 +8713,16 @@ function createEditor(doc) {
       CM.keymap.of([
         { key: 'Alt-k', run: () => { openEditAiBar(); return true; } },
         { key: 'Ctrl-j', run: () => { openEditAiBar(); return true; } },
+        { key: 'Mod-b', run: () => { cmInsertSyntax('bold'); return true; } },
+        { key: 'Mod-i', run: () => { cmInsertSyntax('italic'); return true; } },
+        { key: 'Mod-k', run: () => { cmInsertSyntax('link'); return true; } },
         CM.indentWithTab,
         ...CM.closeBracketsKeymap,
         ...CM.defaultKeymap,
         ...CM.historyKeymap,
         ...CM.completionKeymap
       ]),
+      cmThemeCompartment.of(cmThemeFor(document.body.dataset.theme)),
       CM.EditorView.lineWrapping,
       CM.EditorView.contentAttributes.of({ 'aria-label': _t('toolbar.edit') || '' }),
       CM.EditorView.updateListener.of(u => {
@@ -7837,20 +8747,26 @@ function createEditor(doc) {
 
 }
 
+/* vendor 包只导出 historyKeymap，不直接导出 undo / redo：从键位表里取命令 */
+function cmHistoryCommand(key) {
+  const CM = window.ReadMDCodeMirror;
+  if (!CM) return null;
+  if (typeof CM[key] === 'function') return CM[key];
+  const want = key === 'undo' ? 'Mod-z' : 'Mod-y';
+  const b = (CM.historyKeymap || []).find(x => x.key === want);
+  return b && typeof b.run === 'function' ? b.run : null;
+}
+
 function cmUndo() {
-  if (cmView && window.ReadMDCodeMirror) {
-    window.ReadMDCodeMirror.undo(cmView);
-  } else if ($('edit-area')) {
-    document.execCommand('undo');
-  }
+  const run = cmView && cmHistoryCommand('undo');
+  if (run) { run(cmView); cmView.focus(); }
+  else if ($('edit-area')) document.execCommand('undo');
 }
 
 function cmRedo() {
-  if (cmView && window.ReadMDCodeMirror) {
-    window.ReadMDCodeMirror.redo(cmView);
-  } else if ($('edit-area')) {
-    document.execCommand('redo');
-  }
+  const run = cmView && cmHistoryCommand('redo');
+  if (run) { run(cmView); cmView.focus(); }
+  else if ($('edit-area')) document.execCommand('redo');
 }
 
 function hideCmSelectionToolbar() {
@@ -7973,11 +8889,30 @@ function destroyEditor() {
 }
 
 
+/* CodeMirror 主题跟随 body 的实际 data-theme（light / dark / sepia）。
+   颜色取自 style.css 的主题变量，所以编辑器与阅读区同色。 */
+let cmSepiaTheme = null;
+function cmThemeFor(theme) {
+  const CM = window.ReadMDCodeMirror;
+  if (theme === 'dark') return CM.oneDark;
+  if (theme === 'sepia') {
+    if (!cmSepiaTheme && CM.EditorView && typeof CM.EditorView.theme === 'function') {
+      cmSepiaTheme = CM.EditorView.theme({
+        '&': { backgroundColor: 'var(--bg2)', color: 'var(--fg)' },
+        '.cm-gutters': { backgroundColor: 'var(--bg3)', color: 'var(--fg3)', borderRight: '1px solid var(--border)' },
+        '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: 'var(--accent-soft)' },
+        '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': { backgroundColor: 'var(--editor-selection)' },
+        '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--accent)' },
+      }, { dark: false });
+    }
+    return cmSepiaTheme || [];
+  }
+  return [];
+}
+
 function applyCmTheme() {
   if (!cmView || !window.ReadMDCodeMirror || !cmThemeCompartment) return;
-  const CM = window.ReadMDCodeMirror;
-  const dark = document.body.dataset.theme === 'dark';
-  cmView.dispatch({ effects: cmThemeCompartment.reconfigure(dark ? CM.oneDark : []) });
+  cmView.dispatch({ effects: cmThemeCompartment.reconfigure(cmThemeFor(document.body.dataset.theme)) });
 }
 
 /* Markdown 自动补全（基于 GitHub 开源 @codemirror/autocomplete） */
@@ -8028,47 +8963,28 @@ function cmMarkdownCompletions() {
 function cmInsertSyntax(kind) {
   if (!cmView) return;
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const sel = cmView.state.selection.main;
-  const selected = cmView.state.sliceDoc(sel.from, sel.to);
-  let insert = null;
-  let cursor = sel.from;
-  const textPlaceholder = _t('editor.textWord') || '';
-  const codePlaceholder = _t('editor.codeWord') || '';
-  const headingPlaceholder = _t('editor.headingWord') || '';
-  const quotePlaceholder = _t('editor.quote') || '';
-  const itemPlaceholder = _t('editor.itemWord') || '';
-  const taskPlaceholder = _t('editor.taskWord') || '';
-  const descPlaceholder = _t('editor.descWord') || '';
-
-  const wrap = (b, d, a) => {
-    insert = b + (selected || d) + a;
-    cursor = sel.from + b.length + (selected || d).length;
-  };
   switch (kind) {
-    case 'bold': wrap('**', textPlaceholder, '**'); break;
-    case 'italic': wrap('*', textPlaceholder, '*'); break;
-    case 'strike': wrap('~~', textPlaceholder, '~~'); break;
-    case 'code': wrap('`', codePlaceholder, '`'); break;
-    case 'math': wrap('$', 'x^2', '$'); break;
-    case 'mathblock': insert = '$$\n' + (selected || 'x^2') + '\n$$'; cursor = sel.from + insert.length - 3; break;
-    case 'h2': insert = '## ' + (selected || headingPlaceholder); cursor = sel.from + insert.length; break;
-    case 'quote': insert = '> ' + (selected || quotePlaceholder); cursor = sel.from + insert.length; break;
-    case 'list': insert = '- ' + (selected || itemPlaceholder); cursor = sel.from + insert.length; break;
-    case 'ordered': insert = '1. ' + (selected || itemPlaceholder); cursor = sel.from + insert.length; break;
-    case 'task': insert = '- [ ] ' + (selected || taskPlaceholder); cursor = sel.from + insert.length; break;
-    case 'link': insert = '[' + (selected || textPlaceholder) + '](url)'; cursor = sel.from + 1 + (selected || textPlaceholder).length; break;
-    case 'image': insert = '![' + (selected || descPlaceholder) + '](url)'; cursor = sel.from + 2 + (selected || descPlaceholder).length; break;
-    case 'codeblock': insert = '```\n' + (selected || codePlaceholder) + '\n```'; cursor = sel.from + 4 + (selected || codePlaceholder).length; break;
-    case 'table': insert = '| Col 1 | Col 2 |\n|---|---|\n| ' + (selected || textPlaceholder) + ' |  |'; cursor = sel.from + insert.length; break;
-    case 'hr': insert = '\n---\n'; cursor = sel.from + insert.length; break;
     case 'codechunk': openCodeChunkModal(); return;
     case 'diagram': openDiagramModal(); return;
     case 'docimport': openDocImportModal(); return;
     case 'frontmatter': insertFrontmatterTemplate(); return;
-    default: return;
+    default: break;
   }
-  if (insert === null) return;
-  cmView.dispatch({ changes: { from: sel.from, to: sel.to, insert }, selection: { anchor: cursor } });
+  if (!window.ReadMDTransforms) return;
+  const sel = cmView.state.selection.main;
+  const ph = {
+    text: _t('editor.textWord') || 'text',
+    code: _t('editor.codeWord') || 'code',
+    heading: _t('editor.headingWord') || 'Heading',
+    quote: _t('editor.quote') || 'Quote',
+    item: _t('editor.itemWord') || 'Item',
+    task: _t('editor.taskWord') || 'Task',
+    desc: _t('editor.descWord') || 'image',
+  };
+  const e = window.ReadMDTransforms.computeSyntaxEdit(cmView.state.doc.toString(), sel.from, sel.to, kind, ph);
+  if (!e) return;
+  // 一次 dispatch = 一步撤销
+  cmView.dispatch({ changes: e.changes, selection: e.selection, scrollIntoView: true, userEvent: 'input.syntax' });
   cmView.focus();
 }
 
@@ -8417,10 +9333,10 @@ function handleSmartExcelPaste(e) {
           cmInsertImage(insertRel);
           showToast(_t('toast.imgInsertedRel', { rel: insertRel }) || ('图片已插入（' + insertRel + '）'));
         } else {
-          showToast((d && d.error) || '图片保存失败');
+          showToast(apiMessage(d, 'toast.imgSaveFailed') || '图片保存失败');
         }
       } catch (err) {
-        showToast('图片保存失败：' + err.message);
+        showToast((_t('toast.imgSaveFail') || '图片保存失败：') + err.message);
       }
     };
     reader.readAsDataURL(imageFile);
@@ -11553,6 +12469,7 @@ async function openConvertModal() {
 
 function closeConvertModal() {
   if (typeof stopBatchPoll === 'function') stopBatchPoll();
+  if (typeof setBatchTriggersBusy === 'function') setBatchTriggersBusy(false);
   $('convert-modal').classList.add('hidden');
 }
 
@@ -11591,11 +12508,18 @@ async function pickConvertFolder() {
     if (!files.length) { showToast(_t('convert.noConvertibleFiles') || '该目录下没有可转换的文件'); return; }
     convertLastDir = dir;
     await startBatchConvert(files, $('convert-overwrite').checked);
+    batchFolderRoot = dir;
   } catch (e) { showToast((_t('toast.collectFilesFail') || '收集文件失败：') + e.message); }
 }
 
 async function startBatchConvert(files, overwrite) {
   if (typeof enqueueBatchFiles === 'function') {
+    // A batch that is still running owns the workbench; a second click must
+    // not start a parallel job over the same rows.
+    if (typeof isBatchRunning === 'function' && isBatchRunning()) {
+      showToast(_t('batch.alreadyRunning'));
+      return;
+    }
     return enqueueBatchFiles(files, overwrite);
   }
   // The batch module is part of the generated boot bundle.  Keep a stable
@@ -11609,14 +12533,20 @@ async function startBatchConvert(files, overwrite) {
 
 
 async function ocrFile(path) {
+  // One OCR per file at a time: repeated triggers for the same path are dropped.
+  if (window.ReadMDTask) return window.ReadMDTask.run('ocr:' + path, () => ocrFileOnce(path));
+  return ocrFileOnce(path);
+}
+
+async function ocrFileOnce(path) {
   if (!(await ensureModule('ocr'))) return;
   busy(true);
   try {
     const r = await apiFetch('/api/ocr?p=' + encodeURIComponent(path));
     const d = await r.json();
     if (r.status === 409) { showToast(d.error || (_t('toast.moduleLoading') || '模块加载中…')); return; }
-    if (!r.ok) { showToast(d.error || (_t('toast.ocrFail') || 'OCR 失败')); return; }
-    if (!d.content) { showToast(d.note || (_t('toast.ocrNoText') || '未识别到文字')); return; }
+    if (!r.ok) { showToast(apiMessage(d, 'toast.ocrFail') || 'OCR 失败'); return; }
+    if (!d.content || d.empty) { showToast(apiMessage(d, 'toast.ocrNoText') || '未识别到文字'); return; }
     renderVirtual('ocr', d.name, d.dir, d.content, d.fixes);
   } catch (e) { showToast((_t('toast.ocrFailPrefix') || 'OCR 失败：') + e.message); }
   finally { busy(false); }
@@ -11799,7 +12729,7 @@ function getPluginIconSvg(id, category, capability) {
 }
 
 // 每个错误码对应一个字面量 _t() 调用：key 只有在调用点写成字面量时
-// tools/check_js_i18n_keys.py 才能静态校验，变量形式的 _t(key) 会绕过门禁。
+// tools/check-i18n.mjs 才能静态校验，变量形式的 _t(key) 会绕过门禁。
 const PLUGIN_ERROR_TEXT = {
   pip_network: () => _t('plugin.error.pip_network'),
   pip_timeout: () => _t('plugin.error.pip_timeout'),
@@ -11937,6 +12867,25 @@ function renderPluginCards(plugins) {
         <button class="plugin-action-uninstall-btn" data-action="uninstall">${_t('plugin.uninstall')}</button>
       `;
       if (p.install_error_code) progressHtml = pluginErrorMarkup(p);
+    } else if (p.native && p.native.builtin) {
+      // The Rust kernel already ships this capability; nothing to install.
+      footLeft = `
+        <div class="plugin-status-dot-indicator is-builtin">
+          <span class="plugin-dot-pip builtin"></span>
+          <span>${escapeHtml(_t('plugin.builtin'))}</span>
+        </div>
+      `;
+      footRight = `<span class="plugin-builtin-note">${escapeHtml(_t('plugin.builtinHint'))}</span>`;
+    } else if (p.native && !p.native.builtin) {
+      // No native engine and no package installer in this build: say so
+      // instead of offering an Install button that can only fail.
+      footLeft = `
+        <div class="plugin-status-dot-indicator is-unsupported">
+          <span class="plugin-dot-pip"></span>
+          <span>${escapeHtml(_t('plugin.unsupportedBuild'))}</span>
+        </div>
+      `;
+      footRight = '';
     } else {
       const hasErr = Boolean(p.install_error_code);
       footLeft = `
@@ -12106,6 +13055,8 @@ let batchDocsDone = false;
 let batchOcrDone = false;
 let batchFinished = false;
 let batchCount = { ok: 0, skipped: 0, error: 0, canceled: 0 };
+/** 文件夹批量时所选的根目录；“打开结果目录”优先用它。 */
+let batchFolderRoot = '';
 const batchRowsBySrc = Object.create(null);
 
 function batchT(k, p) {
@@ -12114,11 +13065,13 @@ function batchT(k, p) {
 
 function openBatchModal() {
   stopBatchPoll();
+  setBatchTriggersBusy(false);
   batchJobId = null;
   batchCancelRequested = false;
   batchOcrCanceled = false;
   batchFinished = false;
   batchCount = { ok: 0, skipped: 0, error: 0, canceled: 0 };
+  batchFolderRoot = '';
   for (const k in batchRowsBySrc) delete batchRowsBySrc[k];
   const modal = $('convert-modal');
   if (modal) modal.classList.remove('hidden');
@@ -12134,6 +13087,8 @@ function openBatchModal() {
 
 function closeBatchModal() {
   stopBatchPoll();
+  // Polling stops with the surface, so the lock must not outlive it.
+  setBatchTriggersBusy(false);
   $('convert-modal').classList.add('hidden');
 }
 
@@ -12200,6 +13155,7 @@ async function enqueueBatchFiles(paths, overwrite) {
   batchDocsDone = docs.length === 0;
   batchOcrDone = images.length === 0;
   batchFinished = false;
+  setBatchTriggersBusy(true);
   $('batch-cancel').classList.remove('hidden');
   $('convert-status').textContent = batchT('batch.preparing') || '';
   if (docs.length) runBatchDocsLane(docs, overwrite);
@@ -12269,7 +13225,7 @@ function renderBatchProgress(d) {
     if (!row) return;
     const status = it.status || 'queued';
     if (status !== 'queued') {
-      if (status === 'ok' && it.out) row.dataset.out = it.out;
+      if ((status === 'ok' || status === 'skipped') && it.out) row.dataset.out = it.out;
       setBatchRow(row, status, it.error || '');
       countBatchRow(row, status);
     }
@@ -12297,11 +13253,26 @@ async function runBatchOcrLane(items) {
     }
     setBatchRow(row, 'running');
     try {
-      const r = await apiFetch('/api/ocr?p=' + encodeURIComponent(path));
+      const overwrite = $('convert-overwrite') && $('convert-overwrite').checked;
+      const r = await apiFetch('/api/ocr?p=' + encodeURIComponent(path) + '&save=1&on_exists=' + (overwrite ? 'overwrite' : 'skip'));
       const d = await r.json().catch(() => ({}));
-      const ok = r.ok && d.content;
-      setBatchRow(row, ok ? 'ok' : 'error', ok ? '' : (d.error_code || 'ocr_failed'));
-      countBatchRow(row, ok ? 'ok' : 'error');
+      if (r.ok && d.empty) {
+        // 识别成功但没有文字：不写文件，标注“无文字”。
+        setBatchRow(row, 'skipped', batchT('batch.ocrNoText') || '');
+        const st = row.querySelector('.batch-state');
+        if (st) st.textContent = batchT('batch.ocrNoText') || '无文字';
+        countBatchRow(row, 'skipped');
+      } else if (r.ok && d.content) {
+        if (d.out && (d.saved || d.skipped)) row.dataset.out = d.out;
+        const status = d.skipped ? 'skipped' : 'ok';
+        setBatchRow(row, status);
+        countBatchRow(row, status);
+      } else {
+        const code = d.error_code || 'ocr_failed';
+        const msg = batchT('batch.err.' + code);
+        setBatchRow(row, 'error', msg && msg !== 'batch.err.' + code ? msg : (d.error || code));
+        countBatchRow(row, 'error');
+      }
     } catch (e) {
       setBatchRow(row, 'error', e && e.message);
       countBatchRow(row, 'error');
@@ -12311,9 +13282,68 @@ async function runBatchOcrLane(items) {
   maybeFinishBatch();
 }
 
+/** 最长公共父目录；没有公共部分时取第一个输出所在目录。 */
+function commonOutputDir(paths) {
+  const dirs = paths.map(p => p.replace(/\\/g, '/').replace(/\/[^/]*$/, ''));
+  if (!dirs.length) return '';
+  const split = dirs.map(d => d.split('/'));
+  const first = split[0];
+  let n = first.length;
+  for (const s of split.slice(1)) {
+    let i = 0;
+    while (i < n && i < s.length && s[i].toLowerCase() === first[i].toLowerCase()) i++;
+    n = i;
+  }
+  const common = first.slice(0, n).join('/');
+  return common && !/^[A-Za-z]:$/.test(common) ? common : dirs[0];
+}
+
+function showBatchOpenDir() {
+  const btn = $('convert-open-dir');
+  if (!btn) return;
+  const outs = Array.from($('convert-list').querySelectorAll('.batch-item'))
+    .map(r => r.dataset.out).filter(Boolean);
+  if (!outs.length) { btn.classList.add('hidden'); return; }
+  const dir = (typeof batchFolderRoot === 'string' && batchFolderRoot) || commonOutputDir(outs);
+  btn.classList.remove('hidden');
+  btn.onclick = async () => {
+    try {
+      const r = await apiFetch('/api/system/open-path', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: dir }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || d.ok === false) {
+        showToast(d.error_code === 'path_not_found'
+          ? (batchT('toast.pathNotFound') || '路径不存在')
+          : (batchT('toast.openFailed') || '无法打开：') + dir);
+      }
+    } catch (e) { showToast((batchT('toast.openFailed') || '无法打开：') + dir); }
+  };
+}
+
+/** True from enqueue until both lanes have finished. */
+let batchActive = false;
+function isBatchRunning() {
+  return batchActive;
+}
+
+/** The pickers stay disabled while a batch is running (no parallel jobs). */
+function setBatchTriggersBusy(on) {
+  batchActive = on;
+  ['convert-files', 'convert-folder'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.disabled = on;
+    if (on) el.setAttribute('aria-busy', 'true'); else el.removeAttribute('aria-busy');
+  });
+}
+
 function maybeFinishBatch() {
   if (batchFinished || !batchDocsDone || !batchOcrDone) return;
   batchFinished = true;
+  setBatchTriggersBusy(false);
+  showBatchOpenDir();
   const c = batchCount;
   let text = batchT('batch.summary', { ok: c.ok, skipped: c.skipped, failed: c.error })
     || '';
@@ -13595,7 +14625,7 @@ function initPetSystem() {
               if (prog && prog.percent !== undefined) {
                 if (progressBar) progressBar.style.width = prog.percent + '%';
                 if (progressPercent) progressPercent.textContent = prog.percent + '%';
-                if (progressText) progressText.textContent = `正在下载更新 (${prog.percent}%)...`;
+                if (progressText) progressText.textContent = (window.i18n ? window.i18n.t('updater.downloadingPercent', { percent: prog.percent }) : '正在下载更新 (' + prog.percent + '%)...');
               }
             }
           } catch (_) {}
@@ -14259,8 +15289,9 @@ async function refreshPetGallery() {
       favBtn.tabIndex = 0;
       const isFav = favorites.has(item.slug);
       favBtn.className = 'pet-fav-btn' + (isFav ? ' is-favorite' : '');
-      favBtn.setAttribute('aria-label', isFav ? '已收藏' : '收藏');
-      favBtn.title = isFav ? '已收藏' : '收藏';
+      const favLabel = window.i18n ? window.i18n.t(isFav ? 'pet.favorited' : 'pet.favorite') : (isFav ? '已收藏' : '收藏');
+      favBtn.setAttribute('aria-label', favLabel);
+      favBtn.title = favLabel;
       favBtn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
       const onFavClick = (e) => {
         e.stopPropagation();
@@ -14968,6 +15999,11 @@ function getExportSections() {
     { title: _t('export.secHtmlTheme') || '', fmts: ['html'], fields: [
       { k: 'htmlTheme', label: _t('export.htmlThemeLabel') || '', type: 'select', opts: [['light', _t('export.themeLight') || ''], ['dark', _t('export.themeDark') || ''], ['sepia', _t('export.themeSepia') || '']] },
     ]},
+    { title: _t('export.secSlides') || '', fmts: ['presentation'], fields: [
+      { k: 'theme', label: _t('export.slidesTheme') || '', type: 'select', opts: ['black', 'white', 'league', 'beige', 'night', 'serif', 'simple', 'solarized', 'blood', 'moon', 'sky'] },
+      { k: 'transition', label: _t('export.slidesTransition') || '', type: 'select', opts: ['slide', 'fade', 'zoom', 'convex', 'concave', 'none'] },
+      { k: 'slidesHint', label: _t('export.slidesHint') || '', type: 'note', full: true },
+    ]},
   ];
 }
 
@@ -15068,7 +16104,8 @@ function renderExportModal() {
   initExportAiDesigner();
   updateExportLivePreview();
   const r = $('export-result');
-  r.textContent = ''; r.className = 'export-result';
+  r.textContent = ''; r.className = 'export-result'; r.title = '';
+  if ($('export-warns')) $('export-warns').classList.add('hidden');
   $('export-open').classList.add('hidden');
   $('export-reveal').classList.add('hidden');
 }
@@ -15580,7 +16617,8 @@ function updateExportLivePreview() {
   const badge = $('export-preview-badge');
   const sel = $('exp-preset');
   const presetName = (sel && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : (_t('export.presetDefault') || '');
-  if (badge) badge.textContent = fmt.toUpperCase() + ' · ' + presetName;
+  const fmtLabel = fmt === 'presentation' ? (_t('export.fmtSlides') || 'Slides') : fmt.toUpperCase();
+  if (badge) badge.textContent = fmtLabel + ' · ' + presetName;
 
   const content = currentExportContent();
   const docTitle = currentExportName();
@@ -15776,6 +16814,12 @@ function expFieldEl(f) {
     inner += '<select data-k="' + f.k + '">' + (f.opts || []).map(o =>
       '<option value="' + (Array.isArray(o) ? o[0] : o) + '">' + (Array.isArray(o) ? o[1] : o) + '</option>'
     ).join('') + '</select>';
+  } else if (f.type === 'note') {
+    const p = document.createElement('p');
+    p.className = 'exp-note';
+    p.textContent = f.label;
+    box.appendChild(p);
+    return box;
   } else if (f.type === 'checkbox') {
     inner = '<label class="exp-check"><input id="' + fieldId + '" type="checkbox" data-k="' + f.k + '"> ' + f.label + '</label>';
   } else if (f.type === 'color') {
@@ -15861,7 +16905,26 @@ function renderExportPresetSelect() {
 }
 
 
-async function runExport() {
+/* Single flight: a double click (or Enter + click) never sends two exports. */
+function runExport() {
+  if (!window.ReadMDTask) return runExportOnce();
+  const res = $('export-result');
+  if (res) { res.className = 'export-result'; res.title = ''; }
+  $('export-open')?.classList.add('hidden');
+  $('export-reveal')?.classList.add('hidden');
+  // EPUB and the browser-only presentation preview have their own routes and
+  // are not cancellable; everything through /api/export is.
+  const cancellable = state.export.fmt !== 'epub';
+  const taskId = cancellable ? window.ReadMDTask.newTaskId('export') : '';
+  return window.ReadMDTask.run('export', () => runExportOnce(taskId), {
+    trigger: ['export-run'],
+    status: res,
+    label: (window.i18n ? window.i18n.t('task.exporting') : '') || '',
+    cancel: cancellable ? { id: taskId, button: 'export-cancel' } : null,
+  });
+}
+
+async function runExportOnce(taskId) {
   const fmt = state.export.fmt;
   const options = collectExportOptions();
   const content = currentExportContent();
@@ -15889,26 +16952,23 @@ async function runExport() {
       };
       const fullPayload = { epub: epubPayload, meta: epubPayload, ...options };
       if (hasPy && py.export_epub) {
-        r = await py.export_epub(content, '', fullPayload, true);
+        r = await py.export_epub(content, '', epubPayload, fullPayload, baseDir);
       } else {
         const resp = await apiFetch('/api/export/epub', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: content, meta: epubPayload, epub: epubPayload, options: fullPayload, confirm: true })
+          body: JSON.stringify({ content: content, meta: epubPayload, epub: epubPayload, options: fullPayload, baseDir: baseDir, confirm: true })
         });
         r = await resp.json();
       }
-    } else if (fmt === 'presentation') {
-      if (hasPy && py.export_presentation) {
-        r = await py.export_presentation(content, options.theme || 'black', options.transition || 'slide', true);
-      } else {
-        const resp = await apiFetch('/api/export/presentation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: content, theme: options.theme || 'black', transition: options.transition || 'slide' })
-        });
-        r = await resp.json();
-      }
+    } else if (fmt === 'presentation' && !(window.READMD_ENGINE === 'rust' || (hasPy && py && typeof py.export_doc === 'function'))) {
+      // Browser-only fallback: the in-app preview endpoint returns the HTML.
+      const resp = await apiFetch('/api/export/presentation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: content, theme: options.theme || 'black', transition: options.transition || 'slide' })
+      });
+      r = await resp.json();
     } else {
       const payload = {
         content: content,
@@ -15916,6 +16976,7 @@ async function runExport() {
         suggestedName: suggestedName,
         options: options,
       };
+      if (taskId) payload.task_id = taskId;
       if (hasPy && py && typeof py.export_doc === 'function') {
         r = await py.export_doc(fmt, payload);
       } else {
@@ -15935,19 +16996,69 @@ async function runExport() {
   busy(false);
   if (!r) { showToast(_t('toast.exportFailedSimple') || ''); return; }
   if (r.canceled) return;
-  if (!r.ok) { showToast((_t('toast.exportFailed') || '') + (r.error || (_t('toast.unknownError') || ''))); return; }
+  if (!r.ok && r.error_code === 'cancelled') {
+    const res = $('export-result');
+    if (res) { res.textContent = _t('task.cancelled') || ''; res.className = 'export-result'; res.title = ''; }
+    return;
+  }
+  if (!r.ok) {
+    const reason = apiMessage(r, 'toast.unknownError') || '';
+    const failed = $('export-result');
+    if (failed) { failed.textContent = (_t('toast.exportFailed') || '') + reason; failed.className = 'export-result err'; failed.title = reason; }
+    showToast((_t('toast.exportFailed') || '') + reason);
+    return;
+  }
   const res = $('export-result');
-  res.textContent = (_t('toast.exportedPrefix') || '') + (r.path || '导出完成');
+  res.textContent = (_t('toast.exportedPrefix') || '') + (r.path || _t('toast.exportSuccess') || '');
   res.className = 'export-result ok';
+  const warnList = warnMessages(r);
+  res.title = warnList.join('\n');
+  renderExportWarns(warnList);
   if (r.path && hasPy && py) {
+    const report = (out) => {
+      if (out && out.ok === false) {
+        showToast(out.error_code === 'path_not_found'
+          ? (_t('toast.pathNotFound') || '文件不存在或已被移动')
+          : (_t('toast.openFailed') || '无法打开'));
+      }
+    };
     $('export-open').classList.remove('hidden');
     $('export-reveal').classList.remove('hidden');
-    $('export-open').onclick = () => py.open_path(r.path);
-    $('export-reveal').onclick = () => py.reveal_path(r.path);
+    $('export-open').onclick = async () => report(await py.open_path(r.path));
+    $('export-reveal').onclick = async () => report(await py.reveal_path(r.path));
   }
   try { if (hasPy && py.save_export_presets) py.save_export_presets({ last: { fmt: fmt, options: options } }); } catch (e) { /* ignore */ }
-  if (r.warns && r.warns.length) showToast(_t('toast.exportCompleteWarns', { count: r.warns.length }) || ('导出完成，' + r.warns.length + ' 条提示'));
+  if (warnList.length) showToast(_t('toast.exportCompleteWarns', { count: warnList.length }) || ('导出完成，' + warnList.length + ' 条提示'), 3600);
   else showToast(_t('toast.exportSuccess') || '');
+}
+
+/* 导出结果下方的可展开警告列表（相同提示合并计数） */
+function renderExportWarns(list) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  let box = $('export-warns');
+  if (!box) {
+    const anchor = $('export-result');
+    if (!anchor || !anchor.parentElement) return;
+    box = document.createElement('details');
+    box.id = 'export-warns';
+    box.className = 'export-warns';
+    anchor.parentElement.insertAdjacentElement('afterend', box);
+  }
+  box.innerHTML = '';
+  if (!list || !list.length) { box.classList.add('hidden'); return; }
+  const counts = new Map();
+  list.forEach(w => counts.set(w, (counts.get(w) || 0) + 1));
+  const sum = document.createElement('summary');
+  sum.textContent = _t('export.warnsTitle', { count: list.length });
+  box.appendChild(sum);
+  const ul = document.createElement('ul');
+  counts.forEach((n, w) => {
+    const li = document.createElement('li');
+    li.textContent = n > 1 ? w + ' ×' + n : w;
+    ul.appendChild(li);
+  });
+  box.appendChild(ul);
+  box.classList.remove('hidden');
 }
 
 async function expSavePreset() {
@@ -16203,6 +17314,9 @@ function openUpdateModal() {
 function isUpdateDownloading() {
   return isUpdating === true;
 }
+
+// Esc must not dismiss the dialog while a download is running.
+if (window.ReadMDModal) window.ReadMDModal.setGuard('update-modal', () => { if (isUpdating) { closeUpdateModal(); return false; } return true; });
 
 function closeUpdateModal() {
   if (isUpdating) {
@@ -16745,13 +17859,17 @@ function bindEvents() {
       if (e.key === 'Escape') {
         e.preventDefault();
         closeMoreMenu(true);
-      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      } else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
         const items = Array.from(moreMenu.querySelectorAll('.more-group.open .more-item:not([disabled]):not(.hidden), .more-group-header'));
         if (!items.length) return;
         e.preventDefault();
         const currentIndex = items.indexOf(document.activeElement);
         let nextIndex;
-        if (e.key === 'ArrowDown') {
+        if (e.key === 'Home') {
+          nextIndex = 0;
+        } else if (e.key === 'End') {
+          nextIndex = items.length - 1;
+        } else if (e.key === 'ArrowDown') {
           nextIndex = currentIndex === -1 || currentIndex === items.length - 1 ? 0 : currentIndex + 1;
         } else {
           nextIndex = currentIndex <= 0 ? items.length - 1 : currentIndex - 1;

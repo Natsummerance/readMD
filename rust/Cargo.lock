@@ -2231,6 +2231,7 @@ dependencies = [
  "base64",
  "cbc",
  "dunce",
+ "encoding_rs",
  "flate2",
  "getrandom 0.3.4",
  "lazy_static",
@@ -2248,9 +2249,11 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.20",
  "time",
+ "ttf-parser",
  "ureq",
  "uuid",
  "walkdir",
+ "windows",
  "winres",
  "wry",
 ]
@@ -3624,6 +3627,18 @@ dependencies = [
  "libc",
  "once_cell",
  "pkg-config",
+]
+
+[[package]]
+name = "xtask"
+version = "2.4.0"
+dependencies = [
+ "base64",
+ "flate2",
+ "regex",
+ "serde_json",
+ "sha2",
+ "walkdir",
 ]
 
 [[package]]

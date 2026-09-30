@@ -8,7 +8,7 @@
 
 ## Active release path
 
-Merging an approved website change into `main` runs `.github/workflows/website-github-pages.yml`. The workflow rebuilds `website/dist`, runs `validate_website.py --release`, uploads the artifact, and deploys GitHub Pages. The custom domain is declared by `website/public/CNAME`.
+Merging an approved website change into `main` runs `.github/workflows/website-github-pages.yml`. The workflow rebuilds `website/dist`, runs `node website/tools/validate-website.mjs --release`, uploads the artifact, and deploys GitHub Pages. The custom domain is declared by `website/public/CNAME`.
 
 The active DNS-only record is:
 

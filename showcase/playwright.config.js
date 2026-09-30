@@ -16,7 +16,8 @@ module.exports = defineConfig({
     locale: config.locale,
   },
   webServer: {
-    command: 'python ../tools/ui_server.py',
+    command: 'node ../ui-tests/ui-server.cjs 28473',
+    timeout: 600000,
     port: 28473,
     reuseExistingServer: true,
     cwd: __dirname

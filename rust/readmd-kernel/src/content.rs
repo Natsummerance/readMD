@@ -117,10 +117,16 @@ pub fn unix_millis(t: SystemTime) -> i64 {
     t.duration_since(UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
 }
 
-/// Read a text file, transparently stripping a UTF-8 or UTF-16 BOM.
+/// Read a text file, detecting its encoding (BOMs, UTF-8, GB18030, Big5,
+/// Windows-1252) instead of decoding everything as lossy UTF-8.
 pub fn read_text(path: &Path) -> Result<String> {
+    Ok(read_text_detect(path)?.0)
+}
+
+/// [`read_text`] plus the detected encoding name.
+pub fn read_text_detect(path: &Path) -> Result<(String, &'static str)> {
     let bytes = std::fs::read(path)?;
-    Ok(strip_bom(&bytes))
+    Ok(crate::text_encoding::detect_and_decode(&bytes))
 }
 
 pub fn strip_bom(bytes: &[u8]) -> String {
@@ -376,112 +382,6 @@ fn unix_seconds(meta: &std::fs::Metadata) -> f64 {
             Err(e) => -(e.duration().as_secs_f64()),
         })
         .unwrap_or(0.0)
-}
-
-/// `src.readmd_core.file_writer.save_text_atomic`, including its three result
-/// shapes: `{ok, path, backup, mtime}`, `{ok, conflict, error, current_mtime}`
-/// and `{ok, error}`.
-pub fn save_text_atomic_parity(
-    path: &Path,
-    content: &str,
-    encoding: &str,
-    expected_mtime: Option<f64>,
-) -> Value {
-    // `file_writer.py:55` is `encoding=encoding or "utf-8"`: the fallback fires
-    // on an EMPTY string only.  Measured: `'  ' or 'utf-8'` is `'  '` and
-    // `'\x1c' or 'utf-8'` is `'\x1c'`, so trimming here invented a fallback that
-    // Python does not have (a whitespace-only encoding must reach `encode_for`
-    // and fail the save, exactly like Python's LookupError).
-    let enc = if encoding.is_empty() { "utf-8" } else { encoding };
-    let dir = path.parent().unwrap_or(Path::new(".")).to_path_buf();
-    let old = std::fs::metadata(path).ok();
-    if expected_mtime.is_some() && old.is_none() {
-        return json!({
-            "ok": false,
-            "conflict": true,
-            "error": "预期文件已不存在，未重新创建",
-            "current_mtime": Value::Null,
-        });
-    }
-    if let (Some(want), Some(meta)) = (expected_mtime, old.as_ref()) {
-        let have = unix_seconds(meta);
-        if (have - want).abs() > 1e-6 {
-            return json!({
-                "ok": false,
-                "conflict": true,
-                "error": "文件已在编辑后被其他程序修改",
-                "current_mtime": have,
-            });
-        }
-    }
-    let backup = format!("{}.bak", path.to_string_lossy());
-    let mut backup_value = Value::Null;
-    if old.is_some() && !Path::new(&backup).exists() {
-        match std::fs::copy(path, &backup) {
-            Ok(_) => backup_value = json!(backup),
-            Err(e) => return json!({ "ok": false, "error": e.to_string() }),
-        }
-    }
-    if let Err(e) = std::fs::create_dir_all(&dir) {
-        return json!({ "ok": false, "error": e.to_string() });
-    }
-    let bytes = match encode_for(enc, content) {
-        Ok(b) => b,
-        Err(msg) => return json!({ "ok": false, "error": msg }),
-    };
-    let tmp = sibling_tmp(path);
-    if let Err(e) = std::fs::write(&tmp, &bytes) {
-        let _ = std::fs::remove_file(&tmp);
-        return json!({ "ok": false, "error": e.to_string() });
-    }
-    if let Err(e) = replace_file(&tmp, path) {
-        let _ = std::fs::remove_file(&tmp);
-        return json!({ "ok": false, "error": e.to_string() });
-    }
-    let mtime = std::fs::metadata(path)
-        .ok()
-        .map(|m| unix_seconds(&m))
-        .unwrap_or(0.0);
-    json!({
-        "ok": true,
-        "path": path.to_string_lossy(),
-        "backup": backup_value,
-        "mtime": mtime,
-    })
-}
-
-/// `open(path, 'w', encoding=enc)` for the encodings the kernel can produce
-/// without a codepage table; anything else is reported the way Python's
-/// `LookupError` is reported — as a failed save, never a silent UTF-8 write.
-fn encode_for(encoding: &str, text: &str) -> std::result::Result<Vec<u8>, String> {
-    let key = encoding.to_ascii_lowercase().replace('_', "-");
-    match key.as_str() {
-        "utf-8" | "utf8" => Ok(text.as_bytes().to_vec()),
-        "utf-8-sig" | "utf8-sig" => {
-            let mut out = vec![0xef, 0xbb, 0xbf];
-            out.extend_from_slice(text.as_bytes());
-            Ok(out)
-        }
-        "latin-1" | "iso-8859-1" | "latin1" | "cp1252" => Ok(text
-            .chars()
-            .map(|c| if c.is_ascii() { c as u8 } else { b'?' })
-            .collect()),
-        other => Err(format!("unknown encoding: {other}")),
-    }
-}
-
-/// `os.replace`, with the fallback Windows needs when an editor keeps the target
-/// open and refuses the rename.
-fn replace_file(tmp: &Path, path: &Path) -> std::io::Result<()> {
-    match std::fs::rename(tmp, path) {
-        Ok(()) => Ok(()),
-        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
-            let out = std::fs::copy(tmp, path).map(|_| ());
-            let _ = std::fs::remove_file(tmp);
-            out
-        }
-        Err(e) => Err(e),
-    }
 }
 
 /// `os.path.join(a, b)` over client-supplied strings.
@@ -1107,8 +1007,28 @@ pub fn describe(app: &App, canonical: &Path, include_content: bool) -> Result<Va
         }
     }
     if include_content && is_readable(canonical) {
-        let text = read_text(canonical)?;
-        if kind == "markdown" {
+        let (text, encoding) = read_text_detect(canonical)?;
+        // The editor sends this back with `/api/save` so the file keeps its
+        // original encoding.
+        value["encoding"] = json!(encoding);
+        let is_txt = ext_of(canonical).eq_ignore_ascii_case("txt");
+        if is_txt {
+            // Plain text is shown structured (headings, lists, paragraphs
+            // inferred), exactly like the converter's `.txt` lane; the editor
+            // edits and saves the untouched original.
+            let (md, _) = crate::convert::txt_to_markdown(&text);
+            value["content"] = json!(md);
+            value["original"] = json!(text);
+            value["structured"] = json!(true);
+            value["fixes"] = json!([]);
+            value["words"] = json!(count_words(&text));
+            value["title"] = json!(title_of(canonical, &md));
+            value["headings"] = json!(headings(&md)
+                .iter()
+                .map(|h| json!({ "level": h.level, "text": h.text, "line": h.line, "id": h.id }))
+                .collect::<Vec<_>>());
+            value["frontmatter"] = front_matter(&md);
+        } else if kind == "markdown" {
             let fix = crate::readmd_fix::fix_markdown(&text);
             let fixed_text = fix.text;
             let orig = if fixed_text == text { Value::Null } else { json!(text) };
@@ -1677,26 +1597,6 @@ mod we9_tests {
                    Some("keep name.md"));
         // a real stem survives, only its CPython-whitespace edges are eaten
         assert_eq!(unique_path(dir, "Report", "md").file_name().unwrap().to_str(), Some("Report.md"));
-    }
-
-    #[test]
-    fn we9_encoding_falsy_only_on_empty_string() {
-        // file_writer.py:55 `encoding=encoding or "utf-8"`.  Measured:
-        // `'  ' or 'utf-8'` is `'  '`, so a whitespace-only encoding must FAIL the
-        // save (like Python's LookupError) instead of quietly becoming utf-8.
-        let dir = std::env::temp_dir();
-        for w in ["\u{1c}", " ", "\u{a0}", "\t", "\r", "\u{3000}", "\u{1d}\u{1e}"] {
-            let p = dir.join(format!("readmd-we9-enc-{}.md", w.escape_debug().to_string().replace(|c: char| !c.is_alphanumeric(), "_")));
-            let _ = std::fs::remove_file(&p);
-            let v = save_text_atomic_parity(&p, "body", w, None);
-            assert_eq!(v.get("ok"), Some(&json!(false)), "encoding {:?} must fail", w);
-            assert!(!p.exists());
-        }
-        let p = dir.join("readmd-we9-enc-empty.md");
-        let _ = std::fs::remove_file(&p);
-        let v = save_text_atomic_parity(&p, "body", "", None);
-        assert_eq!(v.get("ok"), Some(&json!(true)), "empty encoding -> utf-8");
-        let _ = std::fs::remove_file(&p);
     }
 
     #[test]

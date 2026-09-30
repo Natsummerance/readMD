@@ -2,57 +2,34 @@
   "claude_desktop": {
     "mcpServers": {
       "readmd": {
-        "command": "python",
-        "args": [
-          "/path/to/readmd/packages/mcp-server/readmd_mcp_server.py"
-        ],
-        "env": {
-          "PYTHONIOENCODING": "utf-8"
-        }
+        "command": "/path/to/readmd",
+        "args": ["--mcp"]
       }
     }
   },
   "cursor": {
     "mcpServers": {
       "readmd": {
-        "command": "python",
-        "args": [
-          "/path/to/readmd/packages/mcp-server/readmd_mcp_server.py"
-        ],
-        "env": {
-          "PYTHONIOENCODING": "utf-8"
-        }
+        "command": "/path/to/readmd",
+        "args": ["--mcp"]
       }
     }
   },
   "vscode_mcp": {
-    "mcp": {
-      "servers": {
-        "readmd": {
-          "type": "stdio",
-          "command": "python",
-          "args": [
-            "${workspaceFolder}/packages/mcp-server/readmd_mcp_server.py"
-          ],
-          "env": {
-            "PYTHONIOENCODING": "utf-8"
-          }
-        }
+    "servers": {
+      "readmd": {
+        "type": "stdio",
+        "command": "/path/to/readmd",
+        "args": ["--mcp"]
       }
     }
   },
   "antigravity": {
     "mcpServers": {
       "readmd": {
-        "command": "python",
-        "args": [
-          "/path/to/readmd/packages/mcp-server/readmd_mcp_server.py"
-        ],
-        "env": {
-          "PYTHONIOENCODING": "utf-8"
-        }
+        "command": "/path/to/readmd",
+        "args": ["--mcp"]
       }
     }
   }
-
 }

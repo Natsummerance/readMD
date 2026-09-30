@@ -6,9 +6,9 @@
     "clean": "node tools/clean.mjs",
     "build:css": "tailwindcss -i ./src/site.css -o ./dist/assets/site.css --minify",
     "build": "npm run clean && npm run build:css && node tools/copy-static.mjs && node tools/sync-version.mjs",
-    "verify": "python ../showcase/scripts/validate_website.py",
+    "verify": "node tools/validate-website.mjs",
     "verify:themes": "node tools/theme-smoke.cjs",
-    "verify:release": "npm run build && python ../showcase/scripts/validate_website.py --release",
+    "verify:release": "npm run build && node tools/validate-website.mjs --release",
     "indexnow": "node tools/indexnow-submit.mjs https://rust.readmd.asia",
     "deploy": "npm run verify:release && npx wrangler deploy --config wrangler.worker.jsonc"
   },

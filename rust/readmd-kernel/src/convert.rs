@@ -228,7 +228,7 @@ pub const MEDIA_EXTS: &[&str] = &[
 
 /// readmd.py:129 CONVERT_EXTS — what /api/convert/collect offers for conversion.
 pub const CONVERT_EXTS: &[&str] = &[
-    ".docx", ".doc", ".pptx", ".ppt", ".xlsx", ".xls", ".pdf", ".html", ".htm",
+    ".docx", ".doc", ".pptx", ".ppt", ".xlsx", ".xls", ".pdf", ".html", ".htm", ".mobi", ".azw3",
     ".txt", ".csv", ".json", ".xml", ".zip", ".eml", ".msg", ".rtf", ".odt", ".epub",
     ".tex", ".latex",
     ".mp3", ".wav", ".m4a", ".mp4", ".flac", ".ogg", ".webm", ".aac", ".wma", ".mkv", ".mov", ".avi",
@@ -476,15 +476,30 @@ pub fn convert_triple(path: &str, form_tables: bool) -> ConvertTriple {
         };
     }
     if ext == ".xls" || ext == ".ppt" {
-        // Python tries MarkItDown first and only reports legacy-office when it
-        // raises; NUL-bearing output is the same garbage guard as the `.doc`
-        // branch above.
-        return match markitdown_text(path).filter(|t| !t.contains('\0')) {
-            Some(t) => ConvertTriple::ok(t, "markitdown"),
-            None => ConvertTriple::err(format!(
-                "legacy-office：旧版 {ext} 二进制格式需安装 MarkItDown 才能转换（{}）",
-                "MarkItDown 未安装（markitdown），本格式无法转换"
-            )),
+        let data = match fs::read(path) {
+            Ok(d) => d,
+            Err(e) => return ConvertTriple::err(format!("legacy_office_parse_failed: 旧版 Office 文件读取失败：{e}")),
+        };
+        let r = if ext == ".xls" {
+            crate::xls_biff::xls_to_md(&data, &basename(path)).map(|t| (t, "xls"))
+        } else {
+            crate::ppt_binary::ppt_to_md(&data).map(|t| (t, "ppt"))
+        };
+        return match r {
+            Ok((t, engine)) => ConvertTriple::ok(t, engine),
+            Err(e) => ConvertTriple::err(format!("legacy_office_parse_failed: 旧版 Office 文件解析失败：{e}")),
+        };
+    }
+    if ext == ".html" || ext == ".htm" || ext == ".xhtml" {
+        return match html_file_to_md(path) {
+            Ok(t) => ConvertTriple::ok(t, "html"),
+            Err(e) => ConvertTriple::err(format!("HTML 转换失败：{e}")),
+        };
+    }
+    if ext == ".mobi" || ext == ".azw" || ext == ".azw3" || ext == ".prc" || ext == ".pdb" {
+        return match mobi_file_to_md(path) {
+            Ok(t) => ConvertTriple::ok(t, "mobi"),
+            Err(e) => ConvertTriple::err(e),
         };
     }
     if is_code_ext(&ext) {
@@ -526,7 +541,69 @@ fn err_text(r: Result<ConvertResult, String>) -> String {
 }
 
 fn legacy_markitdown_failure(err: &str) -> String {
-    format!("{err}（MarkItDown 兜底也失败：MarkItDown 未安装（markitdown），本格式无法转换）")
+    format!("{err}（文件可能已损坏或不是有效的 Office 文档）")
+}
+
+/// `<meta charset>` / `http-equiv` declared encoding in the first 4 KiB.
+fn html_declared_charset(bytes: &[u8]) -> Option<&'static encoding_rs::Encoding> {
+    let head = String::from_utf8_lossy(&bytes[..bytes.len().min(4096)]).to_ascii_lowercase();
+    let re = regex::Regex::new(r#"<meta[^>]+charset\s*=\s*["']?([a-z0-9_\-]+)"#).ok()?;
+    let label = re.captures(&head)?.get(1)?.as_str().to_string();
+    encoding_rs::Encoding::for_label(label.as_bytes())
+}
+
+/// HTML file → Markdown: honour the declared charset, drop scripts/styles/forms,
+/// keep only http(s) links, and prefer `<article>`/`<main>` when present.
+fn html_file_to_md(path: &str) -> Result<String, String> {
+    let bytes = fs::read(path).map_err(|e| e.to_string())?;
+    let html = match html_declared_charset(&bytes) {
+        Some(enc) if enc != encoding_rs::UTF_8 && std::str::from_utf8(&bytes).is_err() => {
+            enc.decode_without_bom_handling(&bytes).0.into_owned()
+        }
+        _ => decode_text_preferred(&bytes)?.0,
+    };
+    let md = crate::headless_renderer::html_to_markdown(&html);
+    let md = crate::headless_renderer::sanitize_markdown(&md, "");
+    let md = crate::headless_renderer::normalize_markdown(&md);
+    let title = regex::Regex::new(r"(?is)<title[^>]*>(.*?)</title>")
+        .ok()
+        .and_then(|re| re.captures(&html).and_then(|c| c.get(1)).map(|m| m.as_str().split_whitespace().collect::<Vec<_>>().join(" ")))
+        .filter(|t| !t.is_empty());
+    let body = md.trim();
+    if body.is_empty() {
+        return Err("页面中没有可提取的正文".into());
+    }
+    let starts_with_title = title.as_ref().map(|t| body.starts_with(&format!("# {t}"))).unwrap_or(true);
+    Ok(match title {
+        Some(t) if !starts_with_title && !body.starts_with("# ") => format!("# {t}\n\n{body}\n"),
+        _ => format!("{body}\n"),
+    })
+}
+
+/// MOBI/AZW → Markdown, with `recindex` images saved to `<stem>.assets/`.
+fn mobi_file_to_md(path: &str) -> Result<String, String> {
+    let bytes = fs::read(path).map_err(|e| format!("MOBI 读取失败：{e}"))?;
+    let book = crate::mobi::parse(&bytes).map_err(|e| e.message())?;
+    let src = Path::new(path);
+    let mut saved: HashMap<usize, String> = HashMap::new();
+    for (idx, data, ext) in &book.images {
+        if let Some(url) = save_doc_asset(src, data, ext) {
+            saved.insert(*idx, url);
+        }
+    }
+    let html = crate::mobi::to_html(&book, &mut |n| saved.get(&n).cloned());
+    let md = crate::headless_renderer::html_to_markdown(&html);
+    let md = crate::headless_renderer::normalize_markdown(&md);
+    let body = md.trim();
+    if body.is_empty() {
+        return Err("MOBI 解析失败：电子书中没有可提取的文字".into());
+    }
+    let title = book.title.trim();
+    if !title.is_empty() && !body.starts_with("# ") {
+        Ok(format!("# {title}\n\n{body}\n"))
+    } else {
+        Ok(format!("{body}\n"))
+    }
 }
 
 /// Verbose conversion with engine information. Compatibility wrapper for the
@@ -665,7 +742,12 @@ pub fn decode_text_preferred(data: &[u8]) -> Result<(String, String), String> {
     }
     match String::from_utf8(data.to_vec()) {
         Ok(s) => Ok((s, "utf-8".to_string())),
-        Err(_) => Ok((data.iter().map(|&b| b as char).collect(), "latin-1".to_string())),
+        // UTF-16 BOM, GB18030, Big5, then cp1252 — the same ladder the editor
+        // uses, so a GBK `.txt`/`.csv`/`.html` converts to readable text.
+        Err(_) => {
+            let (text, enc) = crate::text_encoding::detect_and_decode(data);
+            Ok((text, enc.to_string()))
+        }
     }
 }
 
@@ -2660,7 +2742,7 @@ struct CfbEntry {
     size: u64,
 }
 
-struct CfbReader<'a> {
+pub(crate) struct CfbReader<'a> {
     data: &'a [u8],
     sector_size: usize,
     mini_sector_size: usize,
@@ -2696,6 +2778,28 @@ impl<'a> CfbReader<'a> {
                 if s < 0xFFFFFFFC {
                     difat.push(s);
                 }
+            }
+        }
+
+        // Files with more than 109 FAT sectors continue the DIFAT in a chain of
+        // sectors (last slot of each = next DIFAT sector).
+        {
+            let per = sector_size / 4 - 1;
+            let mut next = u32::from_le_bytes(data[68..72].try_into().ok()?);
+            let mut hops = 0usize;
+            while next < 0xFFFF_FFFA && hops < 50_000 {
+                let off = (next as usize + 1).saturating_mul(sector_size);
+                if off.saturating_add(sector_size) > data.len() {
+                    break;
+                }
+                for j in 0..per {
+                    let s = u32::from_le_bytes(data[off + j * 4..off + j * 4 + 4].try_into().unwrap());
+                    if s < 0xFFFF_FFFC {
+                        difat.push(s);
+                    }
+                }
+                next = u32::from_le_bytes(data[off + per * 4..off + per * 4 + 4].try_into().unwrap());
+                hops += 1;
             }
         }
 
@@ -3497,6 +3601,17 @@ fn pdf_page_xobject_dict<'a>(
     None
 }
 
+/// Render page `page_number` (1-based) with the system PDF renderer and OCR it.
+fn pdf_page_render_ocr(path_obj: &Path, page_number: usize) -> Option<String> {
+    static NEVER: fn() -> bool = || false;
+    let bytes = fs::read(path_obj).ok()?;
+    let done = crate::ocr_winrt::ocr_pdf_bytes(&bytes, 1, Some(vec![page_number.checked_sub(1)?]), &NEVER).ok()?;
+    let text = done.into_iter().next()?.1.join("\n");
+    let formatted = crate::ocr::normalize_ocr_text(&text);
+    let body = if formatted.trim().is_empty() { text } else { formatted };
+    Some(body.trim().to_string()).filter(|t| !t.is_empty())
+}
+
 /// `convert.py:2265-2277` — the rung a page with **no** text layer takes: its rasters are
 /// rendered and OCR'd, and only when OCR has nothing either does Python save the page
 /// image and emit the English marker.  Factored out of the document-wide Tier 5 loop so a
@@ -3545,6 +3660,13 @@ fn pdf_page_scanned_part(
     }
     if !found_page_img {
         return None;
+    }
+    // Raw XObject bytes are often Flate-coded pixels no decoder understands;
+    // the system PDF renderer rasterises the whole page reliably instead.
+    if page_ocr.trim().is_empty() && crate::ocr::pick_engine().is_some() {
+        if let Some(text) = pdf_page_render_ocr(path_obj, page_number) {
+            page_ocr = text;
+        }
     }
     // Python's no-text-layer page is the OCR text when there is any, otherwise the
     // preserved-page-image note plus the image link (convert.py:2262-2277).
@@ -5268,7 +5390,7 @@ fn parse_xml_attrs(mut rest: &str) -> Vec<(String, String)> {
 }
 
 /// `convert.py:320-321` `_md_cell`.
-fn md_cell(text: &str) -> String {
+pub(crate) fn md_cell(text: &str) -> String {
     text.split_whitespace()
         .collect::<Vec<_>>()
         .join(" ")
@@ -8096,7 +8218,7 @@ mod wb7_pptx_odt_tests {
     /// first and its bytes are the authority for the whole ladder.
     #[test]
     fn pptx_real_deck_matches_python_rich_rung() {
-        let src = "T:/Programming/Project/codex/creator/readmd/build/pytest-document-roundtrip/test_powerpoint_images_tables_0/report.pptx";
+        let src = concat!(env!("CARGO_MANIFEST_DIR"), "/../../build/pytest-document-roundtrip/test_powerpoint_images_tables_0/report.pptx");
         if !Path::new(src).exists() {
             return;
         }
@@ -8412,10 +8534,14 @@ mod wd2_pdf_tests {
 mod we4_parity_tests {
     use super::*;
 
-    const REPORT: &str = "T:/Programming/Project/codex/creator/readmd/build/\
-                          pytest-document-roundtrip/test_powerpoint_images_tables_0/report.pptx";
-    const SAMPLE_DOC: &str = "T:\\Programming\\Project\\codex\\creator\\readmd\\test_copies\\\
-                              bjtu_internship\\北京交通大学软件学院本科生实习申请表.doc";
+    const REPORT: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../build/pytest-document-roundtrip/test_powerpoint_images_tables_0/report.pptx"
+    );
+    const SAMPLE_DOC: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../test_copies/bjtu_internship/北京交通大学软件学院本科生实习申请表.doc"
+    );
 
     fn we4_fixture(name: &str) -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -8773,14 +8899,10 @@ mod pdfwinrt_pure_s14_tests {
 
     /// The premise that made the WinRT rung dead code: this kernel declares no OCR engine,
     /// so `crate::ocr::load()` - the rung's very first statement - always answered `Err`.
+    /// A truncated PNG header is never turned into invented text, whichever
+    /// engine state this machine is in.
     #[test]
-    fn the_kernel_declares_no_ocr_engine_so_the_old_gate_could_never_open() {
-        assert!(crate::ocr::pick_engine().is_none());
-        assert_eq!(
-            crate::ocr::load().unwrap_err(),
-            "ocr-no-engine：无可用 OCR 引擎",
-            "`ocr.load()` is the gate the deleted rung returned at"
-        );
+    fn ocr_never_invents_text_for_a_broken_image() {
         assert!(crate::ocr::ocr_bytes(b"\x89PNG\r\n\x1a\n", None).is_err());
     }
 
@@ -9487,5 +9609,59 @@ mod texmd_wire_tests {
             diverged.len(),
             diverged.join("\n")
         );
+    }
+}
+
+#[cfg(test)]
+mod native_legacy_lanes {
+    use super::*;
+
+    fn write(dir: &Path, name: &str, data: &[u8]) -> String {
+        let p = dir.join(name);
+        fs::write(&p, data).unwrap();
+        p.to_string_lossy().into_owned()
+    }
+
+    #[test]
+    fn html_uses_declared_charset_and_strips_active_content() {
+        let dir = tempfile::tempdir().unwrap();
+        let (gbk, _, _) = encoding_rs::GBK.encode(
+            "<html><head><meta charset=\"gbk\"><title>标题页</title><script>alert(1)</script></head>\
+             <body><h2>小节</h2><p>中文 <a href=\"javascript:x()\">坏链</a> <a href=\"https://e.com\">好链</a></p>\
+             <form><input value=\"x\"></form><iframe src=\"x\"></iframe></body></html>",
+        );
+        let t = convert_triple(&write(dir.path(), "a.html", &gbk), true);
+        assert_eq!(t.engine, "html", "{t:?}");
+        assert!(t.text.starts_with("# 标题页\n"), "{}", t.text);
+        assert!(t.text.contains("## 小节") && t.text.contains("中文"), "{}", t.text);
+        assert!(t.text.contains("[好链](https://e.com)"), "{}", t.text);
+        assert!(!t.text.contains("alert") && !t.text.contains("javascript"), "{}", t.text);
+    }
+
+    #[test]
+    fn legacy_office_errors_are_native() {
+        let dir = tempfile::tempdir().unwrap();
+        for name in ["bad.xls", "bad.ppt"] {
+            let t = convert_triple(&write(dir.path(), name, b"not an ole file at all"), true);
+            let e = t.error.unwrap_or_default();
+            assert!(e.starts_with("legacy_office_parse_failed"), "{e}");
+            assert!(!e.to_lowercase().contains("markitdown") && !e.contains("Python"), "{e}");
+        }
+    }
+
+    #[test]
+    fn mobi_lane_reports_drm_reason() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut d = vec![0u8; 78];
+        d[60..68].copy_from_slice(b"BOOKMOBI");
+        d[76..78].copy_from_slice(&1u16.to_be_bytes());
+        d.extend(88u32.to_be_bytes());
+        d.extend([0u8; 6]);
+        let mut r0 = vec![0u8; 16];
+        r0[0..2].copy_from_slice(&2u16.to_be_bytes());
+        r0[12..14].copy_from_slice(&2u16.to_be_bytes());
+        d.extend(r0);
+        let t = convert_triple(&write(dir.path(), "b.mobi", &d), true);
+        assert!(t.error.unwrap_or_default().contains("mobi_drm"));
     }
 }

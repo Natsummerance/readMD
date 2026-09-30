@@ -6,6 +6,123 @@
 /* ---------------- 全局拖拽与标签交互支持 ---------------- */
 
 let dragCounter = 0;
+let lastNativeDropAt = 0;
+
+/** 拖放条目的分类：zip / folder / binary（走转换） / text（直接打开）。 */
+function classifyDroppedEntry(entry) {
+  const name = entry.name || '';
+  if (entry.isDir) return 'folder';
+  if (/\.zip$/i.test(name)) return 'zip';
+  const binary = (typeof CONVERT_BINARY_RE !== 'undefined' && CONVERT_BINARY_RE.test(name))
+    || (typeof IMG_RE !== 'undefined' && IMG_RE.test(name));
+  return binary ? 'binary' : 'text';
+}
+
+async function extractDroppedZip(entry) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  let res;
+  try {
+    if (entry.path) {
+      const resp = await apiFetch('/api/batch/extract-zip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: entry.path, confirm: true })
+      });
+      res = await resp.json().catch(() => ({ ok: false, error_code: 'server_error' }));
+    } else {
+      const resp = await apiFetch('/api/batch/extract-zip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/zip', 'X-ReadMD-Confirm': 'true' },
+        body: entry.file
+      });
+      res = await resp.json().catch(() => ({ ok: false, error_code: 'server_error' }));
+    }
+  } catch (err) {
+    res = { ok: false, error_code: 'server_error' };
+  }
+  if (!res || res.ok === false) {
+    const code = (res && res.error_code) || 'server_error';
+    const kind = /corrupt|invalid|bad/.test(code) ? 'zip_corrupt'
+      : /large|limit|size/.test(code) ? 'zip_too_large'
+      : /unsupported|encrypt/.test(code) ? 'zip_unsupported' : 'server_error';
+    showToast(_t('batch.zipFailed', { name: entry.name, reason: _t('batch.zipReason.' + kind) }) || `无法解压 ${entry.name}`);
+    return { paths: [], skipped: 0 };
+  }
+  return { paths: Array.isArray(res.paths) ? res.paths : [], skipped: Number(res.skipped) || 0 };
+}
+
+/**
+ * 统一的拖放分派。条目形如 {name, path?, file?, isDir?}：
+ * 有 path 时直接按原路径打开（可写回原文件），没有 path 时上传副本。
+ */
+async function handleDroppedEntries(entries) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const groups = { zip: [], folder: [], binary: [], text: [] };
+  for (const en of entries || []) groups[classifyDroppedEntry(en)].push(en);
+
+  if (groups.folder.length && typeof listFolder === 'function') {
+    await listFolder(groups.folder[0].path);
+  }
+
+  if (groups.zip.length) {
+    showToast(_t('batch.extractingZip') || '正在解压压缩包...');
+    const extracted = [];
+    let skipped = 0;
+    for (const zf of groups.zip) {
+      const r = await extractDroppedZip(zf);
+      extracted.push(...r.paths);
+      skipped += r.skipped;
+    }
+    if (skipped > 0) showToast(_t('batch.zipSkipped', { count: skipped }) || `已跳过 ${skipped} 个不支持的文件`);
+    if (extracted.length && typeof enqueueBatchFiles === 'function') enqueueBatchFiles(extracted, false);
+  }
+
+  for (const f of groups.text) {
+    const path = f.path ? f.path : await uploadFile(f.file);
+    if (path) await loadFile(path, { browserCopy: !f.path });
+  }
+
+  if (groups.binary.length) {
+    const paths = [];
+    for (const f of groups.binary) {
+      const path = f.path ? f.path : await uploadFile(f.file);
+      if (path) paths.push(path);
+    }
+    if (paths.length === 1 && typeof convertOrOcr === 'function') {
+      convertOrOcr(paths[0], 'convert');
+    } else if (paths.length && typeof enqueueBatchFiles === 'function') {
+      enqueueBatchFiles(paths, !!($('convert-overwrite') && $('convert-overwrite').checked));
+    }
+  }
+}
+
+/** 桌面宿主（WRY）原生拖放入口：payload 为 {paths:[{path,name,isDir}]} 或 {state:'enter'|'leave'}。 */
+window.__readmdNativeDrop = function (payload) {
+  const overlay = $('drag-overlay');
+  if (!payload) return;
+  if (payload.state === 'enter') {
+    if (overlay) {
+      const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+      overlay.classList.remove('hidden');
+      const title = $('drag-title');
+      const desc = $('drag-desc');
+      if (title) title.textContent = _t('dialog.dropTitle') || '松开以导入文档';
+      if (desc) desc.textContent = _t('dialog.dropDesc') || 'Markdown 文件将在新标签页中打开；Word/PDF 等将自动导入转换';
+    }
+    return;
+  }
+  if (payload.state === 'leave') {
+    dragCounter = 0;
+    if (overlay) overlay.classList.add('hidden');
+    return;
+  }
+  if (Array.isArray(payload.paths) && payload.paths.length) {
+    lastNativeDropAt = Date.now();
+    dragCounter = 0;
+    if (overlay) overlay.classList.add('hidden');
+    handleDroppedEntries(payload.paths.map(p => ({ name: p.name || '', path: p.path || '', isDir: !!p.isDir })));
+  }
+};
 
 function bindGlobalDragAndDrop() {
   const overlay = $('drag-overlay');
@@ -77,78 +194,9 @@ function bindGlobalDragAndDrop() {
 
     // 1. 处理文件拖拽（万物皆可开：代码/配置/脚本/文本直接开，Office/PDF 走转换，ZIP 自动解压）
     if (dt.files && dt.files.length > 0) {
-      const files = Array.from(dt.files);
-      const zipFiles = files.filter(f => /\.zip$/i.test(f.name || ''));
-      const otherFiles = files.filter(f => !/\.zip$/i.test(f.name || ''));
-
-      if (zipFiles.length > 0) {
-        showToast((window.i18n ? window.i18n.t('batch.extractingZip') : '') || '正在解压压缩包...');
-        const extractedPaths = [];
-        let totalSkipped = 0;
-        for (const zf of zipFiles) {
-          try {
-            let res;
-            if (hasPy && py.extract_zip_batch && zf.path) {
-              res = await py.extract_zip_batch(zf.path);
-            } else {
-              if (zf.path) {
-                const resp = await apiFetch('/api/batch/extract-zip', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ path: zf.path, confirm: true })
-                });
-                res = await resp.json();
-              } else {
-                const resp = await apiFetch('/api/batch/extract-zip', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/zip', 'X-ReadMD-Confirm': 'true' },
-                  body: zf
-                });
-                res = await resp.json();
-              }
-            }
-            if (res && res.ok && Array.isArray(res.paths)) {
-              if (res.paths.length > 0) extractedPaths.push(...res.paths);
-              if (res.skipped) totalSkipped += Number(res.skipped) || 0;
-            }
-          } catch (err) {
-            console.error('Extract zip error:', err);
-          }
-        }
-        if (totalSkipped > 0) {
-          const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-          showToast(_t('batch.zipSkipped', { count: totalSkipped }) || `已跳过 ${totalSkipped} 个不支持的文件`);
-        }
-        if (extractedPaths.length > 0) {
-          enqueueBatchFiles(extractedPaths, false);
-        }
-      }
-
-      if (otherFiles.length > 0) {
-        const binaryConvertFiles = otherFiles.filter(f => (typeof CONVERT_BINARY_RE !== 'undefined' ? CONVERT_BINARY_RE.test(f.name || '') : false) || IMG_RE.test(f.name || ''));
-        const textAndCodeFiles = otherFiles.filter(f => !binaryConvertFiles.includes(f));
-
-        if (textAndCodeFiles.length > 0) {
-          for (const f of textAndCodeFiles) {
-            const path = f.path ? f.path : await uploadFile(f);
-            if (path) await loadFile(path, { browserCopy: !f.path });
-          }
-        }
-        if (binaryConvertFiles.length > 0) {
-          const paths = [];
-          for (const f of binaryConvertFiles) {
-            const path = f.path ? f.path : await uploadFile(f);
-            if (path) paths.push(path);
-          }
-          if (paths.length) {
-            if (paths.length === 1 && typeof convertOrOcr === 'function') {
-              convertOrOcr(paths[0], 'convert');
-            } else if (typeof enqueueBatchFiles === 'function') {
-              enqueueBatchFiles(paths, true);
-            }
-          }
-        }
-      }
+      // 桌面端的原生拖放会直接送来真实路径（__readmdNativeDrop），DOM 这里只是兜底。
+      if (Date.now() - lastNativeDropAt < 1500) return;
+      await handleDroppedEntries(Array.from(dt.files).map(f => ({ name: f.name || '', path: f.path || '', file: f })));
       return;
     }
 

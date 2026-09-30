@@ -10,7 +10,7 @@ const VIDEO_DIR = path.join(SHOWCASE_ROOT, 'videos');
 const SNAPSHOT_DIR = path.join(SHOWCASE_ROOT, 'snapshots');
 const SAMPLES_DIR = path.join(SHOWCASE_ROOT, 'samples');
 const KB_DIR = path.join(SAMPLES_DIR, 'knowledge_base');
-const ARTIFACT_DIR = 'C:/Users/Natsumer/.gemini/antigravity/brain/ccbcea97-6f62-4db3-97fb-cfc7f4d855a8';
+const ARTIFACT_DIR = process.env.READMD_CAPTURE_COPY_DIR || '';
 
 fs.mkdirSync(VIDEO_DIR, { recursive: true });
 fs.mkdirSync(SNAPSHOT_DIR, { recursive: true });
@@ -39,8 +39,8 @@ async function smoothMouseMove(page, locator, steps = 18) {
 
 async function startServer() {
   console.log('[Server] 启动 ReadMD UI 测试服务器 (Port: ' + UI_PORT + ')...');
-  const serverPy = path.join(REPO_ROOT, 'tools', 'ui_server.py');
-  const server = spawn('python', [serverPy, String(UI_PORT)], {
+  const serverPy = path.join(REPO_ROOT, 'ui-tests', 'ui-server.cjs');
+  const server = spawn(process.execPath, [serverPy, String(UI_PORT)], {
     stdio: ['ignore', 'pipe', 'inherit'],
     cwd: path.dirname(serverPy),
     env: { ...process.env, READMD_UI_PORT: String(UI_PORT) }
@@ -180,7 +180,7 @@ async function main() {
       body: JSON.stringify({
         ok: true,
         ffmpeg: true,
-        sandbox_dir: 'C:/Users/Natsumer/AppData/Roaming/ReadMD/plugins',
+        sandbox_dir: 'C:/Users/demo/AppData/Roaming/ReadMD/plugins',
         plugins: mockPluginState,
       }),
     }));
@@ -664,7 +664,7 @@ status: "unprocessed"
 
     await page5.route('**/api/plugins/list', r => r.fulfill({
       status: 200, contentType: 'application/json',
-      body: JSON.stringify({ ok: true, ffmpeg: true, sandbox_dir: 'C:/Users/Natsumer/AppData/Roaming/ReadMD/plugins', plugins: mockPluginState }),
+      body: JSON.stringify({ ok: true, ffmpeg: true, sandbox_dir: 'C:/Users/demo/AppData/Roaming/ReadMD/plugins', plugins: mockPluginState }),
     }));
     await page5.route('**/api/links/graph*', r => r.fulfill({
       status: 200, contentType: 'application/json',
@@ -736,7 +736,7 @@ status: "unprocessed"
 
     // Clean up temporary directories and replicate to conversation artifacts
     console.log('\n[Sync] 复制录制资产至对话 Artifacts 目录...');
-    const allVideos = fs.readdirSync(VIDEO_DIR);
+    const allVideos = ARTIFACT_DIR ? fs.readdirSync(VIDEO_DIR) : [];
     for (const v of allVideos) {
       const src = path.join(VIDEO_DIR, v);
       const dest = path.join(ARTIFACT_DIR, v);
@@ -744,7 +744,7 @@ status: "unprocessed"
       console.log(`  ✓ 视频同步: ${v}`);
     }
 
-    const allSnaps = fs.readdirSync(SNAPSHOT_DIR);
+    const allSnaps = ARTIFACT_DIR ? fs.readdirSync(SNAPSHOT_DIR) : [];
     for (const s of allSnaps) {
       const src = path.join(SNAPSHOT_DIR, s);
       const dest = path.join(ARTIFACT_DIR, s);

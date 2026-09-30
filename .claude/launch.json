@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "readmd-kernel",
+      "runtimeExecutable": "rust/target/debug/readmd.exe",
+      "runtimeArgs": ["--no-window", "--port", "26999", "--data-dir", "scratch/preview-data", "--workspace", "showcase"],
+      "port": 26999
+    }
+  ]
+}

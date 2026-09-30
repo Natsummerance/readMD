@@ -2076,7 +2076,7 @@ mod tests {
     /// `cargo test` runs from the crate directory while `rustc --test` runs
     /// from wherever, and `scratch/` is not part of the crate.
     const VECTORS: &str =
-        "T:/Programming/Project/codex/creator/readmd/scratch/rust_parity/we8/_diff_vectors.txt";
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../../scratch/rust_parity/we8/_diff_vectors.txt");
 
     fn hex(raw: &[u8]) -> String {
         raw.iter().map(|b| format!("{:02x}", b)).collect()
@@ -2138,7 +2138,7 @@ mod tests {
     /// `UnicodeDecodeError` span of every strict failure, and the
     /// `str.encode('cp437')` direction).
     const VECTORS2: &str =
-        "T:/Programming/Project/codex/creator/readmd/scratch/rust_parity/we8/_we8b_vectors.txt";
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../../scratch/rust_parity/we8/_we8b_vectors.txt");
 
     fn corpus2() -> Option<Vec<String>> {
         match std::fs::read_to_string(VECTORS2) {

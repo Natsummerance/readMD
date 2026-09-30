@@ -61,5 +61,12 @@
   "errMcpRequestFailed": "Core 请求失败",
   "errMcpToolFailed": "Core 工具执行失败",
   "errAiCancelled": "AI 生成已取消",
-  "errOperationFailed": "操作失败，请重试"
+  "errOperationFailed": "操作失败，请重试",
+  "errBinaryNotFound": "未找到 ReadMD，请安装桌面端或在设置中指定 readmd.executablePath",
+  "errBinaryInvalid": "readmd.executablePath 指向的不是可用的 ReadMD 程序",
+  "errConfirmationRequired": "该操作需要确认",
+  "errOutputExists": "目标文件已存在",
+  "errOutputPathAbsolute": "输出路径必须是绝对路径",
+  "errOutputDirMissing": "输出目录不存在",
+  "errFileNotFound": "文件不存在"
 }

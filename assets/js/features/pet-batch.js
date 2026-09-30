@@ -1262,7 +1262,7 @@ function initPetSystem() {
               if (prog && prog.percent !== undefined) {
                 if (progressBar) progressBar.style.width = prog.percent + '%';
                 if (progressPercent) progressPercent.textContent = prog.percent + '%';
-                if (progressText) progressText.textContent = `正在下载更新 (${prog.percent}%)...`;
+                if (progressText) progressText.textContent = (window.i18n ? window.i18n.t('updater.downloadingPercent', { percent: prog.percent }) : '正在下载更新 (' + prog.percent + '%)...');
               }
             }
           } catch (_) {}

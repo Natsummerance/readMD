@@ -115,6 +115,34 @@ function showToast(msg, ms) {
 }
 
 
+/* 接口消息本地化：error.<code> → note.<code> → 服务端原文 → fallbackKey。
+   i18n.t 找不到键时原样返回键名，所以要和键名比较。 */
+function apiMessage(d, fallbackKey) {
+  const t = (k, p) => (window.i18n ? window.i18n.t(k, p) : k);
+  const tr = (k, p) => { const s = t(k, p); return s && s !== k ? s : ''; };
+  d = d || {};
+  if (d.error_code) {
+    const s = tr('error.' + d.error_code) || (d.reason ? tr('convert.reason.' + d.reason) : '');
+    if (s) return s;
+  }
+  if (d.note_code) { const s = tr('note.' + d.note_code); if (s) return s; }
+  if (typeof d.error === 'string' && d.error) return d.error;
+  if (typeof d.note === 'string' && d.note) return d.note;
+  return fallbackKey ? (tr(fallbackKey) || '') : '';
+}
+
+/* 导出警告：优先按 warn_items 的代码本地化，否则用原文。 */
+function warnMessages(d) {
+  const t = (k, p) => (window.i18n ? window.i18n.t(k, p) : k);
+  const items = Array.isArray(d && d.warn_items) ? d.warn_items : null;
+  if (!items) return ((d && d.warns) || []).map(String);
+  return items.map(w => {
+    const k = 'warn.' + w.code;
+    const s = w.code && w.code !== 'other' ? t(k, w.params || {}) : '';
+    return s && s !== k ? s : String(w.text || '');
+  });
+}
+
 function setProgress(p) {
   const el = $('progress');
   el.style.width = p + '%';

@@ -44,15 +44,15 @@
 
 | 资产角色 | 规范路径 | 行数 | 字节数 | SHA-256 校验和 |
 | :--- | :--- | :--- | :--- | :--- |
-| **`golden_contract`** | [`docs/architecture/pet-rust/golden-contract.json`](file:///T:/Programming/Project/codex/creator/readmd/docs/architecture/pet-rust/golden-contract.json) | 347 | 14,987 B | `a316a1fa97c86fb6b50c394c7f51b67c78a072d819540b3e400f990af004925c` |
-| **`golden_build_provenance`** | [`docs/architecture/pet-rust/golden-build-provenance.json`](file:///T:/Programming/Project/codex/creator/readmd/docs/architecture/pet-rust/golden-build-provenance.json) | 228 | 8,349 B | `8735b71b7475e9699093a42b1ef1a01ba8260d318a9c90c1632468e7c12404e0` |
-| **`tuple_registry`** | [`docs/architecture/pet-rust/tuple-registry.json`](file:///T:/Programming/Project/codex/creator/readmd/docs/architecture/pet-rust/tuple-registry.json) | 490 | 15,304 B | `b37b992d7fca571976586aa98ad7ae0a10ceded31f7545e89c504276c00412c5` |
-| **`validation_registry`** | [`docs/architecture/pet-rust/validation-registry.json`](file:///T:/Programming/Project/codex/creator/readmd/docs/architecture/pet-rust/validation-registry.json) | 1032 | 33,886 B | `c988996b59fbd59834e6220f91fa0ff293a3c644285d22dd4c27afb7da705746` |
-| **`gate_registry`** | [`docs/architecture/pet-rust/gate-registry.json`](file:///T:/Programming/Project/codex/creator/readmd/docs/architecture/pet-rust/gate-registry.json) | 839 | 18,688 B | `85aaa3d637de38009085d4ec1b8f6a1fb7eb7c0c9f797cd2cb7031394c75f019` |
-| **`blocker_registry`** | [`docs/architecture/pet-rust/blocker-registry.json`](file:///T:/Programming/Project/codex/creator/readmd/docs/architecture/pet-rust/blocker-registry.json) | 664 | 19,267 B | `7e8120e87f74b8ba96501de72d42d3cc80fedd86f13c24a3c096b2517e772242` |
-| **`spec_integrity`** | [`docs/architecture/pet-rust/spec.integrity.json`](file:///T:/Programming/Project/codex/creator/readmd/docs/architecture/pet-rust/spec.integrity.json) | 27 | 1,307 B | `b19d153948ef9169fdeb60fd183b7277e6b43064ca029d6b1e1f22a336c45fd8` |
-| **`preload_abi_fixture`** | [`docs/architecture/pet-rust/preload-abi.fixture.json`](file:///T:/Programming/Project/codex/creator/readmd/docs/architecture/pet-rust/preload-abi.fixture.json) | 96 | 2,602 B | `bc0e613f6c3b8e6fe3f2896a866a4a1218194e47e8e486c728ee5092b1b7a7ff` |
-| **`pet_architecture_attestation`** | [`docs/architecture/pet-rust/pet-architecture-attestation.json`](file:///T:/Programming/Project/codex/creator/readmd/docs/architecture/pet-rust/pet-architecture-attestation.json) | 21 | 1,215 B | `bd3139e842a6423a37a581239c64e511bbe604e13f4faa33ea75317ffc034384` |
+| **`golden_contract`** | [`docs/architecture/pet-rust/golden-contract.json`](file:///<repo>/docs/architecture/pet-rust/golden-contract.json) | 347 | 14,987 B | `a316a1fa97c86fb6b50c394c7f51b67c78a072d819540b3e400f990af004925c` |
+| **`golden_build_provenance`** | [`docs/architecture/pet-rust/golden-build-provenance.json`](file:///<repo>/docs/architecture/pet-rust/golden-build-provenance.json) | 228 | 8,349 B | `8735b71b7475e9699093a42b1ef1a01ba8260d318a9c90c1632468e7c12404e0` |
+| **`tuple_registry`** | [`docs/architecture/pet-rust/tuple-registry.json`](file:///<repo>/docs/architecture/pet-rust/tuple-registry.json) | 490 | 15,304 B | `b37b992d7fca571976586aa98ad7ae0a10ceded31f7545e89c504276c00412c5` |
+| **`validation_registry`** | [`docs/architecture/pet-rust/validation-registry.json`](file:///<repo>/docs/architecture/pet-rust/validation-registry.json) | 1032 | 33,886 B | `c988996b59fbd59834e6220f91fa0ff293a3c644285d22dd4c27afb7da705746` |
+| **`gate_registry`** | [`docs/architecture/pet-rust/gate-registry.json`](file:///<repo>/docs/architecture/pet-rust/gate-registry.json) | 839 | 18,688 B | `85aaa3d637de38009085d4ec1b8f6a1fb7eb7c0c9f797cd2cb7031394c75f019` |
+| **`blocker_registry`** | [`docs/architecture/pet-rust/blocker-registry.json`](file:///<repo>/docs/architecture/pet-rust/blocker-registry.json) | 664 | 19,267 B | `7e8120e87f74b8ba96501de72d42d3cc80fedd86f13c24a3c096b2517e772242` |
+| **`spec_integrity`** | [`docs/architecture/pet-rust/spec.integrity.json`](file:///<repo>/docs/architecture/pet-rust/spec.integrity.json) | 27 | 1,307 B | `b19d153948ef9169fdeb60fd183b7277e6b43064ca029d6b1e1f22a336c45fd8` |
+| **`preload_abi_fixture`** | [`docs/architecture/pet-rust/preload-abi.fixture.json`](file:///<repo>/docs/architecture/pet-rust/preload-abi.fixture.json) | 96 | 2,602 B | `bc0e613f6c3b8e6fe3f2896a866a4a1218194e47e8e486c728ee5092b1b7a7ff` |
+| **`pet_architecture_attestation`** | [`docs/architecture/pet-rust/pet-architecture-attestation.json`](file:///<repo>/docs/architecture/pet-rust/pet-architecture-attestation.json) | 21 | 1,215 B | `bd3139e842a6423a37a581239c64e511bbe604e13f4faa33ea75317ffc034384` |
 
 > **完整性解耦原则 (P0-192)**：`spec.integrity.json` 记录所有其他资产的哈希，其自身的哈希由报告生成器在写入后外部独立计算，杜绝自引悖论。
 

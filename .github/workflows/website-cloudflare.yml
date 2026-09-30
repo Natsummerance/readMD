@@ -24,7 +24,7 @@ jobs:
         working-directory: website
         run: npm run build
       - name: Validate release contract
-        run: python3 showcase/scripts/validate_website.py --release
+        run: node website/tools/validate-website.mjs --release
       - uses: actions/upload-artifact@v4
         with:
           name: readmd-site-dist

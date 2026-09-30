@@ -1,0 +1,94 @@
+name: Repo quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: repo-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  kernel:
+    name: Kernel tests · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - name: Linux WebKitGTK headers
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
+      - name: Test kernel and xtask
+        run: cargo test --manifest-path rust/Cargo.toml -p readmd-kernel -p xtask
+      - name: Headless build (Docker / server, no window toolkit)
+        run: cargo build --manifest-path rust/Cargo.toml -p readmd-kernel --no-default-features
+
+  frontend:
+    name: Frontend gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - name: Boot bundle is up to date
+        run: cargo run --quiet --manifest-path rust/Cargo.toml -p xtask -- bundle-boot --check
+      - name: i18n keys and literals
+        run: node tools/check-i18n.mjs
+      - name: Syntax check sources
+        run: for f in assets/app.js assets/readmd.boot.js $(git ls-files 'assets/js/*.js'); do node --check "$f"; done
+      - name: Style tokens and contrast (ratchet)
+        run: node tools/check-styles.mjs
+      - name: Control wiring and accessible names
+        run: node tools/check-wiring.mjs
+      - name: No Python in build, release or runtime paths
+        run: node tools/check-no-python.mjs
+      - name: Vendored assets, provider catalog and prompt policy
+        run: node tools/check-assets.mjs --check
+      - name: Privacy scan
+        run: node tools/privacy-scan.mjs
+      - name: Node tests
+        run: node --test tests/frontend/toolbar.test.mjs tests/test_dragdrop_dispatch.js tools/test/check-styles.test.mjs tools/test/check-wiring.test.mjs tools/test/check-no-python.test.mjs tools/test/privacy-scan.test.mjs tools/test/check-assets.test.mjs tools/test/release-contract.test.mjs
+
+  ui:
+    name: UI quality (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - name: Build headless kernel
+        run: cargo build --manifest-path rust/Cargo.toml -p readmd-kernel --no-default-features
+      - name: Install Playwright
+        working-directory: ui-tests
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Modal, task and layout checks
+        working-directory: ui-tests
+        env:
+          READMD_BIN: ${{ github.workspace }}/rust/target/debug/readmd
+        run: npx playwright test ui-quality.spec.js interaction-regressions.spec.js --project=desktop --project=mobile

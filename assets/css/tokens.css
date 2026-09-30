@@ -1,0 +1,160 @@
+/* ============================================================
+   ReadMD design tokens — the single source for colour, type, spacing,
+   radius, elevation, motion and layering.  Loaded before every other
+   stylesheet.  Themes live on body[data-theme] (light is the default),
+   so every alias below is declared on `:root, body` and re-evaluates
+   per theme.  All text/background pairs meet WCAG 2.1 AA (≥ 4.5:1).
+   ============================================================ */
+:root {
+  --bg: #f5f6f8;
+  --bg2: #ffffff;
+  --bg3: #eef0f4;
+  --bg-sec: #eef0f4;
+  --fg: #1c1f26;
+  --fg2: #5c6470;
+  --fg3: #5d6672;
+  --border: rgba(17, 24, 39, .09);
+  --border2: rgba(17, 24, 39, .18);
+  --accent: #2f5fe8;
+  --accent-soft: #e7eefc;
+  --accent-fg: #ffffff;
+  --danger: #b3261e;
+  --warning: #8a5a00;
+  --code-bg: #f1f2f6;
+  --code-border: rgba(17, 24, 39, .08);
+  --quote-bg: #f3f6fe;
+  --th-bg: #f3f5f9;
+  --hl: #ffd97a;
+  --hl-cur: #ffb84d;
+  --shadow-1: 0 1px 2px rgba(17, 24, 39, .05);
+  --shadow-2: 0 6px 24px rgba(17, 24, 39, .10);
+  --shadow-3: 0 16px 48px rgba(17, 24, 39, .16);
+  --overlay: rgba(15, 20, 30, .42);
+  --preview-canvas-bg: #50545a;
+  --editor-selection: rgba(47, 95, 232, .42);
+  --line-width: 780px;
+  --ai-panel-width: 432px;
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 14px;
+  --toolbar-h: 44px;
+  --status-h: 26px;
+  --font-ui: "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  --font-code: "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace;
+}
+body[data-theme="dark"] {
+  --bg: #14161a;
+  --bg2: #1a1d23;
+  --bg3: #23272f;
+  --bg-sec: #23272f;
+  --fg: #e7e9ee;
+  --fg2: #9aa3b2;
+  --fg3: #868fa0;
+  --border: rgba(255, 255, 255, .09);
+  --border2: rgba(255, 255, 255, .17);
+  --accent: #6d9bff;
+  --accent-soft: rgba(109, 155, 255, .14);
+  --accent-fg: #081226;
+  --danger: #ff9384;
+  --warning: #ffb86b;
+  --code-bg: #20242c;
+  --code-border: rgba(255, 255, 255, .07);
+  --quote-bg: rgba(109, 155, 255, .08);
+  --th-bg: #20242c;
+  --hl: #5b420e;
+  --hl-cur: #453109;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .3);
+  --shadow-2: 0 6px 24px rgba(0, 0, 0, .38);
+  --shadow-3: 0 16px 48px rgba(0, 0, 0, .5);
+  --overlay: rgba(5, 8, 12, .55);
+  --preview-canvas-bg: #1c1f24;
+  --editor-selection: rgba(109, 155, 255, .48);
+}
+body[data-theme="sepia"] {
+  --bg: #f2ead9;
+  --bg2: #fbf6ea;
+  --bg3: #ece2cd;
+  --bg-sec: #ece2cd;
+  --fg: #43392a;
+  --fg2: #665b49;
+  --fg3: #6d614e;
+  --border: rgba(90, 70, 40, .14);
+  --border2: rgba(90, 70, 40, .24);
+  --accent: #8a571b;
+  --accent-soft: rgba(169, 114, 47, .12);
+  --accent-fg: #ffffff;
+  --danger: #a32424;
+  --warning: #7a4a10;
+  --code-bg: #efe5d0;
+  --code-border: rgba(90, 70, 40, .12);
+  --quote-bg: #f3ead6;
+  --th-bg: #eee4cd;
+  --hl: #f0c86a;
+  --hl-cur: #e0a93f;
+  --shadow-1: 0 1px 2px rgba(80, 60, 20, .06);
+  --shadow-2: 0 6px 24px rgba(80, 60, 20, .12);
+  --shadow-3: 0 16px 48px rgba(80, 60, 20, .18);
+  --overlay: rgba(50, 36, 16, .45);
+  --preview-canvas-bg: #4f4436;
+  --editor-selection: rgba(138, 87, 27, .38);
+}
+
+/* ---- Semantic colour aliases (new code uses these) ---- */
+:root, body {
+  --color-bg: var(--bg);
+  --color-surface: var(--bg2);
+  --color-surface-raised: var(--bg2);
+  --color-surface-sunken: var(--bg3);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg2);
+  --color-fg-subtle: var(--fg3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border2);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fg: var(--accent-fg);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-success: #1f7a3d;
+  --color-info: var(--accent);
+  --color-focus-ring: var(--accent);
+  --color-overlay: var(--overlay);
+  --color-selection: var(--editor-selection);
+  --color-code-bg: var(--code-bg);
+  --color-quote-bg: var(--quote-bg);
+  --color-hl: var(--hl);
+}
+body[data-theme="dark"] { --color-success: #6fd08c; }
+body[data-theme="sepia"] { --color-success: #3f6b2a; }
+
+/* ---- Type, spacing, shape, motion, layers ---- */
+:root {
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+  --text-2xs: .6875rem; --text-xs: .75rem; --text-sm: .8125rem; --text-md: .875rem;
+  --text-lg: 1rem; --text-xl: 1.125rem; --text-2xl: 1.375rem; --text-3xl: 1.75rem;
+  --leading-tight: 1.25; --leading-normal: 1.5; --leading-reading: 1.75;
+  --font-reading: var(--font-ui);
+  --font-reading-serif: "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "SimSun", Georgia, serif;
+  --radius-xl: 20px; --radius-full: 999px;
+  --duration-fast: 120ms; --duration-base: 180ms; --duration-slow: 280ms;
+  --ease-standard: cubic-bezier(.2, 0, 0, 1); --ease-emphasized: cubic-bezier(.16, 1, .3, 1);
+  --z-base: 1; --z-sticky: 10; --z-panel: 15; --z-dropdown: 40; --z-modal: 1000; --z-toast: 1100; --z-tooltip: 1200;
+  --control-h-sm: 32px; --control-h-md: 36px;
+  --touch-target: 36px;
+}
+@media (pointer: coarse) {
+  :root { --control-h-sm: 44px; --control-h-md: 44px; --touch-target: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --duration-fast: 0ms; --duration-base: 0ms; --duration-slow: 0ms; }
+}
+[data-reading-font="serif"] { --font-reading: var(--font-reading-serif); }
+
+/* ---- Focus: one visible ring for keyboard users, none for pointer clicks ---- */
+:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+:focus:not(:focus-visible) { outline: none; }
+@media (forced-colors: active) {
+  :focus-visible { outline: 2px solid Highlight; }
+  button, [role="button"], .tb-btn { border: 1px solid ButtonText; }
+}

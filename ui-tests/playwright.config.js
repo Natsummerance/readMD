@@ -15,7 +15,9 @@ module.exports = defineConfig({
     locale: 'zh-CN',
   },
   webServer: {
-    command: `python ../tools/ui_server.py ${uiPort}`,
+    // Rust kernel with a throwaway data dir; READMD_BIN picks a prebuilt binary.
+    command: `node ui-server.cjs ${uiPort}`,
+    timeout: 600000,
     port: uiPort,
     reuseExistingServer: process.env.READMD_REUSE_UI_SERVER === '1',
     env: {

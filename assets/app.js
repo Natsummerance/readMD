@@ -101,13 +101,17 @@ function bindEvents() {
       if (e.key === 'Escape') {
         e.preventDefault();
         closeMoreMenu(true);
-      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      } else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
         const items = Array.from(moreMenu.querySelectorAll('.more-group.open .more-item:not([disabled]):not(.hidden), .more-group-header'));
         if (!items.length) return;
         e.preventDefault();
         const currentIndex = items.indexOf(document.activeElement);
         let nextIndex;
-        if (e.key === 'ArrowDown') {
+        if (e.key === 'Home') {
+          nextIndex = 0;
+        } else if (e.key === 'End') {
+          nextIndex = items.length - 1;
+        } else if (e.key === 'ArrowDown') {
           nextIndex = currentIndex === -1 || currentIndex === items.length - 1 ? 0 : currentIndex + 1;
         } else {
           nextIndex = currentIndex <= 0 ? items.length - 1 : currentIndex - 1;

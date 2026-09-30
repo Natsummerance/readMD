@@ -5,7 +5,7 @@
   "license": "MIT",
   "attribution": "Provider catalog fields adapted from the offline CC-SWITCH snapshot; runtime excludes promotion and affiliate fields.",
   "snapshot_manifest": "assets/upstream/manifest.json",
-  "generated_by": "tools/build_provider_catalog.py",
+  "generated_by": "tools/check-assets.mjs",
   "providers": [
     {
       "name": "OpenCode Zen",

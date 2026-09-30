@@ -10,8 +10,8 @@ const { spawn } = require('child_process');
   const port = 28599;
   console.log(`[Test] 启动 ReadMD 后端测试服务器 (端口: ${port})...`);
   
-  const serverPy = path.join(rootDir, 'tools', 'ui_server.py');
-  const pyServer = spawn('python', [serverPy, String(port)], {
+  const serverPy = path.join(rootDir, 'ui-tests', 'ui-server.cjs');
+  const pyServer = spawn(process.execPath, [serverPy, String(port)], {
     cwd: rootDir,
     stdio: ['ignore', 'pipe', 'inherit'],
     env: { ...process.env, READMD_UI_PORT: String(port) }

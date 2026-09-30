@@ -137,7 +137,7 @@ const fakeBridgeInstance = {
     if (bridgeCalls.aiChatStreamingResult === 'failed') return { ok: false, error_code: 'mcp_tool_failed' };
     return { ok: true, content: '你好，世界。' };
   },
-  getServerPath: () => '/fake/readmd_mcp_server.py',
+  getServerCommand: async () => '/fake/readmd',
   onReady: () => ({ dispose() {} }),
   onDisconnected: () => ({ dispose() {} }),
   fixMarkdown: async () => ({ ok: true, repaired_content: '# fixed', fixes_count: 1 }),
@@ -347,9 +347,8 @@ test('setupMcpServer writes the workspace .vscode/mcp.json contract', async () =
   assert.deepStrictEqual(written, {
     servers: {
       readmd: {
-        command: 'python',
-        args: ['/fake/readmd_mcp_server.py'],
-        env: { PYTHONIOENCODING: 'utf-8' },
+        command: '/fake/readmd',
+        args: ['--mcp'],
       },
     },
   });
@@ -381,9 +380,8 @@ test('setupMcpServer merges and preserves existing MCP server configurations', a
     args: ['/path/to/existing.js'],
   });
   assert.deepStrictEqual(written.servers.readmd, {
-    command: 'python',
-    args: ['/fake/readmd_mcp_server.py'],
-    env: { PYTHONIOENCODING: 'utf-8' },
+    command: '/fake/readmd',
+    args: ['--mcp'],
   });
 });
 
@@ -437,9 +435,8 @@ test('setupMcpServer writes the Cursor .cursor/mcp.json contract', async () => {
   await registered['readmd.setupMcpServer']();
   const written = JSON.parse(fs.readFileSync(path.join(ws, '.cursor', 'mcp.json'), 'utf-8'));
   assert.deepStrictEqual(written.mcpServers.readmd, {
-    command: 'python',
-    args: ['/fake/readmd_mcp_server.py'],
-    env: { PYTHONIOENCODING: 'utf-8' },
+    command: '/fake/readmd',
+    args: ['--mcp'],
   });
 });
 
@@ -451,9 +448,8 @@ test('setupMcpServer copies the Claude Desktop config to the clipboard without a
   await registered['readmd.setupMcpServer']();
   const written = JSON.parse(clipboardText);
   assert.deepStrictEqual(written.mcpServers.readmd, {
-    command: 'python',
-    args: ['/fake/readmd_mcp_server.py'],
-    env: { PYTHONIOENCODING: 'utf-8' },
+    command: '/fake/readmd',
+    args: ['--mcp'],
   });
 });
 

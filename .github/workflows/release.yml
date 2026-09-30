@@ -44,8 +44,16 @@ jobs:
             asset_name: ReadMD-macos-x64
             archive_ext: zip
 
+    env:
+      # Tag builds take their version from the tag; branch and PR builds use 0.0.0.
+      RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.0.0' }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Normalise version
+        shell: bash
+        # `V0.0.2` → `0.0.2` for the .deb control file and Info.plist.
+        run: echo "APP_VERSION=${RELEASE_TAG#[vV]}" >> "$GITHUB_ENV"
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -102,9 +110,9 @@ jobs:
             cp "assets/icon-256.png" "$DEB_DIR/usr/share/icons/hicolor/512x512/apps/readmd.png"
           fi
 
-          cat <<'EOF' > "$DEB_DIR/DEBIAN/control"
+          cat <<EOF > "$DEB_DIR/DEBIAN/control"
           Package: readmd
-          Version: 0.0.1
+          Version: ${APP_VERSION}
           Section: utils
           Priority: optional
           Architecture: amd64
@@ -141,7 +149,7 @@ jobs:
             cp "assets/readmd.icns" "$APP_DIR/Contents/Resources/readmd.icns"
           fi
           cp -r assets "$APP_DIR/Contents/Resources/"
-          cat <<'PLIST' > "$APP_DIR/Contents/Info.plist"
+          cat <<PLIST > "$APP_DIR/Contents/Info.plist"
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -153,9 +161,9 @@ jobs:
               <key>CFBundleIdentifier</key>
               <string>asia.readmd.desktop</string>
               <key>CFBundleVersion</key>
-              <string>0.0.1</string>
+              <string>${APP_VERSION}</string>
               <key>CFBundleShortVersionString</key>
-              <string>0.0.1</string>
+              <string>${APP_VERSION}</string>
               <key>CFBundlePackageType</key>
               <string>APPL</string>
               <key>CFBundleExecutable</key>
@@ -207,8 +215,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'V0.0.1' }}
-          name: ReadMD ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'V0.0.1' }} - 纯 Rust 原生全平台架构版 (Pure Rust Edition)
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'V0.0.2' }}
+          name: ReadMD ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'V0.0.2' }} - 纯 Rust 原生全平台架构版 (Pure Rust Edition)
           body_path: RELEASE_NOTES.md
           files: |
             release-assets/*

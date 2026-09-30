@@ -343,8 +343,9 @@
       favBtn.tabIndex = 0;
       const isFav = favorites.has(item.slug);
       favBtn.className = 'pet-fav-btn' + (isFav ? ' is-favorite' : '');
-      favBtn.setAttribute('aria-label', isFav ? '已收藏' : '收藏');
-      favBtn.title = isFav ? '已收藏' : '收藏';
+      const favLabel = window.i18n ? window.i18n.t(isFav ? 'pet.favorited' : 'pet.favorite') : (isFav ? '已收藏' : '收藏');
+      favBtn.setAttribute('aria-label', favLabel);
+      favBtn.title = favLabel;
       favBtn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
       const onFavClick = (e) => {
         e.stopPropagation();

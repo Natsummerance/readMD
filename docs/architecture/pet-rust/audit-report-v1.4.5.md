@@ -4,7 +4,7 @@
 - **目标规格**：`ReadMD Desktop Overlay Architecture Specification v1.4.5-Candidate`
 - **版本阶段**：`Semantic Closure Candidate` (架构设计语义闭环候选)
 - **基线版本**：`v1.4.4 Contract Restoration Candidate`
-- **仓库地址**：`T:\Programming\Project\codex\creator\readmd` (`Natsummerance/readMD`)
+- **仓库地址**：`<repo>/` (`Natsummerance/readMD`)
 - **Git Commit**：`f06074ef65b5c9f4afd1b7190fa0233932904cbf` (Branch: `main`)
 - **评审结论**：**`NO — Production Architecture Freeze`**（严禁进入 Phase 1 正式 Rust Host 生产实现）
 

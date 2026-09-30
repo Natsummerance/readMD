@@ -1,12 +1,11 @@
 # ReadMD MCP Server
 
-ReadMD MCP 是随发布包离线提供的 stdio 服务。它复用桌面端同一套文档核心、AI Provider、Skill Registry 和错误模型，不需要启动浏览器，也不会读取或修改其他软件的配置。
+ReadMD 的 MCP 服务内置在桌面端可执行程序中：`readmd --mcp` 在标准输入输出上提供 JSON-RPC（MCP 2025-06-18 / 2025-03-26 / 2024-11-05）。它直接调用 Rust 内核里与桌面端相同的转换、导出、OCR、Skill Registry 和 AI Provider 代码，不需要 Python，也不需要打开窗口或监听端口。
 
 ## 快速开始
 
-1. 解压 `readmd-mcp-server-<version>.zip`，确认目录中包含 `readmd_mcp_server.py`、`src/`、`assets/skills/` 和本文件。
-2. 确认 Python 3.11 可用：`python --version`。
-3. 将下面配置中的路径改成解压目录内脚本的绝对路径，然后重启 MCP 客户端。
+1. 安装 ReadMD 桌面端（或把 `readmd` 放到 PATH 中）。终端运行 `readmd --version` 确认可用。
+2. 在 MCP 客户端配置中填入可执行文件的绝对路径，参数为 `--mcp`，然后重启客户端。
 
 Windows：
 
@@ -14,8 +13,8 @@ Windows：
 {
   "mcpServers": {
     "readmd": {
-      "command": "python",
-      "args": ["C:\\Tools\\ReadMD-MCP\\readmd_mcp_server.py"]
+      "command": "C:\\Program Files\\ReadMD\\ReadMD.exe",
+      "args": ["--mcp"]
     }
   }
 }
@@ -27,62 +26,43 @@ macOS / Linux：
 {
   "mcpServers": {
     "readmd": {
-      "command": "python3",
-      "args": ["/opt/readmd-mcp/readmd_mcp_server.py"]
+      "command": "/usr/bin/readmd",
+      "args": ["--mcp"]
     }
   }
 }
 ```
 
-路径中不要使用示例占位符。Windows JSON 路径中的反斜杠必须写成 `\\`；也可以改用 `/`。
+VS Code 扩展的「ReadMD: 一键配置工作区 MCP Server」会自动探测 ReadMD 并写入同样的配置。其他客户端的模板见 `mcp_config_templates.json`。可以额外传 `--data-dir <dir>` 让 MCP 使用独立的数据目录。
 
-## 能力
+## 工具
 
-- 文档：格式诊断与修复、目录生成、`@import` 展开。
-- 转换：DOCX、PDF、PPTX、XLSX、HTML、TXT、LaTeX 转 Markdown。
-- 导出：PDF、DOCX、HTML、LaTeX、EPUB 和 Reveal.js 演示文稿。
-- 学术：LaTeX/Markdown 互转、LaTeX 转 OMML、BibTeX 解析。
-- 本地能力：OCR、受限代码块执行。
-- PDF 矢量编辑：PDF 结构审计、DPI 与噪点采样、沙箱预览差分质检（Zero-Contamination Gate）、物理落盘（带 `.bak` 备份与只读属性解锁）及一键回滚。
-- AI：动态读取桌面端 Provider，列出并调用同一组 Skills；MCP `prompts/list` 与当前 Skill Registry 一一对应，不内置另一套写死提示词。
-- Resources：只读公开当前文档、会话、Skills 元数据和离线上游来源信息。
+以客户端返回的 `tools/list` 为准，共 19 项：
 
-当前工具列表以客户端返回的 `tools/list` 为准。包含 21 项标准化工具：
+`readmd_fix_markdown`、`readmd_convert_to_markdown`、`readmd_web_to_markdown`、`readmd_ocr_to_markdown`、`readmd_export_document`、`readmd_latex_to_md`、`readmd_md_to_latex`、`readmd_parse_bibtex`、`readmd_latex_to_omml`、`readmd_ai_assistant`、`readmd_ai_providers`、`readmd_ai_chat`、`readmd_process_imports`、`readmd_generate_toc`、`readmd_export_presentation`、`readmd_export_epub`、`readmd_run_code_chunk`、`readmd_pdf_audit`、`readmd_pdf_rollback`。
 
-`readmd_fix_markdown`、`readmd_convert_to_markdown`、`readmd_web_to_markdown`、`readmd_ocr_to_markdown`、`readmd_export_document`、`readmd_latex_to_md`、`readmd_md_to_latex`、`readmd_parse_bibtex`、`readmd_latex_to_omml`、`readmd_ai_assistant`、`readmd_ai_providers`、`readmd_ai_chat`、`readmd_process_imports`、`readmd_generate_toc`、`readmd_export_presentation`、`readmd_export_epub`、`readmd_run_code_chunk`、`readmd_pdf_audit`、`readmd_pdf_preview_edit`、`readmd_pdf_apply_edit`、`readmd_pdf_rollback`。
+`resources/list` 公开 Skills（`readmd://skills/<id>`）、Provider 目录（`readmd://providers`，不含密钥）和本地会话记录（`readmd://sessions`）；`prompts/list` 与当前 Skill Registry 一一对应。旧的 workflow id（如 `polish`、`summary`）仍可在 `prompts/get` 和 `readmd_ai_assistant` 中使用。
 
 ## 安全边界
 
-读取、分析、内存内转换及沙箱预览（如 `readmd_pdf_preview_edit`）默认安全可用。下列操作有副作用，调用参数必须明确包含 `"confirm": true`：
+下列工具有副作用，参数必须包含 `"confirm": true`，否则返回 `confirmation_required`：
 
-- 联网抓取网页（`readmd_web_to_markdown`）；
-- 写入或覆盖导出文件（`readmd_export_document`）；
-- 生成演示文稿或 EPUB 文件（`readmd_export_presentation`、`readmd_export_epub`）；
-- 在沙箱中执行代码块（`readmd_run_code_chunk`）；
-- 物理写入或回滚 PDF 编辑（`readmd_pdf_apply_edit`、`readmd_pdf_rollback`）。
+- `readmd_web_to_markdown`（联网）
+- `readmd_export_document`、`readmd_export_presentation`、`readmd_export_epub`（写文件）
+- `readmd_run_code_chunk`（执行代码）
+- `readmd_pdf_rollback`（改写 PDF）
 
-文件工具只处理调用中明确给出的路径。MCP 不暴露桌面应用更新、托盘、开机启动、通知和窗口控制。AI 密钥不会出现在工具结果、URL、历史或导出配置中；服务只使用 ReadMD 配置保存的 `credential_id`。
+输出路径必须是绝对路径，扩展名须与格式一致，父目录必须存在，路径上不允许符号链接；目标已存在时只有 `"overwrite": true` 才会替换，否则返回 `output_exists`。`readmd_ai_chat` 只接受 `credential_id`，传入原始 API Key 会被拒绝。MCP 不暴露更新、托盘、开机启动、通知和窗口控制。
 
-## 使用示例
-
-让客户端先列出工具或 Skills，再发出任务，例如：
-
-- “使用 ReadMD 检查这段 Markdown，只返回修复后的内容。”
-- “列出 ReadMD Skills，并用选中的 Skill 处理当前文档。”
-- “把 `report.docx` 转成 Markdown，先不要覆盖任何已有文件。”
-- “将本文导出到明确路径；确认写入后设置 `confirm=true`。”
-
-## 网络与离线说明
-
-格式修复、本地转换、OCR、目录、LaTeX、BibTeX、Skills 枚举和本地导出可离线运行，但某些格式需要系统中已有的可选转换组件。网页抓取、GitHub Skill 导入和远程 AI Provider 需要网络。AI 功能还需要先在 ReadMD 桌面端配置 Provider 和凭据。
+错误以 `{"ok": false, "error_code": "..."}` 返回（`isError: true`），协议错误使用标准 JSON-RPC 代码；同时运行的工具超过 8 个时返回 `-32001 server_busy`。客户端发送 `notifications/cancelled` 后，被取消的请求不再返回结果。
 
 ## 故障排查
 
-- 客户端显示进程立即退出：在终端直接运行配置中的 `command` 和 `args`，检查 Python 与脚本路径。
-- 找不到模块：必须从完整 MCP ZIP 解压运行，不能只复制单个 Python 文件。
-- Windows 路径解析失败：使用绝对路径，并正确转义 JSON 反斜杠。
-- AI Provider 为空：先在同一用户账户的 ReadMD 桌面端保存 Provider 设置。
-- 写文件被拒绝：确认目标路径明确，并仅对预期副作用传入 `confirm=true`。
-- 客户端缓存旧能力：完全退出并重新启动 Claude Desktop、Cursor 或 Cline，再重新连接服务。
+- 客户端显示进程立即退出：在终端直接运行 `readmd --mcp`，输入一行 `{"jsonrpc":"2.0","id":1,"method":"ping"}` 应返回 `{"jsonrpc":"2.0","id":1,"result":{}}`。
+- `--mcp 不能与 … 同时使用`：`--mcp` 不能与 `--browser`、`--selftest`、`--share` 等界面或自检参数混用。
+- AI Provider 为空：先在同一用户账户的 ReadMD 桌面端保存 Provider 和凭据。
+- OCR 返回 `ocr_no_engine`：当前平台没有系统 OCR 引擎（Windows 10+ 使用系统自带的 Windows.Media.Ocr）。
 
-服务使用标准输入输出通信。不要向标准输出添加调试文本；诊断信息应写入标准错误。
+标准输出只承载协议消息，诊断信息写入标准错误。
+
+旧的 Python 实现 `readmd_mcp_server.py` 已删除，由 `readmd --mcp` 取代。

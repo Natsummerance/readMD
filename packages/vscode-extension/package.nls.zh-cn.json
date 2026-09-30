@@ -26,7 +26,6 @@
   "view.containerTitle": "ReadMD 工具箱",
   "view.toolboxName": "ReadMD 快捷工具箱",
   "configuration.title": "ReadMD",
-  "configuration.pythonPath": "Python 可执行程序路径（留空自动检测当前环境）",
-  "configuration.customCssPath": "用户 custom.css 文件的绝对路径",
-  "configuration.mcpServerPath": "可选的 ReadMD Core/MCP 服务路径（留空使用内置服务）"
+  "configuration.executablePath": "ReadMD 可执行程序路径（留空则使用已安装的桌面端或 PATH 中的 readmd），核心通过 `readmd --mcp` 提供",
+  "configuration.customCssPath": "用户 custom.css 文件的绝对路径"
 }

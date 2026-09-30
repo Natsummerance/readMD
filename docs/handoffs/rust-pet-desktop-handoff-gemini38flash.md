@@ -3,7 +3,7 @@
 **收件人**：Gemini 3.8 Flash（运行于 Google Antigravity）
 **交接人**：上一轮 Qoder 会话（所有事实均在本机实测核查，未凭记忆下结论）
 **日期**：2026-09-23
-**仓库**：`T:\Programming\Project\codex\creator\readmd`
+**仓库**：`<repo>/`
 **分支**：`main` **HEAD**：`81a322e`（`feat(kernel): serve skill-import source routes from the parity owner`，已提交，**未 push**）
 
 > ⚠️ 本文所有行号均为 **2026-09-23 HEAD `81a322e` + 当前工作树未提交改动** 的快照。
@@ -179,7 +179,7 @@ packages/readmd-pet-rust/src/input.rs        477 行
 **Phase 0 操作：**
 
 ```bash
-cd "T:/Programming/Project/codex/creator/readmd"
+cd "<repo>/"
 git status --porcelain -- packages/readmd-pet-rust     # 先看清要提交什么
 git add packages/readmd-pet-rust/Cargo.toml packages/readmd-pet-rust/src
 git status                                              # 复核 staged：不得含 target/ 或 dist/
@@ -739,7 +739,7 @@ ipc 3、snapshot 3、health 2、webview 1。
 ## 17. 动手前的复现清单（把本文的事实变成你的事实）
 
 ```bash
-cd "T:/Programming/Project/codex/creator/readmd"
+cd "<repo>/"
 
 # 1. 我在哪个提交
 git rev-parse --short HEAD                       # 期望 81a322e

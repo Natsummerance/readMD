@@ -1,0 +1,61 @@
+[
+  {
+    "path": "rust/readmd-kernel/src/code_chunk_runner.rs",
+    "pattern": "write_temp_script\\(\"\\.py\"",
+    "reason": "The code-block runner executes the user's own ```python chunk with an interpreter already on PATH; ReadMD itself never needs Python.",
+    "requirement": "3.12"
+  },
+  {
+    "path": "assets/js/core/state.js",
+    "pattern": "CONVERT_EXTS",
+    "reason": "File-extension table: .py files open as highlighted source text.",
+    "requirement": "3.12"
+  },
+  {
+    "path": "rust/readmd-kernel/src/content.rs",
+    "pattern": "\"\\.py\"",
+    "reason": "File-extension tables: .py opens as source text with python highlighting.",
+    "requirement": "3.12"
+  },
+  {
+    "path": "rust/readmd-kernel/src/convert.rs",
+    "pattern": "\"\\.py\"",
+    "reason": "File-extension tables for code-as-Markdown conversion.",
+    "requirement": "3.12"
+  },
+  {
+    "path": "rust/readmd-kernel/src/server.rs",
+    "pattern": "\"\\.py\"",
+    "reason": "File-extension table for the open dialog filter.",
+    "requirement": "3.12"
+  },
+  {
+    "path": "rust/readmd-kernel/src/skill_import.rs",
+    "pattern": "\\.py\"",
+    "reason": "Skill import classifies .py files as inert script data (never executed).",
+    "requirement": "3.13"
+  },
+  {
+    "path": "rust/readmd-kernel/src/plugin_manager.rs",
+    "pattern": "\\.py\"",
+    "reason": "Recognises and uninstalls leftovers of the retired pip sandbox; nothing is imported or run.",
+    "requirement": "2.22"
+  },
+  {
+    "path": "rust/readmd-kernel/src/win_registry.rs",
+    "pattern": "Applications\\\\readmd\\.py",
+    "reason": "Removes the file-association key left by old Python-based installs.",
+    "requirement": "2.23"
+  },
+  {
+    "path": "tools/test/check-no-python.test.mjs",
+    "reason": "Fixtures of the checker's own unit tests.",
+    "requirement": "2.23"
+  },
+  {
+    "path": "scripts/windows/uninstall.bat",
+    "pattern": "Applications\\\\readmd\\.py",
+    "reason": "Removes the file-association key left by old Python-based installs.",
+    "requirement": "2.23"
+  }
+]

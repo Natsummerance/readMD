@@ -521,9 +521,17 @@ fn handle_connection(stream: TcpStream, app: Arc<App>) {
             Ok(Some(req)) => req,
             _ => break,
         };
-        let keep_alive = req.wants_keep_alive() && reader.buffer().len() < MAX_HEADER;
+        let mut keep_alive = req.wants_keep_alive() && reader.buffer().len() < MAX_HEADER;
         let head_only = req.method == "HEAD";
-        let res = dispatch(&app, &req, peer_is_loopback);
+        let res = match dispatch_guarded(&app, &req, peer_is_loopback) {
+            Ok(res) => res,
+            Err(res) => {
+                // A handler panicked: its shared state is suspect, so answer and
+                // close instead of reusing the connection.
+                keep_alive = false;
+                res
+            }
+        };
         if write_response(&mut writer, &res, keep_alive, head_only).is_err() {
             break;
         }
@@ -531,6 +539,46 @@ fn handle_connection(stream: TcpStream, app: Arc<App>) {
             break;
         }
     }
+}
+
+/// Run [`dispatch`] with panic isolation.
+///
+/// A panicking handler used to unwind straight out of the connection thread, so
+/// the client only ever saw a dropped socket.  Now the panic is logged (route and
+/// message only, never the request body) and turned into a structured
+/// `500 {ok:false, error_code:"internal_error"}`.  `Err` tells the caller to
+/// close the connection after writing the response.
+fn dispatch_guarded(app: &Arc<App>, req: &Request, peer_is_loopback: bool) -> Result<Response, Response> {
+    let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        dispatch(app, req, peer_is_loopback)
+    }));
+    match outcome {
+        Ok(res) => Ok(res),
+        Err(payload) => {
+            let msg = panic_message(&*payload);
+            log::error!("handler panicked on {} {}: {}", req.method, req.path, msg);
+            Err(internal_error_response())
+        }
+    }
+}
+
+/// Best-effort text of a panic payload (`&str` or `String`).
+pub(crate) fn panic_message(payload: &(dyn std::any::Any + Send)) -> String {
+    if let Some(s) = payload.downcast_ref::<&str>() {
+        (*s).to_string()
+    } else if let Some(s) = payload.downcast_ref::<String>() {
+        s.clone()
+    } else {
+        "unknown panic".to_string()
+    }
+}
+
+/// The structured response sent in place of a panicked handler's output.
+pub(crate) fn internal_error_response() -> Response {
+    Response::json_status(
+        500,
+        &json!({"ok": false, "error_code": "internal_error", "error": "internal error"}),
+    )
 }
 
 // ------------------------------------------------------------------- routing
@@ -633,6 +681,8 @@ pub const ROUTES: &[(&str, Handler)] = &[
     ("/api/pets/interact", parity_pets::h_pet_interact),
     ("/api/pets/import", parity_pets::h_pet_import),
     ("/api/export", h_export), // KERNEL BRIDGE — non-parity, see its doc comment
+    ("/api/task/cancel", h_task_cancel),
+    ("/api/export/presets", h_export_presets), // KERNEL BRIDGE — `Api.get/save_export_presets`
     // Wave E1 (F1) first planned to delete this row because `readmd.py:_route()`
     // has no `/api/export` branch.  That premise is false: `main.rs`'s injected
     // pywebview shim implements `export_doc(fmt, payload)` as
@@ -841,15 +891,11 @@ pub const LEGACY_DYNAMIC_PREFIXES: &[&str] = &[
 ///
 /// This must never be derived from the route table: an empty table would then
 /// make `pendingCount` report a clean port while every route quietly 404s.
-/// `p1_pending_surface_is_declared_and_nonempty` guards the invariant, and
+/// `p1_pending_surface_is_declared` guards the invariant, and
 /// `p1_every_legacy_route_is_either_routed_or_pending` fails when a route falls
-/// out of both sets.
-pub const PENDING: &[&str] = &[
-    // `Handler._api_file` structures `.txt` through `src.readmd_modules.txtmd`
-    // (`readmd.py:3056`); the route answers, but `structured` stays false and
-    // `content` is the raw text.
-    "/api/file.txt-md-structuring",
-];
+/// out of both sets.  It is empty now: `.txt` structuring on `/api/file`, the
+/// last entry, is served by `content::describe`.
+pub const PENDING: &[&str] = &[];
 
 /// `readmd.py:181` — the single-instance control port.  `instance.json` only
 /// exists while the server really owns this port (`readmd.py:6494`).
@@ -857,6 +903,45 @@ pub const CONTROL_PORT: u16 = 26891;
 
 pub fn is_api_path(path: &str) -> bool {
     path.starts_with("/api/")
+}
+
+/// Run one API call in-process, exactly as a loopback client would see it
+/// (same route table, handlers and error shapes).  Used by `readmd --mcp` so
+/// the MCP tools and the desktop UI share one implementation.
+///
+/// `target` is `"/api/…?query"`; `body` is sent as JSON when present.
+pub fn call_in_process(app: &Arc<App>, method: &str, target: &str, body: Option<&Value>) -> (u16, Value) {
+    let (raw_path, raw_query) = target.split_once('?').unwrap_or((target, ""));
+    // With no listener bound (`readmd --mcp`) a port-less loopback Host passes
+    // `local_host_authorized`; otherwise it must name the bound port.
+    let host = match bound_port() {
+        0 => "127.0.0.1".to_string(),
+        p => format!("127.0.0.1:{p}"),
+    };
+    let bytes = body.map(|b| serde_json::to_vec(b).unwrap_or_default()).unwrap_or_default();
+    let mut headers = HashMap::from([
+        ("host".to_string(), host.clone()),
+        ("origin".to_string(), format!("http://{host}")),
+        ("x-readmd-app-token".to_string(), app.app_token.clone()),
+        ("x-readmd-token".to_string(), app.app_token.clone()),
+    ]);
+    if !bytes.is_empty() {
+        headers.insert("content-type".to_string(), "application/json".to_string());
+        headers.insert("content-length".to_string(), bytes.len().to_string());
+    }
+    let req = Request {
+        method: method.to_string(),
+        path: raw_path.to_string(),
+        query: parse_query(raw_query),
+        headers,
+        body: bytes,
+    };
+    let res = match dispatch_guarded(app, &req, true) {
+        Ok(r) | Err(r) => r,
+    };
+    let value = serde_json::from_slice::<Value>(&res.body)
+        .unwrap_or_else(|_| Value::String(String::from_utf8_lossy(&res.body).into_owned()));
+    (res.status, value)
 }
 
 fn dispatch(app: &Arc<App>, req: &Request, peer_is_loopback: bool) -> Response {
@@ -1581,6 +1666,7 @@ fn send_file(req: &Request, path: &Path, cache: bool) -> ApiResult<Response> {
 
 fn serve_index(app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
     let file = app.paths.assets_dir.join("index.html");
+    // (tokens.css and other nested stylesheets are served by `serve_static`.)
     if !file.is_file() {
         // `_send_index` (`readmd.py:1515-1517`).
         return Err(ApiError::plain_text(404, "not found"));
@@ -1861,7 +1947,10 @@ fn h_file(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     // `500 text/plain; charset=utf-8` `"internal error"`.
     let path = py_abspath(&raw);
     if !path.is_file() {
-        return Err(ApiError::legacy_error(404, "文件不存在"));
+        return Ok(Response::json_status(
+            404,
+            &json!({ "error": "文件不存在", "error_code": crate::api_codes::FILE_NOT_FOUND }),
+        ));
     }
     // `readmd.py:3015` — reading a document through this route is precisely
     // what authorizes `/api/save` to write it back.
@@ -1993,7 +2082,29 @@ fn h_raw(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
 /// It never raises for ordinary I/O: every failure comes back as
 /// `{'ok': False, 'error': <str(exc)>}`, and a stale editor state comes back as
 /// the four-key `conflict` dict.  `_do_save` maps those onto 500 / 409.
-fn py_save_text_atomic(path: &Path, content: &str, expected_mtime: Option<f64>) -> Value {
+fn py_save_text_atomic(path: &Path, content: &str, encoding: &str, expected_mtime: Option<f64>) -> Value {
+    // Encode first: an unrepresentable character must fail the save *before*
+    // any backup or write happens, never be replaced silently.
+    let bytes = match crate::text_encoding::encode(content, encoding) {
+        Ok(b) => b,
+        Err(crate::text_encoding::EncodeError::Unrepresentable { ch, char_index }) => {
+            return json!({
+                "ok": false,
+                "error": format!("当前编码（{encoding}）无法表示字符“{ch}”，可改用 UTF-8 保存"),
+                "error_code": "encoding_unrepresentable",
+                "encoding": encoding,
+                "char": ch.to_string(),
+                "offset": char_index,
+            });
+        }
+        Err(crate::text_encoding::EncodeError::Unknown(name)) => {
+            return json!({
+                "ok": false,
+                "error": format!("unknown encoding: {name}"),
+                "error_code": "encoding_unknown",
+            });
+        }
+    };
     // `path = os.path.abspath(path)` (`file_writer.py:24`).
     let abspath = paths::canonicalize_or_clean(path);
     // `shutil.copy2(path, path + '.bak')` — string concatenation, so the backup
@@ -2031,7 +2142,7 @@ fn py_save_text_atomic(path: &Path, content: &str, expected_mtime: Option<f64>) 
             Err(e) => return json!({ "ok": false, "error": e.to_string() }),
         }
     }
-    match content::write_text_atomic(&abspath, content) {
+    match content::write_bytes_atomic(&abspath, &bytes) {
         Ok(()) => json!({
             "ok": true,
             // `readmd.py:3557-3562` reports `save_text_atomic`'s dict verbatim:
@@ -2119,8 +2230,8 @@ fn h_save(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
         Err(_) => return Err(internal_error()),
     };
     let text = py_or_string(&payload, &["content"], "").unwrap_or_default();
-    // `enc = body.get('encoding') or 'utf-8'`.  The kernel's writer is UTF-8
-    // only, so the value is read (and its type gate honoured) but not honoured.
+    // `enc = body.get('encoding') or 'utf-8'` — the encoding `/api/file`
+    // reported; the file is written back in it (see `text_encoding`).
     let enc = py_or_string(&payload, &["encoding"], "utf-8").unwrap_or_else(|_| "utf-8".into());
     if enc.is_empty() {
         return Err(internal_error());
@@ -2188,11 +2299,13 @@ fn h_save(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
         // API, in LegacyError shape: `{'error': '文件未被授权保存'}`.
         return Err(ApiError::legacy_error(403, "文件未被授权保存"));
     }
-    let result = py_save_text_atomic(&safe_path, &text, expected_mtime);
+    let result = py_save_text_atomic(&safe_path, &text, &enc, expected_mtime);
     let status = if result.get("ok").and_then(|v| v.as_bool()).unwrap_or(false) {
         200
     } else if result.get("conflict").and_then(|v| v.as_bool()).unwrap_or(false) {
         409
+    } else if result.get("error_code").and_then(|v| v.as_str()) == Some("encoding_unrepresentable") {
+        422
     } else {
         500
     };
@@ -3594,6 +3707,7 @@ impl ai_providers::ProviderDirectory for AiProviderDirectory {
 struct RuntimeSkill {
     instructions: String,
     required: Option<Value>,
+    description: String,
 }
 
 struct AiSkillService<'a> {
@@ -3754,6 +3868,7 @@ fn load_runtime_skill(folder: &Path) -> Option<(String, RuntimeSkill, bool)> {
         RuntimeSkill {
             instructions,
             required: metadata.get("required_variables").cloned(),
+            description: ai_providers::py_strip(&ai_providers::py_str(&description)),
         },
         enabled,
     ))
@@ -3785,6 +3900,31 @@ fn runtime_skill_index(app: &App) -> HashMap<String, RuntimeSkill> {
         }
     }
     index
+}
+
+/// A Skill as the MCP surface sees it: id, one-line description, raw instructions.
+pub struct SkillInfo {
+    pub id: String,
+    pub description: String,
+    pub instructions: String,
+}
+
+/// Enabled Skills from every registry root, sorted by id (the same index
+/// `/api/ai/chat` renders from).
+pub fn skill_list(app: &Arc<App>) -> Vec<SkillInfo> {
+    let mut out: Vec<SkillInfo> = runtime_skill_index(app)
+        .into_iter()
+        .map(|(id, s)| SkillInfo { id, description: s.description, instructions: s.instructions })
+        .collect();
+    out.sort_by(|a, b| a.id.cmp(&b.id));
+    out
+}
+
+/// Render one Skill with the given variables (`SkillRegistry.render`).
+pub fn skill_render(app: &Arc<App>, skill_id: &str, variables: &Value) -> Result<String, String> {
+    use ai_providers::SkillService;
+    let vars = ai_providers::VarMap::from_json(variables).ok_or_else(|| "invalid variables".to_string())?;
+    AiSkillService { app }.render_skill(skill_id, &vars).map_err(|e| e.message)
 }
 
 impl ai_providers::SkillService for AiSkillService<'_> {
@@ -5070,7 +5210,7 @@ mod tests {
         assert_eq!(ocr.status, 404);
         assert_eq!(
             serde_json::from_slice::<Value>(&ocr.body).unwrap(),
-            json!({ "error": "文件不存在" })
+            json!({ "error": "文件不存在", "error_code": "file_not_found" })
         );
     }
 
@@ -5180,6 +5320,73 @@ mod tests {
         assert_eq!(std::fs::read_to_string(&doc).unwrap(), "# Draft\n\n新正文");
     }
 
+    /// A GBK file keeps its bytes' encoding through open → edit → save, and a
+    /// character GBK cannot hold is refused (422) without touching the file.
+    #[test]
+    fn save_preserves_the_detected_encoding() {
+        let _env = env_guard();
+        let app = sample_app("enc-save");
+        let outside = outside_root("enc");
+        let doc = outside.join("笔记.md");
+        std::fs::write(&doc, b"# \xc4\xe3\xba\xc3\n").unwrap(); // "# 你好" in GBK
+
+        let read = dispatch(&app, &request("GET", &format!("/api/file?p={}", pquery(&doc)), &[]), true);
+        assert_eq!(read.status, 200);
+        let v: Value = serde_json::from_slice(&read.body).unwrap();
+        assert_eq!(v["encoding"], json!("gb18030"));
+        assert_eq!(v["content"], json!("# 你好\n"));
+
+        let body = serde_json::to_vec(&json!({
+            "path": doc.to_string_lossy(), "content": "# 你好世界\n", "encoding": "gb18030",
+        }))
+        .unwrap();
+        let saved = dispatch(&app, &app_request(&app, "POST", "/api/save", &body), true);
+        assert_eq!(saved.status, 200);
+        assert_eq!(std::fs::read(&doc).unwrap(), b"# \xc4\xe3\xba\xc3\xca\xc0\xbd\xe7\n");
+
+        let before = std::fs::read(&doc).unwrap();
+        let body = serde_json::to_vec(&json!({
+            "path": doc.to_string_lossy(), "content": "emoji 😀", "encoding": "gbk",
+        }))
+        .unwrap();
+        let refused = dispatch(&app, &app_request(&app, "POST", "/api/save", &body), true);
+        assert_eq!(refused.status, 422);
+        let r: Value = serde_json::from_slice(&refused.body).unwrap();
+        assert_eq!(r["error_code"], json!("encoding_unrepresentable"));
+        assert_eq!(r["char"], json!("😀"));
+        assert_eq!(std::fs::read(&doc).unwrap(), before);
+    }
+
+    /// `.txt` opens structured for reading while the raw text stays editable.
+    #[test]
+    fn txt_is_structured_on_open() {
+        let _env = env_guard();
+        let app = sample_app("txt-open");
+        let outside = outside_root("txt");
+        let doc = outside.join("plain.txt");
+        std::fs::write(&doc, "第一章 概述\n\n这是正文。\n\n1. 第一项\n2. 第二项\n").unwrap();
+        let read = dispatch(&app, &request("GET", &format!("/api/file?p={}", pquery(&doc)), &[]), true);
+        assert_eq!(read.status, 200);
+        let v: Value = serde_json::from_slice(&read.body).unwrap();
+        assert_eq!(v["structured"], json!(true));
+        assert_eq!(v["original"], json!("第一章 概述\n\n这是正文。\n\n1. 第一项\n2. 第二项\n"));
+        let (md, _) = crate::convert::txt_to_markdown(v["original"].as_str().unwrap());
+        assert_eq!(v["content"], json!(md));
+    }
+
+    /// A panicking handler answers `500 internal_error` instead of dropping the
+    /// connection.
+    #[test]
+    fn panicking_handler_becomes_internal_error() {
+        let res = internal_error_response();
+        assert_eq!(res.status, 500);
+        let v: Value = serde_json::from_slice(&res.body).unwrap();
+        assert_eq!(v["error_code"], json!("internal_error"));
+        let caught = std::panic::catch_unwind(|| -> Response { panic!("boom") });
+        let msg = panic_message(&*caught.err().unwrap());
+        assert_eq!(msg, "boom");
+    }
+
     /// The reader routes' early exits, each in the envelope `readmd.py` uses.
     #[test]
     fn reader_route_early_exits_use_pythons_shapes() {
@@ -5202,7 +5409,7 @@ mod tests {
         assert_eq!(absent.status, 404);
         assert_eq!(
             serde_json::from_slice::<Value>(&absent.body).unwrap(),
-            json!({ "error": "文件不存在" })
+            json!({ "error": "文件不存在", "error_code": "file_not_found" })
         );
 
         // `readmd.py:3096-3098` — a non-directory is an empty listing, not a 4xx,
@@ -5412,6 +5619,75 @@ mod tests {
             "the bridge answers with the kernel's error envelope, not Python's \
              {{ok:false, stage:'options'}} — recorded in h_export's doc comment"
         );
+    }
+
+    fn export_req(dir: &Path, task_id: &str) -> (Request, PathBuf) {
+        let out = dir.join("doc.html");
+        let body = json!({
+            "format": "html", "content": "# hi", "out_path": out.to_string_lossy(),
+            "task_id": task_id
+        })
+        .to_string();
+        (request("POST", "/api/export", body.as_bytes()), out)
+    }
+
+    /// C.4.6: with a `task_id` the export is staged as `<name>.readmd-part` and
+    /// renamed once; nothing but the target remains afterwards.
+    #[test]
+    fn task_export_commits_through_one_rename() {
+        let app = sample_app("task-export");
+        let dir = tempfile::tempdir().unwrap();
+        let (req, out) = export_req(dir.path(), "exp-ok-1");
+        let res = h_export(&app, &req).unwrap();
+        let body: Value = serde_json::from_slice(&res.body).unwrap();
+        assert_eq!(body["ok"], true, "{body}");
+        assert_eq!(body["path"], out.to_string_lossy().as_ref());
+        assert!(out.is_file());
+        assert!(!crate::cancel::part_path(&out).exists(), "the staging file must be gone");
+        assert_eq!(crate::cancel::cancel("exp-ok-1"), crate::cancel::CancelState::Unknown, "the task deregisters");
+    }
+
+    /// A cancel that arrives before the commit point leaves no file at all and
+    /// answers `error_code: cancelled`.
+    #[test]
+    fn task_export_cancelled_before_commit_leaves_nothing() {
+        let app = sample_app("task-cancel");
+        let dir = tempfile::tempdir().unwrap();
+        // Cancel from another thread as soon as the handler registers. Which
+        // side wins is timing-dependent, but both outcomes must be clean:
+        // either the file was committed, or nothing at all is left.
+        let (req, out) = export_req(dir.path(), "exp-cancel-2");
+        let stop = std::thread::spawn(|| {
+            for _ in 0..2000 {
+                if crate::cancel::cancel("exp-cancel-2") != crate::cancel::CancelState::Unknown {
+                    break;
+                }
+                std::thread::yield_now();
+            }
+        });
+        let res = h_export(&app, &req).unwrap();
+        stop.join().unwrap();
+        let body: Value = serde_json::from_slice(&res.body).unwrap();
+        assert!(!crate::cancel::part_path(&out).exists(), "no staging file may survive");
+        if body["ok"] == true {
+            assert!(out.is_file(), "a finished export keeps its file");
+        } else {
+            assert_eq!(body["error_code"], "cancelled", "{body}");
+            assert!(!out.exists(), "a cancelled export must not leave the target");
+        }
+    }
+
+    #[test]
+    fn task_cancel_route_reports_state() {
+        let app = sample_app("task-route");
+        let res = dispatch(&app, &request("POST", "/api/task/cancel", br#"{"id":"nobody-home"}"#), true);
+        assert_eq!(res.status, 200);
+        assert_eq!(serde_json::from_slice::<Value>(&res.body).unwrap(), json!({"ok": true, "state": "unknown"}));
+        let bad = dispatch(&app, &request("POST", "/api/task/cancel", br#"{"id":"../x"}"#), true);
+        assert_eq!(bad.status, 400);
+        let _g = crate::cancel::register("route-live").unwrap();
+        let res = dispatch(&app, &request("POST", "/api/task/cancel", br#"{"id":"route-live"}"#), true);
+        assert_eq!(serde_json::from_slice::<Value>(&res.body).unwrap()["state"], "cancelling");
     }
 
     /// Wave E1 (F3): `readmd.py:1279` and `readmd.py:1283` are the only two
@@ -5630,11 +5906,10 @@ mod tests {
         // are covered by the module's own tests.
     }
 
-    /// The guard `PENDING`'s doc comment promises: the list stays hand-declared,
-    /// non-empty, and never describes something the table actually serves.
+    /// The guard `PENDING`'s doc comment promises: the list stays hand-declared
+    /// and never describes something the table actually serves.
     #[test]
-    fn p1_pending_surface_is_declared_and_nonempty() {
-        assert!(!PENDING.is_empty(), "the pending surface must stay non-empty");
+    fn p1_pending_surface_is_declared() {
         for entry in PENDING {
             assert!(
                 !table().contains_key(entry),
@@ -6587,217 +6862,235 @@ pub(crate) fn run_powershell_encoded(script: &str) -> Option<String> {
     None
 }
 
-pub(crate) fn run_powershell_dialog(script: &str) -> Option<String> {
-    #[cfg(target_os = "windows")]
-    {
-        use std::process::Command;
-        use std::os::windows::process::CommandExt;
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-        let output = Command::new("powershell")
-            .creation_flags(CREATE_NO_WINDOW)
-            .args(["-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-Command", script])
-            .output()
-            .ok()?;
-        if output.status.success() {
-            let res = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !res.is_empty() {
-                return Some(res);
-            }
-        }
+/// `{ok, path}` for a single-pick dialog.  A cancel keeps `path: null`; a
+/// platform with no dialog also says why (`error_code: dialog_unavailable`).
+fn dialog_single_json(outcome: crate::native_dialogs::DialogOutcome) -> ApiResult<Response> {
+    use crate::native_dialogs::DialogOutcome;
+    match outcome {
+        DialogOutcome::Unavailable => ok_json(json!({ "ok": true, "path": null, "canceled": true, "error_code": "dialog_unavailable" })),
+        other => ok_json(json!({ "ok": true, "path": other.single() })),
     }
-    let _ = script;
-    None
 }
 
-pub(crate) fn run_powershell_dialog_lines(script: &str) -> Vec<String> {
-    #[cfg(target_os = "windows")]
-    {
-        use std::process::Command;
-        use std::os::windows::process::CommandExt;
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-        if let Ok(output) = Command::new("powershell")
-            .creation_flags(CREATE_NO_WINDOW)
-            .args(["-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-Command", script])
-            .output()
-        {
-            if output.status.success() {
-                let text = String::from_utf8_lossy(&output.stdout);
-                return text.lines()
-                    .map(|l| l.trim().to_string())
-                    .filter(|l| !l.is_empty())
-                    .collect();
-            }
-        }
+fn dialog_start_dir(body: &Value) -> String {
+    body.get("dir")
+        .or_else(|| body.get("initial_dir"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string()
+}
+
+fn h_dialog_choose_folder(_app: &Arc<App>, req: &Request) -> ApiResult<Response> {
+    use crate::native_dialogs::{run, DialogShape, Request as Dlg};
+    let body = body_value(req);
+    dialog_single_json(run(&Dlg::new(DialogShape::ChooseFolder).dir(&dialog_start_dir(&body))))
+}
+
+fn h_dialog_choose_file(_app: &Arc<App>, req: &Request) -> ApiResult<Response> {
+    use crate::native_dialogs::{run, DialogShape, Request as Dlg};
+    let body = body_value(req);
+    dialog_single_json(run(&Dlg::new(DialogShape::ChooseFile).dir(&dialog_start_dir(&body))))
+}
+
+fn h_dialog_choose_any_file(_app: &Arc<App>, req: &Request) -> ApiResult<Response> {
+    use crate::native_dialogs::{run, DialogShape, Request as Dlg};
+    let body = body_value(req);
+    dialog_single_json(run(&Dlg::new(DialogShape::ChooseAnyFile).dir(&dialog_start_dir(&body))))
+}
+
+fn h_dialog_choose_many_files(_app: &Arc<App>, req: &Request) -> ApiResult<Response> {
+    use crate::native_dialogs::{run, DialogOutcome, DialogShape, Request as Dlg};
+    let body = body_value(req);
+    match run(&Dlg::new(DialogShape::ChooseManyFiles).dir(&dialog_start_dir(&body))) {
+        DialogOutcome::Unavailable => ok_json(json!({ "ok": true, "paths": [], "canceled": true, "error_code": "dialog_unavailable" })),
+        other => ok_json(json!({ "ok": true, "paths": other.many() })),
     }
-    let _ = script;
-    Vec::new()
-}
-
-fn h_dialog_choose_folder(_app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
-    let script = r#"
-        [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
-        $form = New-Object System.Windows.Forms.Form
-        $form.TopMost = $true
-        $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
-        $dialog.ShowNewFolderButton = $true
-        $dialog.Description = '选择文件夹'
-        if ($dialog.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {
-            [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-            Write-Output $dialog.SelectedPath
-        }
-    "#;
-    let path = run_powershell_dialog(script);
-    ok_json(json!({ "ok": true, "path": path }))
-}
-
-fn h_dialog_choose_file(_app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
-    let script = r#"
-        [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
-        $form = New-Object System.Windows.Forms.Form
-        $form.TopMost = $true
-        $dialog = New-Object System.Windows.Forms.OpenFileDialog
-        $dialog.Filter = 'Markdown 文件 (*.md;*.markdown)|*.md;*.markdown|所有文件 (*.*)|*.*'
-        $dialog.Title = '打开文件'
-        if ($dialog.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {
-            [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-            Write-Output $dialog.FileName
-        }
-    "#;
-    let path = run_powershell_dialog(script);
-    ok_json(json!({ "ok": true, "path": path }))
-}
-
-fn h_dialog_choose_any_file(_app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
-    let script = r#"
-        [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
-        $form = New-Object System.Windows.Forms.Form
-        $form.TopMost = $true
-        $dialog = New-Object System.Windows.Forms.OpenFileDialog
-        $dialog.Filter = '所有文件 (*.*)|*.*'
-        $dialog.Title = '选择文件'
-        if ($dialog.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {
-            [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-            Write-Output $dialog.FileName
-        }
-    "#;
-    let path = run_powershell_dialog(script);
-    ok_json(json!({ "ok": true, "path": path }))
-}
-
-fn h_dialog_choose_many_files(_app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
-    let script = r#"
-        [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
-        $form = New-Object System.Windows.Forms.Form
-        $form.TopMost = $true
-        $dialog = New-Object System.Windows.Forms.OpenFileDialog
-        $dialog.Multiselect = $true
-        $dialog.Filter = '所有支持的文件 (*.*)|*.*'
-        $dialog.Title = '选择文件（可多选）'
-        if ($dialog.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {
-            [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-            foreach ($f in $dialog.FileNames) {
-                Write-Output $f
-            }
-        }
-    "#;
-    let paths = run_powershell_dialog_lines(script);
-    ok_json(json!({ "ok": true, "paths": paths }))
 }
 
 fn h_dialog_save_file(_app: &Arc<App>, req: &Request) -> ApiResult<Response> {
+    use crate::native_dialogs::{run, DialogShape, Request as Dlg};
     let body = body_value(req);
     let default_name = body.get("name").and_then(|v| v.as_str()).unwrap_or("document.md");
-    let script = format!(r#"
-        [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
-        $form = New-Object System.Windows.Forms.Form
-        $form.TopMost = $true
-        $dialog = New-Object System.Windows.Forms.SaveFileDialog
-        $dialog.Filter = 'Markdown 文件 (*.md)|*.md|所有文件 (*.*)|*.*'
-        $dialog.FileName = '{}'
-        $dialog.Title = '另存为'
-        if ($dialog.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {{
-            [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-            Write-Output $dialog.FileName
-        }}
-    "#, default_name.replace('\'', "''"));
-    let path = run_powershell_dialog(&script);
-    ok_json(json!({ "ok": true, "path": path }))
+    dialog_single_json(run(&Dlg::new(DialogShape::SaveFile).name(default_name).dir(&dialog_start_dir(&body))))
+}
+
+/// `{ok:true}` on success, `{ok:false, error_code}` (`path_not_found` /
+/// `open_failed`) otherwise, so the UI can say what went wrong.
+fn open_result_json(r: Result<(), &'static str>) -> ApiResult<Response> {
+    match r {
+        Ok(()) => ok_json(json!({ "ok": true })),
+        Err(code) => ok_json(json!({
+            "ok": false,
+            "error_code": code,
+            "error": if code == "path_not_found" { "路径不存在" } else { "无法打开" },
+        })),
+    }
 }
 
 fn h_system_open_path(_app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     let body = body_value(req);
-    let path_val = body.get("path").and_then(|v| v.as_str()).or_else(|| req.q("path"));
-    if let Some(path) = path_val {
-        if !crate::native_system::windows_open_path(path) {
-            #[cfg(target_os = "macos")]
-            let _ = std::process::Command::new("open").arg(path).spawn();
-            #[cfg(target_os = "linux")]
-            let _ = std::process::Command::new("xdg-open").arg(path).spawn();
+    let path = body.get("path").and_then(|v| v.as_str()).or_else(|| req.q("path")).unwrap_or("");
+    // URLs (already vetted by the bridge's `bridgeSafeExternalUrl`) go to the
+    // default browser; only http(s)/mailto are accepted here.
+    let lower = path.trim().to_ascii_lowercase();
+    if lower.starts_with("http://") || lower.starts_with("https://") || lower.starts_with("mailto:") {
+        if path.chars().any(|c| c.is_control()) || path.len() > 2048 {
+            return open_result_json(Err("open_failed"));
         }
+        #[cfg(windows)]
+        let ok = crate::native_system::shell_open(path);
+        #[cfg(target_os = "macos")]
+        let ok = std::process::Command::new("open").arg(path).spawn().is_ok();
+        #[cfg(all(unix, not(target_os = "macos")))]
+        let ok = std::process::Command::new("xdg-open").arg(path).spawn().is_ok();
+        return open_result_json(if ok { Ok(()) } else { Err("open_failed") });
     }
-    ok_json(json!({ "ok": true }))
+    open_result_json(crate::native_dialogs::open_path(path))
 }
 
 fn h_system_reveal_path(_app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     let body = body_value(req);
-    let path_val = body.get("path").and_then(|v| v.as_str()).or_else(|| req.q("path"));
-    if let Some(path) = path_val {
-        let _ = crate::native_system::windows_reveal_path(path);
-    }
-    ok_json(json!({ "ok": true }))
+    let path = body.get("path").and_then(|v| v.as_str()).or_else(|| req.q("path")).unwrap_or("");
+    open_result_json(crate::native_dialogs::reveal_path(path))
 }
 
+/// Save-as: pick a target, copy web-clipped assets next to it, then write the
+/// document atomically (with the same `.bak` / encoding rules as `/api/save`).
 fn h_dialog_save_as(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
+    use crate::native_dialogs::{run, DialogOutcome, DialogShape, Request as Dlg};
     let body = body_value(req);
     let mut content = body.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string();
     let suggested = body.get("suggested").and_then(|v| v.as_str()).unwrap_or("document.md");
-    
-    let script = format!(r#"
-        $OutputEncoding = [System.Text.Encoding]::UTF8
-        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-        [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
-        $form = New-Object System.Windows.Forms.Form
-        $form.TopMost = $true
-        $dialog = New-Object System.Windows.Forms.SaveFileDialog
-        $dialog.Filter = 'Markdown 文件 (*.md)|*.md|所有文件 (*.*)|*.*'
-        $dialog.FileName = '{}'
-        $dialog.Title = '另存为'
-        if ($dialog.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {{
-            [Console]::Out.Write($dialog.FileName)
-        }}
-    "#, suggested.replace('\'', "''"));
-    let target_str = match run_powershell_encoded(&script) {
-        Some(s) if !s.is_empty() => s,
+    let encoding = body.get("encoding").and_then(|v| v.as_str()).unwrap_or("utf-8").to_string();
+
+    let target_str = match run(&Dlg::new(DialogShape::SaveAs).name(suggested).dir(&dialog_start_dir(&body))) {
+        DialogOutcome::Picked(v) if !v.is_empty() => v[0].clone(),
+        DialogOutcome::Unavailable => {
+            return ok_json(json!({ "ok": false, "canceled": true, "error_code": "dialog_unavailable" }))
+        }
         _ => return ok_json(json!({ "ok": false, "canceled": true })),
     };
     let target_path = PathBuf::from(&target_str);
-    
+
+    let mut warns: Vec<String> = Vec::new();
     if let Some(assets) = body.get("assets").and_then(|v| v.as_array()) {
         if !assets.is_empty() {
             let stem = target_path.file_stem().and_then(|s| s.to_str()).unwrap_or("doc");
             let asset_folder_name = format!("{}.assets", stem);
             if let Some(parent) = target_path.parent() {
                 let asset_dir = parent.join(&asset_folder_name);
-                let _ = std::fs::create_dir_all(&asset_dir);
+                if let Err(e) = std::fs::create_dir_all(&asset_dir) {
+                    warns.push(format!("无法创建资源目录：{e}"));
+                }
                 for item in assets {
                     let source = item.get("path").and_then(|v| v.as_str()).unwrap_or("");
-                    let name = item.get("name").and_then(|v| v.as_str()).unwrap_or("");
-                    if !source.is_empty() && !name.is_empty() && Path::new(source).is_file() {
-                        let dest = asset_dir.join(name);
-                        let _ = std::fs::copy(source, &dest);
-                        let rel = format!("{}/{}", asset_folder_name, name);
-                        content = content.replace(&source.replace('\\', "/"), &rel);
-                        content = content.replace(source, &rel);
+                    let raw_name = item.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                    // The name is a single path segment; anything else is dropped.
+                    let name = Path::new(raw_name).file_name().and_then(|n| n.to_str()).unwrap_or("");
+                    if source.is_empty() || name.is_empty() || !Path::new(source).is_file() {
+                        if !source.is_empty() {
+                            warns.push(format!("资源不存在，已跳过：{source}"));
+                        }
+                        continue;
+                    }
+                    let dest = asset_dir.join(name);
+                    match std::fs::copy(source, &dest) {
+                        Ok(_) => {
+                            let rel = format!("{}/{}", asset_folder_name, name);
+                            content = content.replace(&source.replace('\\', "/"), &rel);
+                            content = content.replace(source, &rel);
+                        }
+                        Err(e) => warns.push(format!("资源复制失败：{name}（{e}）")),
                     }
                 }
             }
         }
     }
-    
-    std::fs::write(&target_path, content.as_bytes()).map_err(|e| ApiError::internal(format!("save_failed: {e}")))?;
-    let display_title = target_path.file_name().and_then(|n| n.to_str()).unwrap_or(&target_str);
-    let _ = app.store.touch_recent(&target_str, display_title);
-    ok_json(json!({ "ok": true, "path": target_str }))
+
+    let mut saved = py_save_text_atomic(&target_path, &content, &encoding, None);
+    if saved.get("ok") != Some(&Value::Bool(true)) {
+        return ok_json(saved);
+    }
+    let display_title = target_path.file_name().and_then(|n| n.to_str()).unwrap_or(&target_str).to_string();
+    let _ = app.store.touch_recent(&target_str, &display_title);
+    if let Some(map) = saved.as_object_mut() {
+        map.insert("path".to_string(), json!(target_str));
+        map.insert("warns".to_string(), json!(warns));
+    }
+    crate::api_codes::attach_warn_items(&mut saved);
+    ok_json(saved)
+}
+
+const EXPORT_PRESETS_MAX: usize = 100;
+
+fn export_presets_path(app: &App) -> PathBuf {
+    app.paths.data_dir.join("export_presets.json")
+}
+
+fn load_export_presets(app: &App) -> (serde_json::Map<String, Value>, Value) {
+    let stored: Value = std::fs::read(export_presets_path(app))
+        .ok()
+        .and_then(|b| serde_json::from_slice(&b).ok())
+        .unwrap_or_else(|| json!({}));
+    let custom = stored.get("custom").and_then(|v| v.as_object()).cloned().unwrap_or_default();
+    let last = stored.get("last").cloned().filter(|v| v.is_object()).unwrap_or(Value::Null);
+    (custom, last)
+}
+
+/// `GET` → `{defaults, presets, custom, last}`; `POST {custom?, last?}` stores
+/// either half (each custom preset sanitised, at most 100, built-in names
+/// refused with `409 preset_name_conflict`).
+fn h_export_presets(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
+    use crate::export_styles as es;
+    let (mut custom, mut last) = load_export_presets(app);
+    if req.method == "POST" {
+        let body = body_value(req);
+        if let Some(c) = body.get("custom") {
+            let Some(map) = c.as_object() else {
+                return Err(ApiError::bad_request("invalid_presets"));
+            };
+            let builtin = es::preset_names();
+            let mut next = serde_json::Map::new();
+            for (name, opts) in map {
+                let name = name.trim();
+                if name.is_empty() || name.chars().count() > 64 {
+                    continue;
+                }
+                if builtin.contains(&name) {
+                    return Ok(Response::json_status(409, &json!({ "ok": false, "error_code": "preset_name_conflict", "name": name })));
+                }
+                if next.len() >= EXPORT_PRESETS_MAX {
+                    break;
+                }
+                next.insert(name.to_string(), es::sanitize(opts));
+            }
+            custom = next;
+        }
+        if let Some(l) = body.get("last") {
+            if l.is_object() {
+                let fmt = l.get("fmt").and_then(|v| v.as_str()).unwrap_or("pdf");
+                let opts = l.get("options").cloned().unwrap_or_else(|| json!({}));
+                last = json!({ "fmt": fmt, "options": opts });
+            }
+        }
+        let doc = json!({ "custom": custom, "last": last });
+        let bytes = serde_json::to_vec_pretty(&doc).unwrap_or_default();
+        if let Err(e) = content::write_bytes_atomic(&export_presets_path(app), &bytes) {
+            return Err(ApiError::internal(format!("write_failed: {e}")));
+        }
+        return ok_json(json!({ "ok": true }));
+    }
+    let mut presets = serde_json::Map::new();
+    for n in es::preset_names() {
+        presets.insert(n.to_string(), es::preset(n).unwrap_or_else(|| json!({})));
+    }
+    ok_json(json!({
+        "ok": true,
+        "defaults": es::default_style(),
+        "presets": presets,
+        "custom": custom,
+        "last": last,
+    }))
 }
 
 /// KERNEL BRIDGE — not a parity route.  `readmd.py`'s HTTP dispatcher
@@ -6839,71 +7132,149 @@ fn h_export(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
         .unwrap_or("")
         .to_string();
 
-    let ext_filter = match format.as_str() {
-        "pdf" => ("pdf", "PDF 文档 (*.pdf)|*.pdf|所有文件 (*.*)|*.*"),
-        "docx" => ("docx", "Word 文档 (*.docx)|*.docx|所有文件 (*.*)|*.*"),
-        "epub" => ("epub", "EPUB 电子书 (*.epub)|*.epub|所有文件 (*.*)|*.*"),
-        "html" => ("html", "HTML 网页 (*.html)|*.html|所有文件 (*.*)|*.*"),
-        "tex" => ("tex", "LaTeX 文档 (*.tex)|*.tex|所有文件 (*.*)|*.*"),
-        _ => return Err(ApiError::bad_request("unsupported_export_format")),
+    if crate::win_dialogs::DialogShape::export_filter_text(&format).is_none() {
+        return Err(ApiError::bad_request("unsupported_export_format"));
+    }
+    // Strip the source extension so `note.md` suggests `note.pdf`, not `note.md.pdf`.
+    let stem = {
+        let s = suggested_name.trim();
+        let s = s.rsplit(['/', '\\']).next().unwrap_or(s);
+        let lower = s.to_ascii_lowercase();
+        [".markdown", ".md", ".mdown", ".mkd", ".txt"]
+            .iter()
+            .find(|e| lower.ends_with(*e))
+            .map(|e| s[..s.len() - e.len()].to_string())
+            .unwrap_or_else(|| s.to_string())
     };
+    let stem = if stem.is_empty() { "export".to_string() } else { stem };
 
     if out_path.is_empty() {
-        #[cfg(target_os = "windows")]
-        {
-            let mut def_name = suggested_name.clone();
-            if !def_name.to_lowercase().ends_with(&format!(".{}", ext_filter.0)) {
-                def_name = format!("{}.{}", def_name, ext_filter.0);
+        use crate::native_dialogs::{run, DialogOutcome, DialogShape, Request as Dlg};
+        let dlg = Dlg::new(DialogShape::Export).name(&stem).export(&format).dir(&base_dir);
+        match run(&dlg) {
+            DialogOutcome::Picked(v) if !v.is_empty() => out_path = v[0].clone(),
+            DialogOutcome::Unavailable => {
+                return ok_json(json!({ "ok": false, "canceled": true, "error_code": "dialog_unavailable" }))
             }
-            let script = format!(r#"
-                $OutputEncoding = [System.Text.Encoding]::UTF8
-                [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-                [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
-                $form = New-Object System.Windows.Forms.Form
-                $form.TopMost = $true
-                $dialog = New-Object System.Windows.Forms.SaveFileDialog
-                $dialog.Filter = '{}'
-                $dialog.FileName = '{}'
-                $dialog.Title = '导出文档'
-                if ($dialog.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {{
-                    [Console]::Out.Write($dialog.FileName)
-                }}
-            "#, ext_filter.1, def_name.replace('\'', "''"));
-
-            if let Some(chosen) = run_powershell_encoded(&script) {
-                if !chosen.trim().is_empty() {
-                    out_path = chosen.trim().to_string();
-                } else {
-                    return ok_json(json!({ "ok": false, "canceled": true }));
-                }
-            } else {
-                return ok_json(json!({ "ok": false, "canceled": true }));
-            }
+            _ => return ok_json(json!({ "ok": false, "canceled": true })),
         }
     }
 
-    if out_path.is_empty() {
-        return ok_json(json!({ "ok": false, "canceled": true }));
+    // Optional `task_id`: the export becomes cancellable through
+    // `/api/task/cancel` (without it, behaviour is exactly as before).
+    let task = body
+        .get("task_id")
+        .and_then(|v| v.as_str())
+        .and_then(crate::cancel::register);
+    if let Some(t) = &task {
+        if t.is_cancelled() {
+            return ok_json(cancelled_body());
+        }
+    }
+    // TeX copies images into `<stem>.assets/` beside the output, so it cannot
+    // be staged under another name; its commit point is the start of writing.
+    let staged = task.is_some() && !matches!(format.as_str(), "tex" | "latex");
+    if let Some(t) = task.as_ref().filter(|_| !staged) {
+        if !t.try_commit() {
+            return ok_json(cancelled_body());
+        }
+    }
+    let target = out_path.clone();
+    let write_to = if staged {
+        crate::cancel::part_path(Path::new(&out_path)).to_string_lossy().into_owned()
+    } else {
+        out_path.clone()
+    };
+    // Commit a staged export: re-check the flag, then one rename.
+    let commit = |res_ok: bool| -> Result<(), Value> {
+        let Some(t) = task.as_ref().filter(|_| staged) else { return Ok(()) };
+        let part = Path::new(&write_to);
+        if !res_ok {
+            let _ = std::fs::remove_file(part);
+            return Ok(());
+        }
+        if !t.try_commit() {
+            let _ = std::fs::remove_file(part);
+            return Err(cancelled_body());
+        }
+        std::fs::rename(part, &target).map_err(|e| {
+            let _ = std::fs::remove_file(part);
+            json!({ "ok": false, "error": e.to_string(), "error_code": crate::api_codes::INTERNAL_ERROR })
+        })
+    };
+    let out_path = write_to.clone();
+
+    if format == "presentation" {
+        let theme = options.get("theme").and_then(|v| v.as_str()).unwrap_or("black");
+        let transition = options.get("transition").and_then(|v| v.as_str()).unwrap_or("slide");
+        // Standalone: vendor scripts inlined so the file works offline, anywhere.
+        return match crate::mdexport::render_presentation_html(&content, &stem, theme, transition, true, &app.paths.assets_dir) {
+            Ok(html) => match content::write_bytes_atomic(Path::new(&out_path), html.as_bytes())
+                .map_err(|e| json!({ "ok": false, "error": e.to_string() }))
+                .and_then(|()| commit(true))
+            {
+                Ok(()) => ok_json(json!({
+                    "ok": true,
+                    "path": target,
+                    "size": html.len(),
+                    "warns": [],
+                    "error": null,
+                    "canceled": false
+                })),
+                Err(body) => {
+                    let _ = commit(false);
+                    ok_json(body)
+                }
+            },
+            Err(e) => ok_json(json!({ "ok": false, "error": e.to_string(), "error_code": "presentation_export_failed" })),
+        };
     }
 
     match crate::mdexport::export_document(&format, &content, &base_dir, &out_path, &options, &suggested_name, &app.paths.assets_dir) {
         Ok(res) => {
-            ok_json(json!({
+            if let Err(body) = commit(res.ok) {
+                return ok_json(body);
+            }
+            let path = if staged { target.clone() } else { res.path.unwrap_or(out_path) };
+            let mut body = json!({
                 "ok": res.ok,
-                "path": res.path.unwrap_or(out_path),
+                "path": path,
                 "size": res.size,
                 "warns": res.warns.unwrap_or_default(),
                 "error": res.error,
                 "canceled": res.canceled.unwrap_or(false)
-            }))
+            });
+            crate::api_codes::attach_warn_items(&mut body);
+            ok_json(body)
         }
         Err(e) => {
+            let _ = commit(false);
             ok_json(json!({
                 "ok": false,
                 "error": e
             }))
         }
     }
+}
+
+/// `/api/export` answer for a task cancelled before its commit point.
+fn cancelled_body() -> Value {
+    json!({ "ok": false, "canceled": false, "error_code": crate::api_codes::CANCELLED, "error": "已取消" })
+}
+
+/// `POST /api/task/cancel {"id": …}` — cancel an export / conversion started
+/// with a `task_id`, or a batch conversion job by its job id.
+fn h_task_cancel(_app: &Arc<App>, req: &Request) -> ApiResult<Response> {
+    let body = body_value(req);
+    let id = body.get("id").and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
+    if !crate::cancel::valid_id(&id) {
+        return Err(ApiError::bad_request("invalid_request"));
+    }
+    let mut state = crate::cancel::cancel(&id);
+    if state == crate::cancel::CancelState::Unknown {
+        state = crate::batch2::cancel_convert_job(&id);
+    }
+    ok_json(json!({ "ok": true, "state": state.as_str() }))
 }
 
 /// KERNEL BRIDGE — not a parity route.  `readmd.py`'s HTTP dispatcher has no

@@ -145,6 +145,11 @@ function getExportSections() {
     { title: _t('export.secHtmlTheme') || '', fmts: ['html'], fields: [
       { k: 'htmlTheme', label: _t('export.htmlThemeLabel') || '', type: 'select', opts: [['light', _t('export.themeLight') || ''], ['dark', _t('export.themeDark') || ''], ['sepia', _t('export.themeSepia') || '']] },
     ]},
+    { title: _t('export.secSlides') || '', fmts: ['presentation'], fields: [
+      { k: 'theme', label: _t('export.slidesTheme') || '', type: 'select', opts: ['black', 'white', 'league', 'beige', 'night', 'serif', 'simple', 'solarized', 'blood', 'moon', 'sky'] },
+      { k: 'transition', label: _t('export.slidesTransition') || '', type: 'select', opts: ['slide', 'fade', 'zoom', 'convex', 'concave', 'none'] },
+      { k: 'slidesHint', label: _t('export.slidesHint') || '', type: 'note', full: true },
+    ]},
   ];
 }
 
@@ -245,7 +250,8 @@ function renderExportModal() {
   initExportAiDesigner();
   updateExportLivePreview();
   const r = $('export-result');
-  r.textContent = ''; r.className = 'export-result';
+  r.textContent = ''; r.className = 'export-result'; r.title = '';
+  if ($('export-warns')) $('export-warns').classList.add('hidden');
   $('export-open').classList.add('hidden');
   $('export-reveal').classList.add('hidden');
 }
@@ -757,7 +763,8 @@ function updateExportLivePreview() {
   const badge = $('export-preview-badge');
   const sel = $('exp-preset');
   const presetName = (sel && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : (_t('export.presetDefault') || '');
-  if (badge) badge.textContent = fmt.toUpperCase() + ' · ' + presetName;
+  const fmtLabel = fmt === 'presentation' ? (_t('export.fmtSlides') || 'Slides') : fmt.toUpperCase();
+  if (badge) badge.textContent = fmtLabel + ' · ' + presetName;
 
   const content = currentExportContent();
   const docTitle = currentExportName();
@@ -953,6 +960,12 @@ function expFieldEl(f) {
     inner += '<select data-k="' + f.k + '">' + (f.opts || []).map(o =>
       '<option value="' + (Array.isArray(o) ? o[0] : o) + '">' + (Array.isArray(o) ? o[1] : o) + '</option>'
     ).join('') + '</select>';
+  } else if (f.type === 'note') {
+    const p = document.createElement('p');
+    p.className = 'exp-note';
+    p.textContent = f.label;
+    box.appendChild(p);
+    return box;
   } else if (f.type === 'checkbox') {
     inner = '<label class="exp-check"><input id="' + fieldId + '" type="checkbox" data-k="' + f.k + '"> ' + f.label + '</label>';
   } else if (f.type === 'color') {
@@ -1038,7 +1051,26 @@ function renderExportPresetSelect() {
 }
 
 
-async function runExport() {
+/* Single flight: a double click (or Enter + click) never sends two exports. */
+function runExport() {
+  if (!window.ReadMDTask) return runExportOnce();
+  const res = $('export-result');
+  if (res) { res.className = 'export-result'; res.title = ''; }
+  $('export-open')?.classList.add('hidden');
+  $('export-reveal')?.classList.add('hidden');
+  // EPUB and the browser-only presentation preview have their own routes and
+  // are not cancellable; everything through /api/export is.
+  const cancellable = state.export.fmt !== 'epub';
+  const taskId = cancellable ? window.ReadMDTask.newTaskId('export') : '';
+  return window.ReadMDTask.run('export', () => runExportOnce(taskId), {
+    trigger: ['export-run'],
+    status: res,
+    label: (window.i18n ? window.i18n.t('task.exporting') : '') || '',
+    cancel: cancellable ? { id: taskId, button: 'export-cancel' } : null,
+  });
+}
+
+async function runExportOnce(taskId) {
   const fmt = state.export.fmt;
   const options = collectExportOptions();
   const content = currentExportContent();
@@ -1066,26 +1098,23 @@ async function runExport() {
       };
       const fullPayload = { epub: epubPayload, meta: epubPayload, ...options };
       if (hasPy && py.export_epub) {
-        r = await py.export_epub(content, '', fullPayload, true);
+        r = await py.export_epub(content, '', epubPayload, fullPayload, baseDir);
       } else {
         const resp = await apiFetch('/api/export/epub', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: content, meta: epubPayload, epub: epubPayload, options: fullPayload, confirm: true })
+          body: JSON.stringify({ content: content, meta: epubPayload, epub: epubPayload, options: fullPayload, baseDir: baseDir, confirm: true })
         });
         r = await resp.json();
       }
-    } else if (fmt === 'presentation') {
-      if (hasPy && py.export_presentation) {
-        r = await py.export_presentation(content, options.theme || 'black', options.transition || 'slide', true);
-      } else {
-        const resp = await apiFetch('/api/export/presentation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: content, theme: options.theme || 'black', transition: options.transition || 'slide' })
-        });
-        r = await resp.json();
-      }
+    } else if (fmt === 'presentation' && !(window.READMD_ENGINE === 'rust' || (hasPy && py && typeof py.export_doc === 'function'))) {
+      // Browser-only fallback: the in-app preview endpoint returns the HTML.
+      const resp = await apiFetch('/api/export/presentation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: content, theme: options.theme || 'black', transition: options.transition || 'slide' })
+      });
+      r = await resp.json();
     } else {
       const payload = {
         content: content,
@@ -1093,6 +1122,7 @@ async function runExport() {
         suggestedName: suggestedName,
         options: options,
       };
+      if (taskId) payload.task_id = taskId;
       if (hasPy && py && typeof py.export_doc === 'function') {
         r = await py.export_doc(fmt, payload);
       } else {
@@ -1112,19 +1142,69 @@ async function runExport() {
   busy(false);
   if (!r) { showToast(_t('toast.exportFailedSimple') || ''); return; }
   if (r.canceled) return;
-  if (!r.ok) { showToast((_t('toast.exportFailed') || '') + (r.error || (_t('toast.unknownError') || ''))); return; }
+  if (!r.ok && r.error_code === 'cancelled') {
+    const res = $('export-result');
+    if (res) { res.textContent = _t('task.cancelled') || ''; res.className = 'export-result'; res.title = ''; }
+    return;
+  }
+  if (!r.ok) {
+    const reason = apiMessage(r, 'toast.unknownError') || '';
+    const failed = $('export-result');
+    if (failed) { failed.textContent = (_t('toast.exportFailed') || '') + reason; failed.className = 'export-result err'; failed.title = reason; }
+    showToast((_t('toast.exportFailed') || '') + reason);
+    return;
+  }
   const res = $('export-result');
-  res.textContent = (_t('toast.exportedPrefix') || '') + (r.path || '导出完成');
+  res.textContent = (_t('toast.exportedPrefix') || '') + (r.path || _t('toast.exportSuccess') || '');
   res.className = 'export-result ok';
+  const warnList = warnMessages(r);
+  res.title = warnList.join('\n');
+  renderExportWarns(warnList);
   if (r.path && hasPy && py) {
+    const report = (out) => {
+      if (out && out.ok === false) {
+        showToast(out.error_code === 'path_not_found'
+          ? (_t('toast.pathNotFound') || '文件不存在或已被移动')
+          : (_t('toast.openFailed') || '无法打开'));
+      }
+    };
     $('export-open').classList.remove('hidden');
     $('export-reveal').classList.remove('hidden');
-    $('export-open').onclick = () => py.open_path(r.path);
-    $('export-reveal').onclick = () => py.reveal_path(r.path);
+    $('export-open').onclick = async () => report(await py.open_path(r.path));
+    $('export-reveal').onclick = async () => report(await py.reveal_path(r.path));
   }
   try { if (hasPy && py.save_export_presets) py.save_export_presets({ last: { fmt: fmt, options: options } }); } catch (e) { /* ignore */ }
-  if (r.warns && r.warns.length) showToast(_t('toast.exportCompleteWarns', { count: r.warns.length }) || ('导出完成，' + r.warns.length + ' 条提示'));
+  if (warnList.length) showToast(_t('toast.exportCompleteWarns', { count: warnList.length }) || ('导出完成，' + warnList.length + ' 条提示'), 3600);
   else showToast(_t('toast.exportSuccess') || '');
+}
+
+/* 导出结果下方的可展开警告列表（相同提示合并计数） */
+function renderExportWarns(list) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  let box = $('export-warns');
+  if (!box) {
+    const anchor = $('export-result');
+    if (!anchor || !anchor.parentElement) return;
+    box = document.createElement('details');
+    box.id = 'export-warns';
+    box.className = 'export-warns';
+    anchor.parentElement.insertAdjacentElement('afterend', box);
+  }
+  box.innerHTML = '';
+  if (!list || !list.length) { box.classList.add('hidden'); return; }
+  const counts = new Map();
+  list.forEach(w => counts.set(w, (counts.get(w) || 0) + 1));
+  const sum = document.createElement('summary');
+  sum.textContent = _t('export.warnsTitle', { count: list.length });
+  box.appendChild(sum);
+  const ul = document.createElement('ul');
+  counts.forEach((n, w) => {
+    const li = document.createElement('li');
+    li.textContent = n > 1 ? w + ' ×' + n : w;
+    ul.appendChild(li);
+  });
+  box.appendChild(ul);
+  box.classList.remove('hidden');
 }
 
 async function expSavePreset() {

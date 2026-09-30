@@ -18,10 +18,10 @@ module.exports = defineConfig({
     trace: 'off',
   },
   webServer: {
-    command: 'python ../tools/ui_server.py',
+    command: 'node ../ui-tests/ui-server.cjs 28473',
     port: 28473,
     reuseExistingServer: true,
     cwd: path.resolve(__dirname),
-    timeout: 30_000,
+    timeout: 600_000,
   },
 });

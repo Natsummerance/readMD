@@ -40,20 +40,56 @@ function applySettings() {
   document.body.style.setProperty('--fs', (state.fontSize / 100).toFixed(2));
   document.body.style.setProperty('--line-width', state.lineWidth + 'px');
   document.body.style.setProperty('--ai-panel-width', state.aiPanelWidth + 'px');
-  $('btn-theme').textContent = theme === 'dark' ? '\u2600' : '\u263E';
-  if (prevTheme && prevTheme !== theme && typeof reloadAllDiagrams === 'function') {
-    reloadAllDiagrams();
+  updateThemeButton();
+  if (prevTheme && prevTheme !== theme) {
+    if (typeof reloadAllDiagrams === 'function') reloadAllDiagrams();
+    if (typeof applyCmTheme === 'function') applyCmTheme();
   }
 }
 
+/* \u4E3B\u9898\u5FAA\u73AF\uFF1Aauto \u2192 light \u2192 dark \u2192 sepia \u2192 auto\u3002state.theme \u5B58\u7528\u6237\u7684\u9009\u62E9\uFF08\u542B 'auto'\uFF09\uFF0C
+   body[data-theme] \u6C38\u8FDC\u662F\u5B9E\u9645\u751F\u6548\u7684 light / dark / sepia\u3002 */
+const THEME_ORDER = ['auto', 'light', 'dark', 'sepia'];
+const THEME_ICONS = {
+  auto: '<svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg>',
+  light: '<svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  dark: '<svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',
+  sepia: '<svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/><path d="M8 7h8M8 11h6"/></svg>',
+};
+
+function updateThemeButton() {
+  const btn = $('btn-theme');
+  if (!btn) return;
+  const choice = THEME_ORDER.includes(state.theme) ? state.theme : 'auto';
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const name = _t('theme.' + choice);
+  const label = _t('theme.current', { name }) + ' (Ctrl+D)';
+  if (btn.dataset.themeIcon !== choice) {
+    btn.innerHTML = THEME_ICONS[choice];
+    btn.dataset.themeIcon = choice;
+  }
+  btn.title = label;
+  btn.setAttribute('aria-label', label);
+}
+
 function toggleTheme() {
-  const cur = document.body.dataset.theme;
-  const next = cur === 'dark' ? 'sepia' : (cur === 'sepia' ? 'light' : 'dark');
-  state.theme = next;
+  const i = THEME_ORDER.indexOf(state.theme);
+  state.theme = THEME_ORDER[(i + 1) % THEME_ORDER.length];
   applySettings();
   saveSettings();
   applyCmTheme();
+  if (typeof showToast === 'function' && window.i18n) {
+    showToast(window.i18n.t('theme.current', { name: window.i18n.t('theme.' + state.theme) }), 1400);
+  }
 }
+
+if (window.matchMedia) {
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  const onScheme = () => { if (state.theme === 'auto') applySettings(); };
+  if (mq.addEventListener) mq.addEventListener('change', onScheme);
+  else if (mq.addListener) mq.addListener(onScheme);
+}
+window.addEventListener('readmd:language-changed', () => updateThemeButton());
 
 function zoom(delta) {
   state.fontSize = Math.max(70, Math.min(180, state.fontSize + delta));

@@ -4,13 +4,24 @@ const { spawn, execSync } = require('child_process');
 const { chromium } = require('@playwright/test');
 
 const UI_PORT = 28501;
+
+// Convert a showcase sample through the running kernel (GET /api/convert);
+// on_exists=skip never rewrites an existing .md next to the sample.
+async function convertSample(name) {
+  const url = `http://127.0.0.1:${UI_PORT}/api/convert?on_exists=skip&p=${encodeURIComponent(path.join(SAMPLES_DIR, name))}`;
+  const res = await fetch(url);
+  const body = await res.json();
+  if (!res.ok) throw new Error(`convert ${name}: ${body.error_code || res.status}`);
+  return body.content || '';
+}
 const REPO_ROOT = path.join(__dirname, '..');
 const SHOWCASE_ROOT = path.join(REPO_ROOT, 'showcase', 'v239_full_coverage');
 const VIDEO_DIR = path.join(SHOWCASE_ROOT, 'videos');
 const SNAPSHOT_DIR = path.join(SHOWCASE_ROOT, 'snapshots');
 const SAMPLES_DIR = path.join(SHOWCASE_ROOT, 'samples');
 const KB_DIR = path.join(SAMPLES_DIR, 'knowledge_base');
-const ARTIFACT_DIR = 'C:/Users/Natsumer/.gemini/antigravity/brain/ccbcea97-6f62-4db3-97fb-cfc7f4d855a8';
+// Optional extra copy of every capture (e.g. a report folder).
+const ARTIFACT_DIR = process.env.READMD_CAPTURE_COPY_DIR || '';
 
 fs.mkdirSync(VIDEO_DIR, { recursive: true });
 fs.mkdirSync(SNAPSHOT_DIR, { recursive: true });
@@ -56,8 +67,8 @@ async function smoothMouseMove(page, locator, steps = 15) {
 
 async function startServer() {
   console.log('[Server] 启动 ReadMD UI 测试服务器 (Port: ' + UI_PORT + ')...');
-  const serverPy = path.join(REPO_ROOT, 'tools', 'ui_server.py');
-  const server = spawn('python', [serverPy, String(UI_PORT)], {
+  const serverPy = path.join(REPO_ROOT, 'ui-tests', 'ui-server.cjs');
+  const server = spawn(process.execPath, [serverPy, String(UI_PORT)], {
     stdio: ['ignore', 'pipe', 'inherit'],
     cwd: path.dirname(serverPy),
     env: { ...process.env, READMD_UI_PORT: String(UI_PORT) }
@@ -289,10 +300,7 @@ async function main() {
     }
     await page2.waitForTimeout(400);
 
-    const texConverted = execSync('python -c "from src.readmd_modules.convert import convert_verbose; import sys; t, e, _ = convert_verbose(r\'' + path.join(SAMPLES_DIR, 'sample_paper.tex') + '\'); sys.stdout.buffer.write(t.encode(\'utf-8\'))"', {
-      cwd: REPO_ROOT,
-      env: { ...process.env, PYTHONPATH: '.' }
-    }).toString('utf-8');
+    const texConverted = await convertSample('sample_paper.tex');
 
     await page2.evaluate((content) => {
       window.renderContent(content, 0);
@@ -302,10 +310,7 @@ async function main() {
 
     // Render converted Excel Sheet
     console.log('  [Render] 渲染 Excel 表格原生转换产物 (财务指标 GFM Markdown)...');
-    const xlsxConverted = execSync('python -c "from src.readmd_modules.convert import convert_verbose; import sys; t, e, _ = convert_verbose(r\'' + path.join(SAMPLES_DIR, 'financial.xlsx') + '\'); sys.stdout.buffer.write(t.encode(\'utf-8\'))"', {
-      cwd: REPO_ROOT,
-      env: { ...process.env, PYTHONPATH: '.' }
-    }).toString('utf-8');
+    const xlsxConverted = await convertSample('financial.xlsx');
 
     await page2.evaluate((content) => {
       window.renderContent(content, 0);
@@ -315,10 +320,7 @@ async function main() {
 
     // Render Audio Transcript
     console.log('  [Render] 渲染音视频转写产物 (结构化时间戳片段与 YAML 元数据)...');
-    const wavConverted = execSync('python -c "from src.readmd_modules.convert import convert_verbose; import sys; t, e, _ = convert_verbose(r\'' + path.join(SAMPLES_DIR, 'speech_demo.wav') + '\'); sys.stdout.buffer.write(t.encode(\'utf-8\'))"', {
-      cwd: REPO_ROOT,
-      env: { ...process.env, PYTHONPATH: '.' }
-    }).toString('utf-8');
+    const wavConverted = await convertSample('speech_demo.wav');
 
     await page2.evaluate((content) => {
       window.renderContent(content, 0);
@@ -562,10 +564,7 @@ async function main() {
       const wrap = document.getElementById('pet-character-wrap');
       if (wrap) wrap.classList.remove('is-drop-target');
     });
-    const pptxConverted = execSync('python -c "from src.readmd_modules.convert import convert_verbose; import sys; t, e, _ = convert_verbose(r\'' + path.join(SAMPLES_DIR, 'presentation.pptx') + '\'); sys.stdout.buffer.write(t.encode(\'utf-8\'))"', {
-      cwd: REPO_ROOT,
-      env: { ...process.env, PYTHONPATH: '.' }
-    }).toString('utf-8');
+    const pptxConverted = await convertSample('presentation.pptx');
 
     await page4.evaluate((content) => {
       window.renderContent(content, 0);
@@ -620,7 +619,7 @@ async function main() {
       body: JSON.stringify({
         ok: true,
         ffmpeg: true,
-        sandbox_dir: 'C:/Users/Natsumer/AppData/Roaming/ReadMD/plugins',
+        sandbox_dir: 'C:/Users/demo/AppData/Roaming/ReadMD/plugins',
         plugins: mockPluginState,
       }),
     }));

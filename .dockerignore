@@ -1,0 +1,15 @@
+**/target
+**/node_modules
+**/__pycache__
+.git
+.env
+.env.local
+scratch
+showcase
+website
+docs
+ui-tests
+tests
+packages
+release
+migration

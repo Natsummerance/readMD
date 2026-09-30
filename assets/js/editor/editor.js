@@ -36,7 +36,6 @@ function createEditor(doc) {
   if (!window.ReadMDCodeMirror) return false;
   const CM = window.ReadMDCodeMirror;
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const dark = document.body.dataset.theme === 'dark';
   cmThemeCompartment = new CM.Compartment();
   const st = CM.EditorState.create({
     doc: doc,
@@ -57,12 +56,16 @@ function createEditor(doc) {
       CM.keymap.of([
         { key: 'Alt-k', run: () => { openEditAiBar(); return true; } },
         { key: 'Ctrl-j', run: () => { openEditAiBar(); return true; } },
+        { key: 'Mod-b', run: () => { cmInsertSyntax('bold'); return true; } },
+        { key: 'Mod-i', run: () => { cmInsertSyntax('italic'); return true; } },
+        { key: 'Mod-k', run: () => { cmInsertSyntax('link'); return true; } },
         CM.indentWithTab,
         ...CM.closeBracketsKeymap,
         ...CM.defaultKeymap,
         ...CM.historyKeymap,
         ...CM.completionKeymap
       ]),
+      cmThemeCompartment.of(cmThemeFor(document.body.dataset.theme)),
       CM.EditorView.lineWrapping,
       CM.EditorView.contentAttributes.of({ 'aria-label': _t('toolbar.edit') || '' }),
       CM.EditorView.updateListener.of(u => {
@@ -87,20 +90,26 @@ function createEditor(doc) {
 
 }
 
+/* vendor 包只导出 historyKeymap，不直接导出 undo / redo：从键位表里取命令 */
+function cmHistoryCommand(key) {
+  const CM = window.ReadMDCodeMirror;
+  if (!CM) return null;
+  if (typeof CM[key] === 'function') return CM[key];
+  const want = key === 'undo' ? 'Mod-z' : 'Mod-y';
+  const b = (CM.historyKeymap || []).find(x => x.key === want);
+  return b && typeof b.run === 'function' ? b.run : null;
+}
+
 function cmUndo() {
-  if (cmView && window.ReadMDCodeMirror) {
-    window.ReadMDCodeMirror.undo(cmView);
-  } else if ($('edit-area')) {
-    document.execCommand('undo');
-  }
+  const run = cmView && cmHistoryCommand('undo');
+  if (run) { run(cmView); cmView.focus(); }
+  else if ($('edit-area')) document.execCommand('undo');
 }
 
 function cmRedo() {
-  if (cmView && window.ReadMDCodeMirror) {
-    window.ReadMDCodeMirror.redo(cmView);
-  } else if ($('edit-area')) {
-    document.execCommand('redo');
-  }
+  const run = cmView && cmHistoryCommand('redo');
+  if (run) { run(cmView); cmView.focus(); }
+  else if ($('edit-area')) document.execCommand('redo');
 }
 
 function hideCmSelectionToolbar() {
@@ -223,11 +232,30 @@ function destroyEditor() {
 }
 
 
+/* CodeMirror 主题跟随 body 的实际 data-theme（light / dark / sepia）。
+   颜色取自 style.css 的主题变量，所以编辑器与阅读区同色。 */
+let cmSepiaTheme = null;
+function cmThemeFor(theme) {
+  const CM = window.ReadMDCodeMirror;
+  if (theme === 'dark') return CM.oneDark;
+  if (theme === 'sepia') {
+    if (!cmSepiaTheme && CM.EditorView && typeof CM.EditorView.theme === 'function') {
+      cmSepiaTheme = CM.EditorView.theme({
+        '&': { backgroundColor: 'var(--bg2)', color: 'var(--fg)' },
+        '.cm-gutters': { backgroundColor: 'var(--bg3)', color: 'var(--fg3)', borderRight: '1px solid var(--border)' },
+        '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: 'var(--accent-soft)' },
+        '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': { backgroundColor: 'var(--editor-selection)' },
+        '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--accent)' },
+      }, { dark: false });
+    }
+    return cmSepiaTheme || [];
+  }
+  return [];
+}
+
 function applyCmTheme() {
   if (!cmView || !window.ReadMDCodeMirror || !cmThemeCompartment) return;
-  const CM = window.ReadMDCodeMirror;
-  const dark = document.body.dataset.theme === 'dark';
-  cmView.dispatch({ effects: cmThemeCompartment.reconfigure(dark ? CM.oneDark : []) });
+  cmView.dispatch({ effects: cmThemeCompartment.reconfigure(cmThemeFor(document.body.dataset.theme)) });
 }
 
 /* Markdown 自动补全（基于 GitHub 开源 @codemirror/autocomplete） */
@@ -278,47 +306,28 @@ function cmMarkdownCompletions() {
 function cmInsertSyntax(kind) {
   if (!cmView) return;
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const sel = cmView.state.selection.main;
-  const selected = cmView.state.sliceDoc(sel.from, sel.to);
-  let insert = null;
-  let cursor = sel.from;
-  const textPlaceholder = _t('editor.textWord') || '';
-  const codePlaceholder = _t('editor.codeWord') || '';
-  const headingPlaceholder = _t('editor.headingWord') || '';
-  const quotePlaceholder = _t('editor.quote') || '';
-  const itemPlaceholder = _t('editor.itemWord') || '';
-  const taskPlaceholder = _t('editor.taskWord') || '';
-  const descPlaceholder = _t('editor.descWord') || '';
-
-  const wrap = (b, d, a) => {
-    insert = b + (selected || d) + a;
-    cursor = sel.from + b.length + (selected || d).length;
-  };
   switch (kind) {
-    case 'bold': wrap('**', textPlaceholder, '**'); break;
-    case 'italic': wrap('*', textPlaceholder, '*'); break;
-    case 'strike': wrap('~~', textPlaceholder, '~~'); break;
-    case 'code': wrap('`', codePlaceholder, '`'); break;
-    case 'math': wrap('$', 'x^2', '$'); break;
-    case 'mathblock': insert = '$$\n' + (selected || 'x^2') + '\n$$'; cursor = sel.from + insert.length - 3; break;
-    case 'h2': insert = '## ' + (selected || headingPlaceholder); cursor = sel.from + insert.length; break;
-    case 'quote': insert = '> ' + (selected || quotePlaceholder); cursor = sel.from + insert.length; break;
-    case 'list': insert = '- ' + (selected || itemPlaceholder); cursor = sel.from + insert.length; break;
-    case 'ordered': insert = '1. ' + (selected || itemPlaceholder); cursor = sel.from + insert.length; break;
-    case 'task': insert = '- [ ] ' + (selected || taskPlaceholder); cursor = sel.from + insert.length; break;
-    case 'link': insert = '[' + (selected || textPlaceholder) + '](url)'; cursor = sel.from + 1 + (selected || textPlaceholder).length; break;
-    case 'image': insert = '![' + (selected || descPlaceholder) + '](url)'; cursor = sel.from + 2 + (selected || descPlaceholder).length; break;
-    case 'codeblock': insert = '```\n' + (selected || codePlaceholder) + '\n```'; cursor = sel.from + 4 + (selected || codePlaceholder).length; break;
-    case 'table': insert = '| Col 1 | Col 2 |\n|---|---|\n| ' + (selected || textPlaceholder) + ' |  |'; cursor = sel.from + insert.length; break;
-    case 'hr': insert = '\n---\n'; cursor = sel.from + insert.length; break;
     case 'codechunk': openCodeChunkModal(); return;
     case 'diagram': openDiagramModal(); return;
     case 'docimport': openDocImportModal(); return;
     case 'frontmatter': insertFrontmatterTemplate(); return;
-    default: return;
+    default: break;
   }
-  if (insert === null) return;
-  cmView.dispatch({ changes: { from: sel.from, to: sel.to, insert }, selection: { anchor: cursor } });
+  if (!window.ReadMDTransforms) return;
+  const sel = cmView.state.selection.main;
+  const ph = {
+    text: _t('editor.textWord') || 'text',
+    code: _t('editor.codeWord') || 'code',
+    heading: _t('editor.headingWord') || 'Heading',
+    quote: _t('editor.quote') || 'Quote',
+    item: _t('editor.itemWord') || 'Item',
+    task: _t('editor.taskWord') || 'Task',
+    desc: _t('editor.descWord') || 'image',
+  };
+  const e = window.ReadMDTransforms.computeSyntaxEdit(cmView.state.doc.toString(), sel.from, sel.to, kind, ph);
+  if (!e) return;
+  // 一次 dispatch = 一步撤销
+  cmView.dispatch({ changes: e.changes, selection: e.selection, scrollIntoView: true, userEvent: 'input.syntax' });
   cmView.focus();
 }
 
@@ -667,10 +676,10 @@ function handleSmartExcelPaste(e) {
           cmInsertImage(insertRel);
           showToast(_t('toast.imgInsertedRel', { rel: insertRel }) || ('图片已插入（' + insertRel + '）'));
         } else {
-          showToast((d && d.error) || '图片保存失败');
+          showToast(apiMessage(d, 'toast.imgSaveFailed') || '图片保存失败');
         }
       } catch (err) {
-        showToast('图片保存失败：' + err.message);
+        showToast((_t('toast.imgSaveFail') || '图片保存失败：') + err.message);
       }
     };
     reader.readAsDataURL(imageFile);

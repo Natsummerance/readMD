@@ -20,6 +20,7 @@ async function openConvertModal() {
 
 function closeConvertModal() {
   if (typeof stopBatchPoll === 'function') stopBatchPoll();
+  if (typeof setBatchTriggersBusy === 'function') setBatchTriggersBusy(false);
   $('convert-modal').classList.add('hidden');
 }
 
@@ -58,11 +59,18 @@ async function pickConvertFolder() {
     if (!files.length) { showToast(_t('convert.noConvertibleFiles') || '该目录下没有可转换的文件'); return; }
     convertLastDir = dir;
     await startBatchConvert(files, $('convert-overwrite').checked);
+    batchFolderRoot = dir;
   } catch (e) { showToast((_t('toast.collectFilesFail') || '收集文件失败：') + e.message); }
 }
 
 async function startBatchConvert(files, overwrite) {
   if (typeof enqueueBatchFiles === 'function') {
+    // A batch that is still running owns the workbench; a second click must
+    // not start a parallel job over the same rows.
+    if (typeof isBatchRunning === 'function' && isBatchRunning()) {
+      showToast(_t('batch.alreadyRunning'));
+      return;
+    }
     return enqueueBatchFiles(files, overwrite);
   }
   // The batch module is part of the generated boot bundle.  Keep a stable
@@ -76,14 +84,20 @@ async function startBatchConvert(files, overwrite) {
 
 
 async function ocrFile(path) {
+  // One OCR per file at a time: repeated triggers for the same path are dropped.
+  if (window.ReadMDTask) return window.ReadMDTask.run('ocr:' + path, () => ocrFileOnce(path));
+  return ocrFileOnce(path);
+}
+
+async function ocrFileOnce(path) {
   if (!(await ensureModule('ocr'))) return;
   busy(true);
   try {
     const r = await apiFetch('/api/ocr?p=' + encodeURIComponent(path));
     const d = await r.json();
     if (r.status === 409) { showToast(d.error || (_t('toast.moduleLoading') || '模块加载中…')); return; }
-    if (!r.ok) { showToast(d.error || (_t('toast.ocrFail') || 'OCR 失败')); return; }
-    if (!d.content) { showToast(d.note || (_t('toast.ocrNoText') || '未识别到文字')); return; }
+    if (!r.ok) { showToast(apiMessage(d, 'toast.ocrFail') || 'OCR 失败'); return; }
+    if (!d.content || d.empty) { showToast(apiMessage(d, 'toast.ocrNoText') || '未识别到文字'); return; }
     renderVirtual('ocr', d.name, d.dir, d.content, d.fixes);
   } catch (e) { showToast((_t('toast.ocrFailPrefix') || 'OCR 失败：') + e.message); }
   finally { busy(false); }
@@ -266,7 +280,7 @@ function getPluginIconSvg(id, category, capability) {
 }
 
 // 每个错误码对应一个字面量 _t() 调用：key 只有在调用点写成字面量时
-// tools/check_js_i18n_keys.py 才能静态校验，变量形式的 _t(key) 会绕过门禁。
+// tools/check-i18n.mjs 才能静态校验，变量形式的 _t(key) 会绕过门禁。
 const PLUGIN_ERROR_TEXT = {
   pip_network: () => _t('plugin.error.pip_network'),
   pip_timeout: () => _t('plugin.error.pip_timeout'),
@@ -404,6 +418,25 @@ function renderPluginCards(plugins) {
         <button class="plugin-action-uninstall-btn" data-action="uninstall">${_t('plugin.uninstall')}</button>
       `;
       if (p.install_error_code) progressHtml = pluginErrorMarkup(p);
+    } else if (p.native && p.native.builtin) {
+      // The Rust kernel already ships this capability; nothing to install.
+      footLeft = `
+        <div class="plugin-status-dot-indicator is-builtin">
+          <span class="plugin-dot-pip builtin"></span>
+          <span>${escapeHtml(_t('plugin.builtin'))}</span>
+        </div>
+      `;
+      footRight = `<span class="plugin-builtin-note">${escapeHtml(_t('plugin.builtinHint'))}</span>`;
+    } else if (p.native && !p.native.builtin) {
+      // No native engine and no package installer in this build: say so
+      // instead of offering an Install button that can only fail.
+      footLeft = `
+        <div class="plugin-status-dot-indicator is-unsupported">
+          <span class="plugin-dot-pip"></span>
+          <span>${escapeHtml(_t('plugin.unsupportedBuild'))}</span>
+        </div>
+      `;
+      footRight = '';
     } else {
       const hasErr = Boolean(p.install_error_code);
       footLeft = `
