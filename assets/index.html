@@ -45,6 +45,11 @@
         <div id="doc-tabs-dropdown" class="doc-tabs-dropdown hidden" role="menu"></div>
       </div>
     </div>
+    <button id="btn-palette" class="tb-btn icon tb-palette" type="button" title="命令面板 (Ctrl+K)" aria-label="命令面板" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K" data-i18n-title="shell.toolbar.paletteTip" data-i18n-aria="editor.command">
+      <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 7.5L10 12l-4.5 4.5"/><path d="M12.5 16.5h6"/></svg>
+      <span class="tb-palette-label" data-i18n="shell.toolbar.palette">命令</span>
+      <span class="tb-palette-keys" data-kbd="Mod+K" aria-hidden="true"></span>
+    </button>
   </div>
   <div class="tb-group tb-right">
     <button id="btn-graph" class="tb-btn icon hidden" disabled title="知识图谱 (Ctrl+G)" aria-label="知识图谱" data-i18n-title="graph.title" data-i18n-aria="graph.title">
@@ -207,42 +212,62 @@
     <main id="content" role="tabpanel" tabindex="-1" aria-label="当前文档" data-i18n-aria="reader.currentDoc">
       <div id="welcome">
         <div class="welcome-inner">
-          <div class="logo">Read<span>MD</span></div>
-          <p class="welcome-sub" data-i18n="app.slogan">轻量本地 Markdown 阅读器 · 自动修正 · 万物转 MD · AI 助手</p>
-          <div class="welcome-btns">
-            <button id="w-open" class="big-btn" title="打开本地 Markdown 文件" data-i18n-title="toolbar.open">
+          <header class="welcome-hero">
+            <svg class="welcome-mark" viewBox="0 0 48 48" aria-hidden="true"><rect x="3" y="3" width="42" height="42" rx="12"/><path d="M13 31V17l6 7 6-7v14"/><path d="M34 17v13m-4.5-4.5L34 30l4.5-4.5"/></svg>
+            <h1 class="logo">Read<span>MD</span></h1>
+            <p class="welcome-sub" data-i18n="shell.welcome.tagline">安静、专注地阅读与书写 Markdown</p>
+          </header>
+          <div class="welcome-primary">
+            <button id="w-open" class="big-btn welcome-cta is-primary" title="打开本地 Markdown 文件" data-i18n-title="toolbar.open">
               <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6"/></svg>
-              <span data-i18n="app.open">打开 Markdown</span><em>Ctrl+O</em>
+              <span data-i18n="app.open">打开 Markdown</span><span class="welcome-cta-keys" data-kbd="Mod+O" aria-hidden="true"></span>
             </button>
-            <button id="w-folder" class="big-btn" title="打开文件夹，浏览其中所有 Markdown" data-i18n-title="toolbar.openFolder">
+            <button id="w-folder" class="big-btn welcome-cta" title="打开文件夹，浏览其中所有 Markdown" data-i18n-title="toolbar.openFolder">
               <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z"/></svg>
-              <span data-i18n="app.folder">打开文件夹</span><em data-i18n="app.folderSub">目录浏览</em>
-            </button>
-            <button id="w-ai" class="big-btn" title="AI 助手" data-i18n-title="toolbar.ai">
-              <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
-              <span data-i18n="app.ai">AI 助手</span><em>Ctrl+Shift+A</em>
-            </button>
-            <button id="w-convert" class="big-btn" title="万物转 MD" data-i18n-title="menu.convert">
-              <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
-              <span data-i18n="app.convert">万物转 MD</span><em>docx · pdf · xlsx…</em>
-            </button>
-            <button id="w-web" class="big-btn" title="网页转 MD" data-i18n-title="menu.web">
-              <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z"/></svg>
-              <span data-i18n="app.web">网页转 MD</span><em>Ctrl+U</em>
-            </button>
-            <button id="w-ocr" class="big-btn" title="扫描转 MD" data-i18n-title="menu.ocr">
-              <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h3"/><path d="M17 4h3v3"/><path d="M20 17v3h-3"/><path d="M7 20H4v-3"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
-              <span data-i18n="app.ocr">扫描转 MD</span><em data-i18n="app.ocrSub">离线 OCR</em>
+              <span data-i18n="app.folder">打开文件夹</span>
             </button>
           </div>
-          <div id="recent-box" class="hidden">
+          <button type="button" class="welcome-search" data-action="palette" aria-haspopup="dialog">
+            <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>
+            <span class="welcome-search-label" data-i18n="shell.welcome.search">搜索命令、文件与设置…</span>
+            <span class="welcome-search-keys" data-kbd="Mod+K" aria-hidden="true"></span>
+          </button>
+          <section class="welcome-section" aria-labelledby="welcome-start-title">
+            <h2 id="welcome-start-title" class="welcome-section-title" data-i18n="shell.welcome.start">快速开始</h2>
+            <div class="welcome-btns">
+              <button id="w-convert" class="big-btn welcome-card" title="万物转 MD" data-i18n-title="menu.convert">
+                <span class="welcome-card-ic"><svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h11l-3-3"/><path d="M17 17H6l3 3"/></svg></span>
+                <span class="welcome-card-text"><span data-i18n="app.convert">万物转 MD</span><em>docx · pdf · xlsx · pptx</em></span>
+              </button>
+              <button id="w-web" class="big-btn welcome-card" title="网页转 MD" data-i18n-title="menu.web">
+                <span class="welcome-card-ic"><svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.5 2.7 2.5 14.3 0 17M12 3.5c-2.5 2.7-2.5 14.3 0 17"/></svg></span>
+                <span class="welcome-card-text"><span data-i18n="app.web">网页转 MD</span><em data-i18n="menu.webSub">网页转 MD</em></span>
+              </button>
+              <button id="w-ocr" class="big-btn welcome-card" title="扫描转 MD" data-i18n-title="menu.ocr">
+                <span class="welcome-card-ic"><svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 12h8"/></svg></span>
+                <span class="welcome-card-text"><span data-i18n="app.ocr">扫描转 MD</span><em data-i18n="app.ocrSub">离线 OCR</em></span>
+              </button>
+              <button id="w-ai" class="big-btn welcome-card" title="AI 助手" data-i18n-title="toolbar.ai">
+                <span class="welcome-card-ic"><svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg></span>
+                <span class="welcome-card-text"><span data-i18n="app.ai">AI 助手</span><em data-i18n="shell.welcome.aiSub">总结、润色、翻译</em></span>
+              </button>
+            </div>
+          </section>
+          <section id="recent-box" class="welcome-section hidden" aria-labelledby="welcome-recent-title">
             <div class="recent-head">
-              <h3 data-i18n="app.recent">最近打开</h3>
+              <h2 id="welcome-recent-title" class="welcome-section-title" data-i18n="app.recent">最近打开</h2>
               <button id="recent-clear" class="link-btn" data-i18n="app.clearRecent">清空记录</button>
             </div>
             <ul id="recent-list"></ul>
+          </section>
+          <div class="welcome-drop" aria-hidden="true">
+            <svg class="bb-ic" viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+            <span data-i18n="shell.welcome.drop">拖入 .md、.docx、.pdf 或图片即可打开</span>
           </div>
-          <p class="welcome-hint" data-i18n="app.welcomeHint">直接双击 .md 秒开 · 自动修正常见格式错误（不改原文件）· 快捷键 Ctrl+O 打开 · Ctrl+F 搜索 · Ctrl+E 编辑 · Ctrl+P 打印</p>
+          <p class="welcome-hint">
+            <button type="button" class="welcome-hint-btn" data-action="palette"><span data-kbd="Mod+K" aria-hidden="true"></span><span data-i18n="editor.command">命令面板</span></button>
+            <button type="button" class="welcome-hint-btn" data-action="shortcuts"><kbd class="rm-kbd" aria-hidden="true">?</kbd><span data-i18n="shell.welcome.kbdShortcuts">键盘快捷键</span></button>
+          </p>
         </div>
       </div>
 
