@@ -124,28 +124,58 @@
 </div>
 
 
-<div id="edit-bar" class="hidden">
+<div id="edit-bar" class="hidden" role="toolbar" aria-label="Markdown 编辑工具栏" data-i18n-aria="editor.toolbarLabel">
   <div class="md-tool" id="md-tool">
-    <button class="md-tool-btn" data-md="bold" title="加粗：**文本**" data-i18n="editor.bold" data-i18n-title="editor.boldTip">加粗</button>
-    <button class="md-tool-btn" data-md="italic" title="斜体：*文本*" data-i18n-title="editor.italicTip" data-i18n-aria="editor.italic"><i>I</i></button>
-    <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-text-menu" data-i18n="editor.text">文本⌄</button>
-      <div id="md-text-menu" class="md-menu hidden"><button data-md="strike" data-i18n="editor.strikethrough">删除线</button><button data-md="code" data-i18n="editor.codeInline">行内代码</button><button data-md="link" data-i18n="editor.link">链接</button></div></div>
-    <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-structure-menu" data-i18n="editor.structure">结构⌄</button>
-      <div id="md-structure-menu" class="md-menu hidden"><button data-md="h2" data-i18n="editor.h2">标题</button><button data-md="quote" data-i18n="editor.quote">引用</button><button data-md="list" data-i18n="editor.ul">无序列表</button><button data-md="ordered" data-i18n="editor.ol">有序列表</button><button data-md="task" data-i18n="editor.taskList">任务列表</button><button data-md="codeblock" data-i18n="editor.codeBlock">代码块</button><button data-md="hr" data-i18n="editor.hr">分隔线</button></div></div>
-    <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-insert-menu" data-i18n="editor.insert">插入⌄</button>
-      <div id="md-insert-menu" class="md-menu hidden">
-        <button data-md="image" data-i18n="editor.image">图片</button>
-        <button id="btn-insert-table" data-md="table" data-i18n="editor.table">表格</button>
-        <button data-md="link" data-i18n="editor.link">链接</button>
-        <button id="btn-insert-code-chunk" data-md="codechunk" data-i18n="editor.codeChunk">交互代码块</button>
-        <button id="btn-insert-diagram" data-md="diagram" data-i18n="editor.diagram">科学图表</button>
-        <button id="btn-insert-doc-import" data-md="docimport" data-i18n="editor.docImport">文档引用</button>
-        <button id="btn-insert-frontmatter" data-md="frontmatter" data-i18n="editor.frontmatter">样式元数据 (Frontmatter)</button>
+    <div class="md-tool-group md-fmt-group">
+      <button class="md-tool-btn icon" data-md="bold" title="加粗 (Ctrl+B)" aria-label="加粗" data-i18n-title="editor.boldTip" data-i18n-aria="editor.bold">
+        <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h6a3.5 3.5 0 0 1 0 7H7zM7 12h7a3.5 3.5 0 0 1 0 7H7z"/></svg>
+      </button>
+      <button class="md-tool-btn icon" data-md="italic" title="斜体 (Ctrl+I)" aria-label="斜体" data-i18n-title="editor.italicTip" data-i18n-aria="editor.italic">
+        <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5M5 19h5M15 5l-6 14"/></svg>
+      </button>
+      <button class="md-tool-btn icon md-wide-only" data-md="strike" title="删除线 (Ctrl+Shift+X)" aria-label="删除线" data-i18n-title="editor.strikeTip" data-i18n-aria="editor.strikethrough">
+        <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M16.5 6.5C15.8 5.3 14.2 4.5 12 4.5c-2.8 0-4.5 1.4-4.5 3.3 0 1 .4 1.8 1.2 2.4M8 17c.8 1.5 2.4 2.5 4.4 2.5 2.8 0 4.6-1.4 4.6-3.4 0-.8-.2-1.5-.7-2.1"/></svg>
+      </button>
+      <button class="md-tool-btn icon md-wide-only" data-md="code" title="行内代码 (Ctrl+E)" aria-label="行内代码" data-i18n-title="editor.codeTip" data-i18n-aria="editor.codeInline">
+        <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m15.5 17 5-5-5-5M8.5 7l-5 5 5 5"/></svg>
+      </button>
+      <button class="md-tool-btn icon" data-md="link" title="链接 (Ctrl+K)" aria-label="链接" data-i18n-title="editor.linkTip" data-i18n-aria="editor.link">
+        <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></svg>
+      </button>
+    </div>
+    <span class="md-tool-sep" aria-hidden="true"></span>
+    <div class="md-menu-wrap md-wide-only"><button class="md-tool-btn md-group" data-menu="md-text-menu" aria-haspopup="true" aria-expanded="false"><span data-i18n="editor.text">文本</span><svg class="md-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
+      <div id="md-text-menu" class="md-menu hidden" role="menu"><button data-md="strike" role="menuitem"><span data-i18n="editor.strikethrough">删除线</span><kbd>Ctrl+Shift+X</kbd></button><button data-md="code" role="menuitem"><span data-i18n="editor.codeInline">行内代码</span><kbd>Ctrl+E</kbd></button><button data-md="math" role="menuitem"><span data-i18n="editor.mathInline">行内公式</span></button><button data-md="link" role="menuitem"><span data-i18n="editor.link">链接</span><kbd>Ctrl+K</kbd></button></div></div>
+    <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-structure-menu" aria-haspopup="true" aria-expanded="false"><span data-i18n="editor.structure">结构</span><svg class="md-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
+      <div id="md-structure-menu" class="md-menu hidden" role="menu"><button data-md="h1" role="menuitem"><span data-i18n="editor.h1">一级标题</span><kbd>Ctrl+1</kbd></button><button data-md="h2" role="menuitem"><span data-i18n="editor.h2">标题</span><kbd>Ctrl+2</kbd></button><button data-md="h3" role="menuitem"><span data-i18n="editor.h3">三级标题</span><kbd>Ctrl+3</kbd></button><button data-md="para" role="menuitem"><span data-i18n="editor.paragraph">正文</span><kbd>Ctrl+0</kbd></button><span class="md-menu-sep" aria-hidden="true"></span><button data-md="quote" role="menuitem"><span data-i18n="editor.quote">引用</span><kbd>Ctrl+Shift+.</kbd></button><button data-md="callout" role="menuitem"><span data-i18n="editor.callout">提示块</span></button><button data-md="list" role="menuitem"><span data-i18n="editor.ul">无序列表</span><kbd>Ctrl+Shift+8</kbd></button><button data-md="ordered" role="menuitem"><span data-i18n="editor.ol">有序列表</span><kbd>Ctrl+Shift+7</kbd></button><button data-md="task" role="menuitem"><span data-i18n="editor.taskList">任务列表</span><kbd>Ctrl+Shift+9</kbd></button><span class="md-menu-sep" aria-hidden="true"></span><button data-md="codeblock" role="menuitem"><span data-i18n="editor.codeBlock">代码块</span></button><button data-md="mathblock" role="menuitem"><span data-i18n="editor.mathBlock">公式块</span></button><button data-md="hr" role="menuitem"><span data-i18n="editor.hr">分隔线</span></button></div></div>
+    <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-insert-menu" aria-haspopup="true" aria-expanded="false"><span data-i18n="editor.insert">插入</span><svg class="md-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
+      <div id="md-insert-menu" class="md-menu hidden" role="menu">
+        <button data-md="image" role="menuitem" data-i18n="editor.image">图片</button>
+        <button id="btn-insert-table" data-md="table" role="menuitem" data-i18n="editor.table">表格</button>
+        <button data-md="link" role="menuitem" data-i18n="editor.link">链接</button>
+        <span class="md-menu-sep" aria-hidden="true"></span>
+        <button id="btn-insert-code-chunk" data-md="codechunk" role="menuitem" data-i18n="editor.codeChunk">交互代码块</button>
+        <button id="btn-insert-diagram" data-md="diagram" role="menuitem" data-i18n="editor.diagram">科学图表</button>
+        <button id="btn-insert-doc-import" data-md="docimport" role="menuitem" data-i18n="editor.docImport">文档引用</button>
+        <button id="btn-insert-frontmatter" data-md="frontmatter" role="menuitem" data-i18n="editor.frontmatter">样式元数据 (Frontmatter)</button>
       </div></div>
-    <button id="formula-open" class="md-tool-btn md-group" title="公式选择器" data-i18n="editor.formula" data-i18n-title="dialog.formulaTitle">∑ 公式</button>
+    <button id="formula-open" class="md-tool-btn md-group" title="公式选择器" data-i18n-title="dialog.formulaTitle"><span data-i18n="editor.formula">∑ 公式</span></button>
+    <button id="edit-slash-btn" class="md-tool-btn md-slash-btn" title="插入块 (/ 或 Ctrl+/)" aria-label="插入块" data-i18n-title="slash.buttonTip" data-i18n-aria="slash.button">
+      <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><kbd aria-hidden="true">/</kbd>
+    </button>
   </div>
-  <span class="edit-tip"><span id="edit-doc-stats">0 字 · 阅读约 1 分钟</span> <span data-i18n="editor.shortcutsTip">· Ctrl+S 保存 · Esc 取消</span></span>
+  <span class="edit-tip"><span id="edit-doc-stats" aria-live="polite">0 字 · 阅读约 1 分钟</span> <span class="edit-tip-keys" data-i18n="editor.shortcutsTip">· Ctrl+S 保存 · Esc 取消</span></span>
   <div class="edit-actions-right">
+    <div class="md-menu-wrap edit-view-ctl">
+      <button id="edit-view-trigger" class="md-tool-btn icon" aria-haspopup="true" aria-expanded="false" title="视图" aria-label="视图" data-i18n-title="editor.view" data-i18n-aria="editor.view">
+        <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>
+      </button>
+      <div id="edit-view-menu" class="md-menu edit-view-menu hidden" role="menu">
+        <button id="edit-view-focus" role="menuitemcheckbox" aria-checked="false"><span class="md-check" aria-hidden="true"></span><span data-i18n="editor.focusMode">专注模式</span></button>
+        <button id="edit-view-typewriter" role="menuitemcheckbox" aria-checked="false"><span class="md-check" aria-hidden="true"></span><span data-i18n="editor.typewriterMode">打字机滚动</span></button>
+        <button id="edit-view-lines" role="menuitemcheckbox" aria-checked="false"><span class="md-check" aria-hidden="true"></span><span data-i18n="editor.lineNumbers">行号</span></button>
+      </div>
+    </div>
     <button id="edit-undo" class="md-tool-btn icon" title="撤销 (Ctrl+Z)" aria-label="撤销" data-i18n-title="editor.undo" data-i18n-aria="editor.undo">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
     </button>
@@ -153,7 +183,7 @@
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 14l5-5-5-5"/><path d="M4 20v-7a4 4 0 0 1 4-4h12"/></svg>
     </button>
     <div class="pv-ctl md-menu-wrap" aria-label="预览布局" data-i18n-aria="editor.previewLayout">
-      <button id="pv-trigger" class="md-tool-btn md-group" aria-haspopup="true" aria-expanded="false"><span data-i18n="editor.preview">预览：无</span>⌄</button>
+      <button id="pv-trigger" class="md-tool-btn md-group" aria-haspopup="true" aria-expanded="false"><span data-i18n="editor.preview">预览：无</span></button>
       <div id="pv-menu" class="pv-menu hidden" role="menu">
 
         <div class="pv-grid" aria-label="预览停靠方向" data-i18n-aria="editor.previewDockDir">
@@ -171,21 +201,41 @@
 
 <!-- 编辑器选中文本浮动快捷操作栏 -->
 <div id="cm-selection-toolbar" class="cm-selection-toolbar hidden" role="toolbar" aria-label="选中文本快捷操作" data-i18n-aria="editor.selectionToolbar">
-  <button id="cm-sel-ai" class="cm-sel-btn ai-highlight" title="AI 润色与智能修改" data-i18n-title="editai.actPolish">
+  <button id="cm-sel-ai" class="cm-sel-btn ai-highlight" title="AI 改写 (Alt+K)" aria-label="AI 改写" data-i18n-title="editor.aiInlineTip" data-i18n-aria="editor.aiInline">
     <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
-    <span data-i18n="editai.title">AI</span>
+    <span data-i18n="editor.aiShort">AI</span>
   </button>
-  <button id="cm-sel-copy" class="cm-sel-btn" title="复制 (Ctrl+C)" data-i18n-title="editor.copy">
-    <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-    <span data-i18n="editor.copy">复制</span>
+  <span class="cm-sel-sep" aria-hidden="true"></span>
+  <button id="cm-sel-bold" class="cm-sel-btn icon" data-cmd="bold" aria-pressed="false" title="加粗 (Ctrl+B)" aria-label="加粗" data-i18n-title="editor.boldTip" data-i18n-aria="editor.bold">
+    <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h6a3.5 3.5 0 0 1 0 7H7zM7 12h7a3.5 3.5 0 0 1 0 7H7z"/></svg>
   </button>
-  <button id="cm-sel-cut" class="cm-sel-btn" title="剪切 (Ctrl+X)" data-i18n-title="editor.cut">
-    <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
-    <span data-i18n="editor.cut">剪切</span>
+  <button id="cm-sel-italic" class="cm-sel-btn icon" data-cmd="italic" aria-pressed="false" title="斜体 (Ctrl+I)" aria-label="斜体" data-i18n-title="editor.italicTip" data-i18n-aria="editor.italic">
+    <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5M5 19h5M15 5l-6 14"/></svg>
   </button>
-  <button id="cm-sel-paste" class="cm-sel-btn" title="粘贴 (Ctrl+V)" data-i18n-title="editor.paste">
-    <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-    <span data-i18n="editor.paste">粘贴</span>
+  <button id="cm-sel-strike" class="cm-sel-btn icon cm-sel-extra" data-cmd="strike" aria-pressed="false" title="删除线 (Ctrl+Shift+X)" aria-label="删除线" data-i18n-title="editor.strikeTip" data-i18n-aria="editor.strikethrough">
+    <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M16.5 6.5C15.8 5.3 14.2 4.5 12 4.5c-2.8 0-4.5 1.4-4.5 3.3 0 1 .4 1.8 1.2 2.4M8 17c.8 1.5 2.4 2.5 4.4 2.5 2.8 0 4.6-1.4 4.6-3.4 0-.8-.2-1.5-.7-2.1"/></svg>
+  </button>
+  <button id="cm-sel-code" class="cm-sel-btn icon cm-sel-extra" data-cmd="code" aria-pressed="false" title="行内代码 (Ctrl+E)" aria-label="行内代码" data-i18n-title="editor.codeTip" data-i18n-aria="editor.codeInline">
+    <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m15.5 17 5-5-5-5M8.5 7l-5 5 5 5"/></svg>
+  </button>
+  <button id="cm-sel-link" class="cm-sel-btn icon" data-cmd="link" aria-pressed="false" title="链接 (Ctrl+K)" aria-label="链接" data-i18n-title="editor.linkTip" data-i18n-aria="editor.link">
+    <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></svg>
+  </button>
+  <button id="cm-sel-heading" class="cm-sel-btn icon cm-sel-extra" data-cmd="h2" title="标题 (Ctrl+2)" aria-label="标题" data-i18n-title="editor.headingTip" data-i18n-aria="editor.h2">
+    <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5v14M14 5v14M5 12h9M18 19v-5.5l-1.5 1"/></svg>
+  </button>
+  <button id="cm-sel-quote" class="cm-sel-btn icon cm-sel-extra" data-cmd="quote" title="引用 (Ctrl+Shift+.)" aria-label="引用" data-i18n-title="editor.quoteTip" data-i18n-aria="editor.quote">
+    <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6v12M9 8h11M9 12h11M9 16h7"/></svg>
+  </button>
+  <span class="cm-sel-sep" aria-hidden="true"></span>
+  <button id="cm-sel-copy" class="cm-sel-btn icon" title="复制 (Ctrl+C)" aria-label="复制" data-i18n-title="editor.copy" data-i18n-aria="editor.copy">
+    <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4.5A1.5 1.5 0 0 1 3 13.5v-9A1.5 1.5 0 0 1 4.5 3h9A1.5 1.5 0 0 1 15 4.5V5"/></svg>
+  </button>
+  <button id="cm-sel-cut" class="cm-sel-btn icon" title="剪切 (Ctrl+X)" aria-label="剪切" data-i18n-title="editor.cut" data-i18n-aria="editor.cut">
+    <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg>
+  </button>
+  <button id="cm-sel-paste" class="cm-sel-btn icon" title="粘贴 (Ctrl+V)" aria-label="粘贴" data-i18n-title="editor.paste" data-i18n-aria="editor.paste">
+    <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
   </button>
 </div>
 

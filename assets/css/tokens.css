@@ -151,6 +151,71 @@ body[data-theme="sepia"] { --color-success: #3f6b2a; }
 }
 [data-reading-font="serif"] { --font-reading: var(--font-reading-serif); }
 
+/* ---- Editor lane: source-view syntax palette and editor surfaces ---- */
+:root, body {
+  --editor-measure: var(--line-width);
+  --editor-gutter-w: 44px;
+  --editor-font: var(--font-reading);
+  --editor-leading: 1.72;
+  --editor-caret: var(--accent);
+  --editor-selection-bg: color-mix(in srgb, var(--accent) 22%, transparent);
+  --editor-selection-blur: color-mix(in srgb, var(--fg3) 16%, transparent);
+  --editor-active-line: color-mix(in srgb, var(--accent) 5%, transparent);
+  --editor-mark: color-mix(in srgb, var(--fg3) 88%, transparent);
+  --editor-dim: color-mix(in srgb, var(--fg) 34%, transparent);
+}
+:root {
+  --syn-keyword: #a626a4;
+  --syn-string: #2f7d32;
+  --syn-number: #b35c00;
+  --syn-fn: #2f5fe8;
+  --syn-type: #9a5b00;
+  --syn-prop: #0f6e8c;
+  --syn-comment: #6b7280;
+  --syn-tag: #c0392b;
+  --syn-attr: #986801;
+  --syn-meta: #7a4fd0;
+  --callout-note: #2f5fe8;
+  --callout-tip: #1f7a3d;
+  --callout-important: #7a4fd0;
+  --callout-warning: #9a6200;
+  --callout-caution: #b3261e;
+}
+body[data-theme="dark"] {
+  --syn-keyword: #d49bff;
+  --syn-string: #9fd88a;
+  --syn-number: #ffb870;
+  --syn-fn: #82aaff;
+  --syn-type: #f2ca78;
+  --syn-prop: #79d4ea;
+  --syn-comment: #8b93a3;
+  --syn-tag: #ff8f86;
+  --syn-attr: #e6c07b;
+  --syn-meta: #c3a6ff;
+  --callout-note: #6d9bff;
+  --callout-tip: #6fd08c;
+  --callout-important: #b89cff;
+  --callout-warning: #ffb86b;
+  --callout-caution: #ff9384;
+}
+body[data-theme="sepia"] {
+  --syn-keyword: #8b3a8f;
+  --syn-string: #4c6b1f;
+  --syn-number: #9a4a0c;
+  --syn-fn: #2f5a8a;
+  --syn-type: #7d5a12;
+  --syn-prop: #2d6470;
+  --syn-comment: #7a6d57;
+  --syn-tag: #a33a2a;
+  --syn-attr: #85600f;
+  --syn-meta: #6d4a9c;
+  --callout-note: #2f5a8a;
+  --callout-tip: #3f6b2a;
+  --callout-important: #6d4a9c;
+  --callout-warning: #8a571b;
+  --callout-caution: #a32424;
+}
+
 /* ---- Focus: one visible ring for keyboard users, none for pointer clicks ---- */
 :focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 :focus:not(:focus-visible) { outline: none; }

@@ -279,6 +279,58 @@
     return edit(from, to, text, at, at + 3);
   }
 
+  /* ---------------- 标题级别：H1–H6 / 正文 ---------------- */
+
+  /* Set every touched line to heading `level` (0 = paragraph). Pressing the
+     same level again turns the lines back into paragraphs. */
+  function headingLevelEdit(doc, from, to, level, ph) {
+    const range = blockRange(doc, from, to);
+    const lines = doc.slice(range.from, range.to).split('\n');
+    const want = level ? '#'.repeat(level) + ' ' : '';
+    const levelOf = l => { const m = /^[ \t]{0,3}(#{1,6})(?:[ \t]+|$)/.exec(l); return m ? m[1].length : 0; };
+    const content = lines.filter(l => !isBlank(l));
+    if (!content.length) {
+      if (!level) return null;
+      const line = lineAt(doc, from);
+      const at = line.from + want.length;
+      return edit(line.from, line.to, want + ph, at, at + ph.length);
+    }
+    const remove = level && content.every(l => levelOf(l) === level);
+    const out = lines.map(l => {
+      if (isBlank(l)) return { text: l, pre: l.length };
+      const body = l.replace(/^[ \t]*/, '').replace(HEADING_RE, '');
+      const pre = remove ? '' : want;
+      return { text: pre + body, pre: pre.length };
+    });
+    const insert = out.map(o => o.text).join('\n');
+    if (insert === doc.slice(range.from, range.to)) return null;
+    if (from === to && lines.length === 1) {
+      const fromEnd = range.to - from;
+      const col = Math.max(out[0].pre, out[0].text.length - fromEnd);
+      return edit(range.from, range.to, insert, range.from + col);
+    }
+    return edit(range.from, range.to, insert, range.from, range.from + insert.length);
+  }
+
+  /* ---------------- 提示块（GitHub callout） ---------------- */
+
+  const CALLOUT_TYPES = ['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION'];
+
+  function calloutEdit(doc, from, to, type, ph) {
+    const t = CALLOUT_TYPES.includes(String(type).toUpperCase()) ? String(type).toUpperCase() : 'NOTE';
+    const head = '> [!' + t + ']';
+    if (from === to || isBlank(doc.slice(from, to))) {
+      const r = targetRange(doc, from, to);
+      const block = head + '\n> ' + ph;
+      return placeBlock(doc, r.from, r.to, block, head.length + 3, head.length + 3 + ph.length);
+    }
+    const r = blockRange(doc, from, to);
+    const body = doc.slice(r.from, r.to).split('\n')
+      .map(l => (isBlank(l) ? '>' : '> ' + l.replace(/^>[ \t]?/, ''))).join('\n');
+    const block = head + '\n' + body;
+    return placeBlock(doc, r.from, r.to, block, 0, block.length);
+  }
+
   const DEFAULT_PH = { text: 'text', code: 'code', heading: 'Heading', quote: 'Quote', item: 'Item', task: 'Task', desc: 'image' };
 
   /**
@@ -297,6 +349,10 @@
     const p = Object.assign({}, DEFAULT_PH, ph || {});
     switch (kind) {
       case 'h2': return lineEdit(doc, from, to, kind, p.heading);
+      case 'h1': case 'h3': case 'h4': case 'h5': case 'h6':
+        return headingLevelEdit(doc, from, to, +kind[1], p.heading);
+      case 'para': return headingLevelEdit(doc, from, to, 0, p.heading);
+      case 'callout': return calloutEdit(doc, from, to, p.callout || 'NOTE', p.text);
       case 'quote': return lineEdit(doc, from, to, kind, p.quote);
       case 'list': case 'ordered': return lineEdit(doc, from, to, kind, p.item);
       case 'task': return lineEdit(doc, from, to, kind, p.task);
@@ -317,7 +373,318 @@
     return doc.slice(0, e.changes.from) + e.changes.insert + doc.slice(e.changes.to);
   }
 
-  const api = { computeSyntaxEdit, applySyntaxEdit };
+  /* ================================================================
+     Slash-menu inserts: every helper returns ONE change (one undo step)
+     that also removes the typed "/query" text in [from, to).
+     ================================================================ */
+
+  /* Replace "/query" with a block that sits on its own lines. When the
+     slash was typed after text ("intro /table"), the text stays and the
+     block goes below it. */
+  function blockInsertEdit(doc, from, to, block, selFrom, selTo) {
+    doc = String(doc);
+    const line = lineAt(doc, from);
+    const before = doc.slice(line.from, from);
+    const after = doc.slice(to, line.to);
+    if (isBlank(before) && isBlank(after)) {
+      return placeBlock(doc, line.from, line.to, block, selFrom, selTo == null ? selFrom : selTo);
+    }
+    const kept = (before.replace(/[ \t]+$/, '') + (isBlank(after) ? '' : (before && !/\s$/.test(before) ? ' ' : '') + after.replace(/^[ \t]+/, '')));
+    const trail = line.to < doc.length && !isBlank(lineAt(doc, line.to + 1).text) ? '\n' : '';
+    const insert = kept + '\n\n' + block + trail;
+    const base = line.from + kept.length + 2;
+    return edit(line.from, line.to, insert, base + selFrom, base + (selTo == null ? selFrom : selTo));
+  }
+
+  /* Replace "/query" and give the line a block prefix ("## ", "- [ ] ", "> "),
+     replacing any heading / list / quote prefix it already had. */
+  function linePrefixEdit(doc, from, to, prefix) {
+    doc = String(doc);
+    const line = lineAt(doc, from);
+    const tail = doc.slice(to, line.to);
+    let head = doc.slice(line.from, from);
+    if (isBlank(tail)) head = head.replace(/[ \t]+$/, '') || head.replace(/[^ \t]/g, '');
+    const text = head + tail;
+    const ind = /^[ \t]*/.exec(text)[0];
+    let body = text.slice(ind.length);
+    const cursorInBody = Math.max(0, (from - line.from) - ind.length);
+    const stripped = body.replace(HEADING_RE, '').replace(LIST_RE, '').replace(/^>[ \t]?/, '');
+    const removed = body.length - stripped.length;
+    body = stripped;
+    const insert = ind + prefix + body;
+    const col = ind.length + prefix.length + Math.max(0, Math.min(body.length, cursorInBody - removed));
+    return edit(line.from, line.to, insert, line.from + col);
+  }
+
+  /* Replace "/query" with inline text; the selection is relative to `text`. */
+  function inlineInsertEdit(doc, from, to, text, selFrom, selTo) {
+    const a = from + (selFrom == null ? text.length : selFrom);
+    const b = from + (selTo == null ? (selFrom == null ? text.length : selFrom) : selTo);
+    return edit(from, to, text, a, b);
+  }
+
+  /* Footnote: reference where the slash was, definition at the end of the
+     document, cursor on the definition. */
+  function footnoteEdit(doc, from, to) {
+    doc = String(doc);
+    let n = 0;
+    for (const m of doc.matchAll(/\[\^(\d+)\]/g)) n = Math.max(n, +m[1]);
+    const id = n + 1;
+    const ref = '[^' + id + ']';
+    const rest = doc.slice(0, from) + ref + doc.slice(to);
+    const tail = rest.replace(/\s+$/, '');
+    const lastLine = tail.slice(tail.lastIndexOf('\n') + 1);
+    const sep = !tail ? '' : /^\[\^[^\]]+\]:/.test(lastLine) ? '\n' : '\n\n';
+    const def = '[^' + id + ']: ';
+    const next = tail + sep + def;
+    // One change covering [from, end): the reference plus the rewritten tail.
+    const insert = next.slice(from);
+    return { changes: { from, to: doc.length, insert }, selection: { anchor: next.length, head: next.length }, id };
+  }
+
+  function headingSlug(text, seen) {
+    let slug = text.trim().toLowerCase().replace(/[^\w一-鿿\s-]/g, '').replace(/\s+/g, '-');
+    if (!slug) slug = 'section';
+    if (seen[slug]) { seen[slug]++; slug = slug + '-' + seen[slug]; } else seen[slug] = 1;
+    return slug;
+  }
+
+  /* A Markdown list linking every ATX heading (fenced code is skipped). */
+  function tocMarkdown(doc) {
+    const heads = [];
+    let fence = null;
+    for (const raw of String(doc).split('\n')) {
+      const f = /^\s{0,3}(`{3,}|~{3,})/.exec(raw);
+      if (f) {
+        if (!fence) fence = f[1][0].repeat(f[1].length);
+        else if (f[1][0] === fence[0] && f[1].length >= fence.length) fence = null;
+        continue;
+      }
+      if (fence) continue;
+      const m = /^\s{0,3}(#{1,6})[ \t]+(.+?)[ \t#]*$/.exec(raw);
+      if (!m) continue;
+      const text = m[2]
+        .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+        .replace(/[*_`~]/g, '')
+        .trim();
+      if (text) heads.push({ level: m[1].length, text });
+    }
+    if (!heads.length) return '';
+    const min = Math.min(...heads.map(h => h.level));
+    const seen = {};
+    return heads.map(h => '  '.repeat(h.level - min) + '- [' + h.text.replace(/([[\]])/g, '\\$1') + '](#' + headingSlug(h.text, seen) + ')').join('\n');
+  }
+
+  /* ---------------- 模糊匹配（斜杠菜单） ---------------- */
+
+  /* 0 = no match; higher is better. Prefix and word-start hits win over
+     scattered subsequence hits. */
+  function fuzzyScore(query, text) {
+    const q = String(query || '').toLowerCase().replace(/\s+/g, '');
+    const t = String(text || '').toLowerCase();
+    if (!q) return 1;
+    if (t.startsWith(q)) return 1000 - t.length;
+    const at = t.indexOf(q);
+    if (at > 0) return (/[\s\-_/(]/.test(t[at - 1]) ? 800 : 600) - at;
+    let score = 0, ti = 0, run = 0;
+    for (const ch of q) {
+      const idx = t.indexOf(ch, ti);
+      if (idx < 0) return 0;
+      run = idx === ti ? run + 1 : 1;
+      score += 10 + run * 5 + (idx === 0 || /[\s\-_/(]/.test(t[idx - 1]) ? 15 : 0) - Math.min(9, idx - ti);
+      ti = idx + 1;
+    }
+    return Math.max(1, Math.min(499, score));
+  }
+
+  /* ---------------- 字数统计 ---------------- */
+
+  const CJK_RE = /[぀-ヿ㐀-䶿一-鿿가-힯豈-﫿]/g;
+  function textStats(text) {
+    const s = String(text || '');
+    const cjk = (s.match(CJK_RE) || []).length;
+    const words = s.replace(CJK_RE, ' ').split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w)).length;
+    const chars = s.replace(/\s/g, '').length;
+    const total = cjk + words;
+    const minutes = total ? Math.max(1, Math.round(cjk / 400 + words / 230)) : 0;
+    return { words: total, chars, cjk, minutes };
+  }
+
+  /* ================================================================
+     Tables: parse / align / navigate. Pure; used by Tab / Enter.
+     ================================================================ */
+
+  const DELIM_CELL_RE = /^\s*:?-{1,}:?\s*$/;
+
+  function charWidth(cp) {
+    return (cp >= 0x1100 && (cp <= 0x115f || cp === 0x2329 || cp === 0x232a ||
+      (cp >= 0x2e80 && cp <= 0xa4cf && cp !== 0x303f) || (cp >= 0xac00 && cp <= 0xd7a3) ||
+      (cp >= 0xf900 && cp <= 0xfaff) || (cp >= 0xfe30 && cp <= 0xfe4f) || (cp >= 0xff00 && cp <= 0xff60) ||
+      (cp >= 0xffe0 && cp <= 0xffe6) || (cp >= 0x1f300 && cp <= 0x1faff) || (cp >= 0x20000 && cp <= 0x3fffd))) ? 2 : 1;
+  }
+  function strWidth(s) { let w = 0; for (const c of s) w += charWidth(c.codePointAt(0)); return w; }
+
+  /* Split a row on unescaped pipes (pipes inside `code` also count, as in GFM). */
+  function splitRow(line) {
+    let s = line.trim();
+    if (s.startsWith('|')) s = s.slice(1);
+    if (s.endsWith('|') && !s.endsWith('\\|')) s = s.slice(0, -1);
+    const cells = [];
+    let cur = '';
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] === '\\' && s[i + 1] === '|') { cur += '\\|'; i++; continue; }
+      if (s[i] === '|') { cells.push(cur.trim()); cur = ''; continue; }
+      cur += s[i];
+    }
+    cells.push(cur.trim());
+    return cells;
+  }
+
+  function isTableLine(text) { return /\|/.test(text) && !isBlank(text); }
+  function isDelimRow(text) {
+    if (!/-/.test(text) || !isTableLine(text)) return false;
+    return splitRow(text).every(c => DELIM_CELL_RE.test(c));
+  }
+
+  function formatTable(lines) {
+    const indent = /^[ \t]*/.exec(lines[0])[0];
+    const rows = lines.map(splitRow);
+    const align = rows[1].map(c => {
+      const l = c.startsWith(':'), r = c.endsWith(':');
+      return l && r ? 'c' : r ? 'r' : l ? 'l' : '';
+    });
+    const cols = Math.max(...rows.map(r => r.length));
+    const widths = Array.from({ length: cols }, (_, i) =>
+      Math.max(3, ...rows.map((r, ri) => ri === 1 ? 0 : strWidth(r[i] || ''))));
+    const pad = (s, w, a) => {
+      const gap = w - strWidth(s);
+      if (a === 'r') return ' '.repeat(gap) + s;
+      if (a === 'c') { const l = Math.floor(gap / 2); return ' '.repeat(l) + s + ' '.repeat(gap - l); }
+      return s + ' '.repeat(gap);
+    };
+    return rows.map((r, ri) => {
+      const cells = widths.map((w, i) => {
+        if (ri === 1) {
+          const a = align[i] || '';
+          const dashes = '-'.repeat(w - (a === 'c' ? 2 : a ? 1 : 0));
+          return a === 'c' ? ':' + dashes + ':' : a === 'l' ? ':' + dashes : a === 'r' ? dashes + ':' : dashes;
+        }
+        return pad(r[i] || '', w, align[i]);
+      });
+      return indent + '| ' + cells.join(' | ') + ' |';
+    });
+  }
+
+  /* The table around `pos`: contiguous pipe lines with a delimiter row second. */
+  function findTable(doc, pos) {
+    doc = String(doc);
+    const cur = lineAt(doc, pos);
+    if (!isTableLine(cur.text)) return null;
+    let from = cur.from, to = cur.to;
+    while (from > 0) { const p = lineAt(doc, from - 1); if (!isTableLine(p.text)) break; from = p.from; }
+    while (to < doc.length) { const n = lineAt(doc, to + 1); if (!isTableLine(n.text)) break; to = n.to; }
+    const lines = doc.slice(from, to).split('\n');
+    if (lines.length < 2 || !isDelimRow(lines[1]) || isDelimRow(lines[0])) return null;
+    const row = doc.slice(from, cur.from).split('\n').length - 1;
+    return { from, to, lines, row, colText: doc.slice(cur.from, pos) };
+  }
+
+  /* Content ranges [{from, to}] of each cell in a formatted row (offsets in the line). */
+  function cellRanges(line) {
+    const out = [];
+    let i = line.indexOf('|');
+    if (i < 0) return out;
+    for (;;) {
+      let j = i + 1;
+      while (j < line.length && !(line[j] === '|' && line[j - 1] !== '\\')) j++;
+      if (j >= line.length) break;
+      const seg = line.slice(i + 1, j);
+      const lead = seg.length - seg.replace(/^\s+/, '').length;
+      const core = seg.trim();
+      if (core) {
+        const a = i + 1 + lead;
+        out.push({ from: a, to: a + core.length });
+      } else {
+        // Empty cell: select its padding so typing replaces it and the
+        // closing pipe stays where it is.
+        const a = Math.min(i + 2, j);
+        out.push({ from: a, to: Math.max(a, j - 1) });
+      }
+      i = j;
+    }
+    return out;
+  }
+
+  function cellIndex(text, colText) {
+    const t = colText.replace(/^[ \t]*\|?/, '');
+    let n = 0;
+    for (let i = 0; i < t.length; i++) if (t[i] === '|' && t[i - 1] !== '\\') n++;
+    return n;
+  }
+
+  function tableResult(t, rows, targetRow, targetCol) {
+    const formatted = formatTable(rows);
+    const insert = formatted.join('\n');
+    let off = 0;
+    for (let i = 0; i < targetRow; i++) off += formatted[i].length + 1;
+    const cells = cellRanges(formatted[targetRow]);
+    const c = cells[Math.max(0, Math.min(cells.length - 1, targetCol))] || { from: 0, to: 0 };
+    return edit(t.from, t.to, insert, t.from + off + c.from, t.from + off + c.to);
+  }
+
+  /* Tab / Shift+Tab: realign the table and move to the next / previous cell
+     (a new row is added after the last cell). */
+  function tableNavEdit(doc, pos, dir) {
+    const t = findTable(doc, pos);
+    if (!t) return null;
+    const rows = t.lines.slice();
+    const cols = Math.max(...rows.map(r => splitRow(r).length));
+    let r = t.row, c = Math.min(cellIndex(rows[r], t.colText), cols - 1);
+    if (r === 1) { r = dir > 0 ? 2 : 0; c = dir > 0 ? -1 : cols; }
+    c += dir;
+    if (c >= cols) { c = 0; r++; if (r === 1) r = 2; }
+    if (c < 0) { c = cols - 1; r--; if (r === 1) r = 0; }
+    if (r < 0) return tableResult(t, rows, 0, 0);
+    if (r >= rows.length) rows.push('|' + ' |'.repeat(cols));
+    return tableResult(t, rows, r, c);
+  }
+
+  /* Enter inside a table: new row below (below the delimiter from the
+     header); Enter on an empty last row leaves the table. */
+  function tableEnterEdit(doc, pos) {
+    const t = findTable(doc, pos);
+    if (!t) return null;
+    const rows = t.lines.slice();
+    const cols = Math.max(...rows.map(r => splitRow(r).length));
+    const empty = splitRow(rows[t.row]).every(c => !c);
+    if (t.row >= 2 && empty && t.row === rows.length - 1) {
+      rows.pop();
+      const insert = formatTable(rows).join('\n') + '\n';
+      const at = t.from + insert.length;
+      return edit(t.from, t.to, insert, at);
+    }
+    const at = t.row <= 1 ? 2 : t.row + 1;
+    rows.splice(at, 0, '|' + ' |'.repeat(cols));
+    return tableResult(t, rows, at, 0);
+  }
+
+  /* A fresh table (header + `rows` body rows) and the header-cell selection. */
+  function tableBlock(cols, rows, headerWord) {
+    const head = Array.from({ length: cols }, (_, i) => (headerWord || 'Column') + ' ' + (i + 1));
+    const lines = ['| ' + head.join(' | ') + ' |', '|' + ' --- |'.repeat(cols)];
+    for (let r = 0; r < rows; r++) lines.push('|' + ' |'.repeat(cols));
+    const formatted = formatTable(lines);
+    const first = cellRanges(formatted[0])[0];
+    return { text: formatted.join('\n'), selFrom: first.from, selTo: first.to };
+  }
+
+  const api = {
+    computeSyntaxEdit, applySyntaxEdit,
+    headingLevelEdit, calloutEdit, CALLOUT_TYPES,
+    blockInsertEdit, linePrefixEdit, inlineInsertEdit, footnoteEdit, tocMarkdown, headingSlug,
+    fuzzyScore, textStats,
+    strWidth, splitRow, isDelimRow, formatTable, findTable, cellRanges, tableNavEdit, tableEnterEdit, tableBlock,
+  };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.ReadMDTransforms = api;
 })(typeof window !== 'undefined' ? window : null);

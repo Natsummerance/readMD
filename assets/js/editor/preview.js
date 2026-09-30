@@ -73,7 +73,18 @@ function setPvLayout(layout) {
   };
   const narrow = window.innerWidth < 600 && (layout === 'left' || layout === 'right');
   const previewLabel = _t('editor.preview') || '预览';
-  if ($('pv-trigger')) $('pv-trigger').textContent = narrow ? previewLabel + '：' + names[layout] + '（' + (_t('editor.narrowScreenBottom') || '窄屏置底') + '）⌄' : previewLabel + '：' + names[layout] + '⌄';
+  const trigger = $('pv-trigger');
+  if (trigger) {
+    // Short visible label; the full state (incl. narrow-screen note) is in title/aria-label.
+    const full = narrow
+      ? previewLabel + '：' + names[layout] + '（' + (_t('editor.narrowScreenBottom') || '窄屏置底') + '）'
+      : previewLabel + '：' + names[layout];
+    trigger.innerHTML = '<svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg><span class="pv-trigger-label"></span><svg class="md-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>';
+    trigger.querySelector('.pv-trigger-label').textContent = full;
+    trigger.title = full;
+    trigger.setAttribute('aria-label', full);
+    trigger.classList.toggle('is-on', layout !== 'none');
+  }
   const mc = $('main-col');
 
   const pw = $('preview-wrap');
@@ -143,15 +154,71 @@ function bindPvSplitter() {
   window.addEventListener('resize', () => requestAnimationFrame(() => setPvLayout(state.pvLayout)));
 }
 
+/* Which pane the user is driving: scroll events from the other pane are
+   echoes of our own programmatic scrolling and must not bounce back. */
+let pvScrollDriver = null;
+let pvScrollDriverTimer = null;
+let pvSyncFrame = 0;
+function pvClaimScroll(who) {
+  pvScrollDriver = who;
+  if (pvScrollDriverTimer) clearTimeout(pvScrollDriverTimer);
+  pvScrollDriverTimer = setTimeout(() => { pvScrollDriver = null; }, 160);
+}
+// Kept for callers that read these flags.
 let isSyncingFromEditor = false;
 let isSyncingFromPreview = false;
 
+/* Preview refresh: the first keystroke after a pause renders on the next
+   frame (instant feel), a burst of typing is coalesced, and the delay grows
+   with document size so huge files stay responsive. */
+let pvLastRenderAt = 0;
 function schedulePreview() {
   if (pvTimer) clearTimeout(pvTimer);
   if (state.liveUpdate === false) return; // Save-only mode
+  if (state.pvLayout === 'none' || !state.editing) return;
   const size = getEditContent().length;
-  const delay = size >= 100000 ? 700 : size >= 30000 ? 450 : 300;
-  pvTimer = setTimeout(renderPreview, delay);
+  const settle = size >= 100000 ? 600 : size >= 30000 ? 320 : 140;
+  const idle = Date.now() - pvLastRenderAt > settle * 2;
+  pvTimer = setTimeout(renderPreview, idle ? 16 : settle);
+}
+
+/* Replace only the top-level blocks whose HTML changed, so MathJax output,
+   diagrams and images elsewhere in the pane are not re-rendered. */
+function pvPatchPane(pane, html) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+  const next = Array.from(tpl.content.childNodes).filter(n => n.nodeType === 1 || (n.nodeType === 3 && n.textContent.trim()));
+  const prev = Array.from(pane.childNodes);
+  if (!prev.length || !pane.__pvSource || Math.abs(prev.length - next.length) > 400) {
+    pane.innerHTML = '';
+    next.forEach((n, i) => { if (n.nodeType === 1) n.__pvSource = n.outerHTML; pane.appendChild(n); });
+    pane.__pvSource = true;
+    return next.filter(n => n.nodeType === 1);
+  }
+  const key = n => n.nodeType === 1 ? (n.__pvSource || n.outerHTML).replace(/\sdata-source-line="\d+"/, '') : n.textContent;
+  const prevKeys = prev.map(key);
+  const nextKeys = next.map(n => n.nodeType === 1 ? n.outerHTML.replace(/\sdata-source-line="\d+"/, '') : n.textContent);
+  let head = 0;
+  while (head < prev.length && head < next.length && prevKeys[head] === nextKeys[head]) head++;
+  let tail = 0;
+  while (tail < prev.length - head && tail < next.length - head && prevKeys[prev.length - 1 - tail] === nextKeys[next.length - 1 - tail]) tail++;
+  // Unchanged blocks keep their node, only their source line is refreshed.
+  const syncLine = (oldNode, newNode) => {
+    if (oldNode.nodeType !== 1) return;
+    const l = newNode.getAttribute('data-source-line');
+    if (l) oldNode.setAttribute('data-source-line', l);
+  };
+  for (let i = 0; i < head; i++) syncLine(prev[i], next[i]);
+  for (let i = 0; i < tail; i++) syncLine(prev[prev.length - 1 - i], next[next.length - 1 - i]);
+  const anchor = tail ? prev[prev.length - tail] : null;
+  for (let i = head; i < prev.length - tail; i++) prev[i].remove();
+  const fresh = [];
+  for (let i = head; i < next.length - tail; i++) {
+    const n = next[i];
+    if (n.nodeType === 1) { n.__pvSource = n.outerHTML; fresh.push(n); }
+    pane.insertBefore(n, anchor);
+  }
+  return fresh;
 }
 
 async function renderPreview() {
@@ -183,129 +250,136 @@ async function renderPreview() {
     html = '<p class="ai-err">' + (_t('editor.previewRenderFail') || '预览渲染失败') + '</p>';
   }
   if (renderEpoch !== pvRenderEpoch) return;
-  pane.innerHTML = window.sanitizeRenderedHtml ? window.sanitizeRenderedHtml(html) : html;
-  fixLinks(pane);
+  pvLastRenderAt = Date.now();
+  const safe = window.sanitizeRenderedHtml ? window.sanitizeRenderedHtml(html) : html;
+  const fresh = pvPatchPane(pane, safe);
+  if (!fresh.length) return;
+  // Post-process only the blocks that changed: fixLinks binds click handlers,
+  // so it sees just the fresh links while heading lookup spans the whole pane.
+  const freshLinks = fresh.flatMap(n => (n.tagName === 'A' ? [n] : Array.from(n.querySelectorAll('a'))));
+  fixLinks({ querySelectorAll: sel => (sel === 'a' ? freshLinks : pane.querySelectorAll(sel)) });
   fixImages(pane);
-  renderMath(pane);
+  fresh.forEach(n => renderMath(n));
   if (window.renderAllCodeChunks) renderAllCodeChunks(pane);
   if (window.renderAllDiagrams) renderAllDiagrams(pane);
+  if (state.pvSync) pvSyncFromEditor();
 }
 
 function getEditorVisibleLine() {
+  const pos = pvEditorTopPosition();
+  return pos ? Math.max(1, Math.floor(pos.line)) : 1;
+}
+
+/* Fractional source line at the top edge of the editor viewport. */
+function pvEditorTopPosition() {
   if (cmView && cmView.lineBlockAtHeight) {
     try {
-      const lineBlock = cmView.lineBlockAtHeight(cmView.scrollDOM.scrollTop);
-      return cmView.state.doc.lineAt(lineBlock.from).number;
+      const top = cmView.scrollDOM.scrollTop;
+      // Heights inside lineBlockAtHeight are relative to the document top.
+      const docTop = cmView.documentTop - cmView.scrollDOM.getBoundingClientRect().top + top;
+      const y = Math.max(0, top - docTop);
+      const block = cmView.lineBlockAtHeight(y);
+      const line = cmView.state.doc.lineAt(block.from).number;
+      const frac = block.height > 0 ? Math.min(1, Math.max(0, (y - block.top) / block.height)) : 0;
+      return { line: line + frac, max: cmView.scrollDOM.scrollHeight - cmView.scrollDOM.clientHeight, top };
     } catch (e) {
-      return 1;
+      return null;
     }
-  } else if ($('edit-area')) {
-    const ta = $('edit-area');
+  }
+  const ta = $('edit-area');
+  if (ta) {
     const totalLines = ta.value.split('\n').length;
     const pct = ta.scrollTop / Math.max(1, ta.scrollHeight - ta.clientHeight);
-    return Math.max(1, Math.round(pct * totalLines));
+    return { line: 1 + pct * (totalLines - 1), max: ta.scrollHeight - ta.clientHeight, top: ta.scrollTop };
   }
-  return 1;
+  return null;
+}
+
+/* [{line, top}] for every preview element carrying a source line, sorted. */
+function pvAnchors(wrap, pane) {
+  const base = wrap.getBoundingClientRect().top - wrap.scrollTop;
+  const out = [];
+  pane.querySelectorAll('[data-source-line]').forEach(el => {
+    const line = parseInt(el.dataset.sourceLine, 10);
+    if (!line || !el.getClientRects().length) return;
+    const top = el.getBoundingClientRect().top - base;
+    if (out.length && (line <= out[out.length - 1].line || top < out[out.length - 1].top)) return;
+    out.push({ line, top });
+  });
+  return out;
 }
 
 function pvSyncFromEditor() {
-  if (!state.pvSync || state.pvLayout === 'none' || isSyncingFromPreview) return;
-  isSyncingFromEditor = true;
-
-  const dst = $('preview-wrap');
-  if (!dst) { isSyncingFromEditor = false; return; }
-
-  const currentLine = getEditorVisibleLine();
-  const pane = $('preview-pane');
-  if (!pane) { isSyncingFromEditor = false; return; }
-
-  // 查找带有 data-source-line 的所有元素
-  const lineEls = Array.from(pane.querySelectorAll('[data-source-line]'));
-  if (lineEls.length === 0) {
-    const src = pvEditorEl || $('edit-area');
-    if (src) {
-      const maxSrc = src.scrollHeight - src.clientHeight;
-      const maxDst = dst.scrollHeight - dst.clientHeight;
-      if (maxSrc > 0 && maxDst > 0) dst.scrollTop = (src.scrollTop / maxSrc) * maxDst;
+  if (!state.pvSync || state.pvLayout === 'none' || pvScrollDriver === 'preview') return;
+  if (pvSyncFrame) return;
+  pvSyncFrame = requestAnimationFrame(() => {
+    pvSyncFrame = 0;
+    pvClaimScroll('editor');
+    const dst = $('preview-wrap');
+    const pane = $('preview-pane');
+    const pos = pvEditorTopPosition();
+    if (!dst || !pane || !pos) return;
+    const maxDst = dst.scrollHeight - dst.clientHeight;
+    if (maxDst <= 0) return;
+    if (pos.top <= 1) { dst.scrollTop = 0; return; }
+    if (pos.max > 0 && pos.top >= pos.max - 1) { dst.scrollTop = maxDst; return; }
+    const anchors = pvAnchors(dst, pane);
+    if (!anchors.length) {
+      if (pos.max > 0) dst.scrollTop = (pos.top / pos.max) * maxDst;
+      return;
     }
-    isSyncingFromEditor = false;
-    return;
-  }
-
-  let targetEl = lineEls[0];
-  let nextEl = null;
-  for (let i = 0; i < lineEls.length; i++) {
-    const l = parseInt(lineEls[i].dataset.sourceLine, 10);
-    if (l <= currentLine) {
-      targetEl = lineEls[i];
-    } else {
-      nextEl = lineEls[i];
-      break;
+    let i = 0;
+    while (i + 1 < anchors.length && anchors[i + 1].line <= pos.line) i++;
+    const a = anchors[i];
+    const b = anchors[i + 1];
+    let y;
+    if (pos.line < a.line) y = a.top * (pos.line - 1) / Math.max(1, a.line - 1);
+    else if (b) y = a.top + (b.top - a.top) * (pos.line - a.line) / Math.max(1e-6, b.line - a.line);
+    else {
+      const lines = cmView ? cmView.state.doc.lines : a.line + 1;
+      y = a.top + (dst.scrollHeight - a.top) * (pos.line - a.line) / Math.max(1, lines + 1 - a.line);
     }
-  }
-
-  if (targetEl) {
-    let targetScrollTop = targetEl.offsetTop;
-    if (nextEl) {
-      const l1 = parseInt(targetEl.dataset.sourceLine, 10);
-      const l2 = parseInt(nextEl.dataset.sourceLine, 10);
-      if (l2 > l1) {
-        const factor = (currentLine - l1) / (l2 - l1);
-        targetScrollTop += factor * (nextEl.offsetTop - targetEl.offsetTop);
-      }
-    }
-    dst.scrollTop = Math.max(0, targetScrollTop - 20);
-  }
-
-  setTimeout(() => { isSyncingFromEditor = false; }, 50);
+    dst.scrollTop = Math.max(0, Math.min(maxDst, y - 12));
+  });
 }
 
 function pvSyncFromPreview() {
-  if (!state.pvSync || state.pvLayout === 'none' || isSyncingFromEditor) return;
-  isSyncingFromPreview = true;
-
-  const src = $('preview-wrap');
-  const pane = $('preview-pane');
-  if (!src || !pane) { isSyncingFromPreview = false; return; }
-
-  const scrollTop = src.scrollTop;
-  const lineEls = Array.from(pane.querySelectorAll('[data-source-line]'));
-  if (lineEls.length === 0) {
-    const dst = pvEditorEl || $('edit-area');
-    if (dst) {
-      const maxSrc = src.scrollHeight - src.clientHeight;
-      const maxDst = dst.scrollHeight - dst.clientHeight;
-      if (maxSrc > 0 && maxDst > 0) dst.scrollTop = (src.scrollTop / maxSrc) * maxDst;
+  if (!state.pvSync || state.pvLayout === 'none' || pvScrollDriver === 'editor') return;
+  if (pvSyncFrame) return;
+  pvSyncFrame = requestAnimationFrame(() => {
+    pvSyncFrame = 0;
+    pvClaimScroll('preview');
+    const src = $('preview-wrap');
+    const pane = $('preview-pane');
+    if (!src || !pane) return;
+    const maxSrc = src.scrollHeight - src.clientHeight;
+    const y = src.scrollTop + 12;
+    const scroller = cmView ? cmView.scrollDOM : $('edit-area');
+    if (!scroller) return;
+    const maxDst = scroller.scrollHeight - scroller.clientHeight;
+    if (src.scrollTop <= 1) { scroller.scrollTop = 0; return; }
+    if (maxSrc > 0 && src.scrollTop >= maxSrc - 1) { scroller.scrollTop = maxDst; return; }
+    const anchors = pvAnchors(src, pane);
+    if (!anchors.length || !cmView) {
+      if (maxSrc > 0) scroller.scrollTop = (src.scrollTop / maxSrc) * maxDst;
+      return;
     }
-    isSyncingFromPreview = false;
-    return;
-  }
-
-  let matchedLine = 1;
-  for (let i = 0; i < lineEls.length; i++) {
-    if (lineEls[i].offsetTop <= scrollTop + 30) {
-      matchedLine = parseInt(lineEls[i].dataset.sourceLine, 10);
-    } else {
-      break;
-    }
-  }
-
-  if (cmView && window.ReadMDCodeMirror) {
+    let i = 0;
+    while (i + 1 < anchors.length && anchors[i + 1].top <= y) i++;
+    const a = anchors[i], b = anchors[i + 1];
+    let line;
+    if (y < a.top) line = 1 + (a.line - 1) * (y / Math.max(1, a.top));
+    else if (b) line = a.line + (b.line - a.line) * (y - a.top) / Math.max(1, b.top - a.top);
+    else line = a.line + (y - a.top) / Math.max(1, src.scrollHeight - a.top) * (cmView.state.doc.lines + 1 - a.line);
+    const doc = cmView.state.doc;
+    const n = Math.min(doc.lines, Math.max(1, Math.floor(line)));
     try {
-      const doc = cmView.state.doc;
-      const targetLine = Math.min(doc.lines, Math.max(1, matchedLine));
-      const pos = doc.line(targetLine).from;
-      cmView.dispatch({
-        effects: window.ReadMDCodeMirror.EditorView.scrollIntoView(pos, { y: 'start' })
-      });
-    } catch (e) {}
-  } else if ($('edit-area')) {
-    const ta = $('edit-area');
-    const totalLines = ta.value.split('\n').length;
-    ta.scrollTop = (matchedLine / totalLines) * (ta.scrollHeight - ta.clientHeight);
-  }
-
-  setTimeout(() => { isSyncingFromPreview = false; }, 50);
+      const block = cmView.lineBlockAt(doc.line(n).from);
+      const docTop = cmView.documentTop - scroller.getBoundingClientRect().top + scroller.scrollTop;
+      const target = docTop + block.top + block.height * Math.min(1, line - n);
+      scroller.scrollTop = Math.max(0, Math.min(maxDst, target));
+    } catch (e) { /* ignore */ }
+  });
 }
 
 function alignEditorAndPreview() {

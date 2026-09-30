@@ -31,64 +31,119 @@ function loadCodeMirror() {
   });
 }
 
+/* Editor view preferences (line numbers / focus / typewriter), kept in the
+   browser profile so they survive restarts without touching shared settings. */
+const EDITOR_PREFS_KEY = 'readmd-editor-prefs';
+const editorPrefs = (() => {
+  const base = { lineNumbers: false, focus: false, typewriter: false };
+  try { return Object.assign(base, JSON.parse(localStorage.getItem(EDITOR_PREFS_KEY) || '{}')); }
+  catch (e) { return base; }
+})();
+function saveEditorPrefs() {
+  try { localStorage.setItem(EDITOR_PREFS_KEY, JSON.stringify(editorPrefs)); } catch (e) { /* ignore */ }
+}
+
+let cmCompartments = null;
+let cmPointerDown = false;
+
 function createEditor(doc) {
   destroyEditor();
   if (!window.ReadMDCodeMirror) return false;
   const CM = window.ReadMDCodeMirror;
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  cmThemeCompartment = new CM.Compartment();
+  const C = cmCompartments = {
+    theme: new CM.Compartment(), gutter: new CM.Compartment(),
+    focus: new CM.Compartment(), typewriter: new CM.Compartment(),
+  };
+  cmThemeCompartment = C.theme;
+  const fmt = kind => () => { cmInsertSyntax(kind); return true; };
   const st = CM.EditorState.create({
     doc: doc,
     extensions: [
-      CM.lineNumbers(),
-      CM.highlightActiveLineGutter(),
+      C.gutter.of(cmGutterExtension()),
       CM.highlightActiveLine(),
-      CM.drawSelection(),
+      CM.highlightSpecialChars(),
+      CM.drawSelection({ cursorBlinkRate: 1100 }),
       CM.dropCursor(),
+      CM.EditorState.allowMultipleSelections.of(true),
+      CM.rectangularSelection(),
+      CM.crosshairCursor(),
       CM.bracketMatching(),
       CM.indentOnInput(),
-      CM.foldGutter(),
-      CM.syntaxHighlighting(CM.defaultHighlightStyle, { fallback: true }),
       CM.history(),
       CM.markdown({ base: CM.markdownLanguage, codeLanguages: CM.languages }),
-      CM.autocompletion({ override: [cmMarkdownCompletions()], activateOnTyping: true }),
+      // Markdown prose: pair brackets, double quotes, backticks and CJK brackets
+      // (single quotes stay unpaired: they are apostrophes in prose).
+      CM.markdownLanguage.data.of({ closeBrackets: { brackets: ['(', '[', '{', '"', '`', '（', '【', '「', '《', '“'] } }),
+      CM.syntaxHighlighting(cmHighlightStyle()),
+      cmMarkdownDecorations(),
+      C.focus.of(editorPrefs.focus ? cmFocusExtension() : []),
+      C.typewriter.of(editorPrefs.typewriter ? cmTypewriterExtension() : []),
+      CM.autocompletion({ override: [cmMarkdownCompletions()], activateOnTyping: false, icons: false }),
       CM.closeBrackets(),
+      CM.Prec.highest(CM.keymap.of(cmPriorityKeymap())),
       CM.keymap.of([
         { key: 'Alt-k', run: () => { openEditAiBar(); return true; } },
         { key: 'Ctrl-j', run: () => { openEditAiBar(); return true; } },
-        { key: 'Mod-b', run: () => { cmInsertSyntax('bold'); return true; } },
-        { key: 'Mod-i', run: () => { cmInsertSyntax('italic'); return true; } },
-        { key: 'Mod-k', run: () => { cmInsertSyntax('link'); return true; } },
+        { key: 'Mod-b', run: fmt('bold'), preventDefault: true },
+        { key: 'Mod-i', run: fmt('italic'), preventDefault: true },
+        { key: 'Mod-k', run: fmt('link'), preventDefault: true },
+        // Ctrl+E toggles edit mode globally; inside the editor it is inline code.
+        { key: 'Mod-e', run: fmt('code'), preventDefault: true, stopPropagation: true },
+        { key: 'Mod-Shift-x', run: fmt('strike'), preventDefault: true },
+        { key: 'Mod-Shift-8', run: fmt('list'), preventDefault: true },
+        { key: 'Mod-Shift-7', run: fmt('ordered'), preventDefault: true },
+        { key: 'Mod-Shift-9', run: fmt('task'), preventDefault: true },
+        { key: 'Mod-Shift-.', run: fmt('quote'), preventDefault: true },
+        ...[0, 1, 2, 3, 4, 5, 6].map(n => ({ key: 'Mod-' + n, run: fmt(n ? 'h' + n : 'para'), preventDefault: true, stopPropagation: true })),
+        { key: 'Mod-/', run: v => { openSlashMenu(v, { typed: false }); return true; }, preventDefault: true },
         CM.indentWithTab,
         ...CM.closeBracketsKeymap,
         ...CM.defaultKeymap,
         ...CM.historyKeymap,
         ...CM.completionKeymap
       ]),
-      cmThemeCompartment.of(cmThemeFor(document.body.dataset.theme)),
+      C.theme.of(cmThemeFor(document.body.dataset.theme)),
       CM.EditorView.lineWrapping,
-      CM.EditorView.contentAttributes.of({ 'aria-label': _t('toolbar.edit') || '' }),
+      CM.placeholder(_t('editor.placeholder')),
+      CM.EditorView.contentAttributes.of({ 'aria-label': _t('toolbar.edit') || '', 'aria-multiline': 'true' }),
+      CM.Prec.high(CM.EditorView.inputHandler.of(cmSmartInput)),
+      CM.Prec.highest(CM.EditorView.domEventHandlers({ paste: cmHandlePaste })),
+      CM.EditorView.domEventHandlers({ mousedown: cmTaskMarkerClick }),
       CM.EditorView.updateListener.of(u => {
         if (u.docChanged) {
           schedulePreview();
-          updateDocStatistics();
+          scheduleDocStatistics();
           if (typeof updateUnloadGuard === 'function') updateUnloadGuard();
           if (typeof syncActiveTabDirty === 'function') syncActiveTabDirty();
         }
+        slashOnUpdate(u);
+        if (u.selectionSet && !u.docChanged) scheduleDocStatistics();
         if (u.selectionSet || u.docChanged) updateCmSelectionToolbar();
+        if (u.geometryChanged && !slash.open) repositionCmSelectionToolbar();
       }),
     ],
   });
   cmView = new CM.EditorView({ state: st, parent: $('edit-cm') });
   window.cmView = cmView;
-  cmView.dom.addEventListener('mouseup', () => setTimeout(updateCmSelectionToolbar, 10));
+  applyEditorViewClasses();
+  cmView.dom.addEventListener('pointerdown', () => { cmPointerDown = true; hideCmSelectionToolbar(); });
   cmView.dom.addEventListener('keyup', () => setTimeout(updateCmSelectionToolbar, 10));
-  cmView.dom.addEventListener('paste', handleSmartExcelPaste);
+  cmView.scrollDOM.addEventListener('scroll', () => {
+    if (slash.open) positionSlashMenu();
+    repositionCmSelectionToolbar();
+  }, { passive: true });
   updateDocStatistics();
   cmView.focus();
   return true;
 
 }
+
+document.addEventListener('pointerup', () => {
+  if (!cmPointerDown) return;
+  cmPointerDown = false;
+  setTimeout(updateCmSelectionToolbar, 10);
+});
 
 /* vendor 包只导出 historyKeymap，不直接导出 undo / redo：从键位表里取命令 */
 function cmHistoryCommand(key) {
@@ -117,15 +172,34 @@ function hideCmSelectionToolbar() {
   if (toolbar) toolbar.classList.add('hidden');
 }
 
+/* Selection toolbar buttons -> toolbar command (same code path as #md-tool). */
+const CM_SEL_COMMANDS = {
+  'cm-sel-bold': 'bold', 'cm-sel-italic': 'italic', 'cm-sel-strike': 'strike',
+  'cm-sel-code': 'code', 'cm-sel-link': 'link', 'cm-sel-heading': 'h2', 'cm-sel-quote': 'quote',
+};
+const CM_SEL_NODES = { bold: 'StrongEmphasis', italic: 'Emphasis', strike: 'Strikethrough', code: 'InlineCode', link: 'Link' };
+
+function cmSelectionMarks(view, from, to) {
+  const CM = window.ReadMDCodeMirror;
+  const active = new Set();
+  if (!CM || !CM.syntaxTree) return active;
+  const tree = CM.syntaxTree(view.state);
+  const names = Object.values(CM_SEL_NODES);
+  for (let n = tree.resolveInner(from, 1); n; n = n.parent) {
+    if (names.includes(n.name) && n.from <= from && n.to >= to) active.add(n.name);
+  }
+  return active;
+}
+
 function updateCmSelectionToolbar() {
   const toolbar = $('cm-selection-toolbar');
   if (!toolbar) return;
-  if (!state.editing || !cmView) {
+  if (!state.editing || !cmView || cmPointerDown || slash.open) {
     toolbar.classList.add('hidden');
     return;
   }
   const sel = cmView.state.selection.main;
-  if (!sel || sel.empty) {
+  if (!sel || sel.empty || !cmView.hasFocus && !toolbar.contains(document.activeElement)) {
     toolbar.classList.add('hidden');
     return;
   }
@@ -134,21 +208,82 @@ function updateCmSelectionToolbar() {
     toolbar.classList.add('hidden');
     return;
   }
-  const coords = cmView.coordsAtPos(sel.to) || cmView.coordsAtPos(sel.from);
-  if (!coords) {
+  const a = cmView.coordsAtPos(sel.from, 1);
+  const b = cmView.coordsAtPos(sel.to, -1) || a;
+  if (!a) {
     toolbar.classList.add('hidden');
     return;
   }
+  const marks = cmSelectionMarks(cmView, sel.from, sel.to);
+  toolbar.querySelectorAll('[data-cmd]').forEach(btn => {
+    const node = CM_SEL_NODES[btn.dataset.cmd];
+    if (node) btn.setAttribute('aria-pressed', marks.has(node) ? 'true' : 'false');
+  });
+  const wasHidden = toolbar.classList.contains('hidden');
   toolbar.classList.remove('hidden');
-  const tbWidth = toolbar.offsetWidth || 190;
-  const tbHeight = toolbar.offsetHeight || 34;
-  let left = Math.max(10, Math.min(window.innerWidth - tbWidth - 10, coords.left - (tbWidth / 2)));
-  let top = coords.top - tbHeight - 8;
-  if (top < 50) {
-    top = coords.bottom + 8;
-  }
-  toolbar.style.left = left + 'px';
-  toolbar.style.top = top + 'px';
+  if (wasHidden) toolbar.classList.remove('is-settled');
+  const tbWidth = toolbar.offsetWidth || 320;
+  const tbHeight = toolbar.offsetHeight || 36;
+  const scroller = cmView.scrollDOM.getBoundingClientRect();
+  const sameLine = Math.abs(a.top - b.top) < 4;
+  const anchorX = sameLine ? (a.left + b.right) / 2 : a.left + Math.min(160, (scroller.right - a.left) / 2);
+  const minX = Math.max(8, scroller.left + 4);
+  const maxX = Math.min(window.innerWidth - 8, scroller.right - 4) - tbWidth;
+  const left = Math.max(minX, Math.min(maxX, anchorX - tbWidth / 2));
+  // Touch devices show the native selection menu above: sit below instead.
+  const below = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  let top = below ? b.bottom + 12 : a.top - tbHeight - 10;
+  if (!below && top < scroller.top + 4) top = b.bottom + 10;
+  if (top + tbHeight > window.innerHeight - 8) top = Math.max(scroller.top + 4, a.top - tbHeight - 10);
+  toolbar.style.left = Math.round(left) + 'px';
+  toolbar.style.top = Math.round(top) + 'px';
+  if (wasHidden) requestAnimationFrame(() => toolbar.classList.add('is-settled'));
+}
+
+let cmSelRepositionFrame = 0;
+function repositionCmSelectionToolbar() {
+  const toolbar = $('cm-selection-toolbar');
+  if (!toolbar || toolbar.classList.contains('hidden') || cmSelRepositionFrame) return;
+  cmSelRepositionFrame = requestAnimationFrame(() => { cmSelRepositionFrame = 0; updateCmSelectionToolbar(); });
+}
+
+/* The AI hook: other modules listen for `readmd:ai-inline` (bubbles to document
+   and window) and call preventDefault() to take over.  Unclaimed events fall
+   back to the built-in edit AI bar. */
+function cmRequestInlineAi(source) {
+  if (!cmView) return;
+  const sel = cmView.state.selection.main;
+  const detail = { selection: cmView.state.sliceDoc(sel.from, sel.to), from: sel.from, to: sel.to, source: source || 'selection-toolbar' };
+  const ev = new CustomEvent('readmd:ai-inline', { detail, bubbles: true, cancelable: true, composed: true });
+  cmView.dom.dispatchEvent(ev);
+  hideCmSelectionToolbar();
+  if (!ev.defaultPrevented) openEditAiBar();
+}
+window.cmRequestInlineAi = cmRequestInlineAi;
+
+function bindCmSelectionToolbar() {
+  const toolbar = $('cm-selection-toolbar');
+  if (!toolbar || toolbar.dataset.bound) return;
+  toolbar.dataset.bound = '1';
+  // Keep the editor selection while clicking toolbar buttons.
+  toolbar.addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
+  Object.keys(CM_SEL_COMMANDS).forEach(id => {
+    const btn = $(id);
+    if (btn) btn.addEventListener('click', () => { cmInsertSyntax(CM_SEL_COMMANDS[id]); updateCmSelectionToolbar(); });
+  });
+  toolbar.addEventListener('keydown', e => {
+    const buttons = [...toolbar.querySelectorAll('button')].filter(b => b.offsetParent !== null);
+    const at = buttons.indexOf(document.activeElement);
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const next = buttons[(at + (e.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length];
+      if (next) next.focus();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (cmView) cmView.focus();
+    }
+  });
 }
 
 async function cmCopySelection() {
@@ -216,11 +351,13 @@ document.addEventListener('pointerdown', e => {
   if (toolbar && !toolbar.classList.contains('hidden') && !toolbar.contains(e.target) && !e.target.closest('#edit-cm')) {
     hideCmSelectionToolbar();
   }
+  if (slash.open && slash.el && !slash.el.contains(e.target)) closeSlashMenu();
 });
 
 function destroyEditor() {
 
   hideCmSelectionToolbar();
+  closeSlashMenu();
   if (cmView) {
     try { cmView.destroy(); } catch (e) { /* ignore */ }
     cmView = null;
@@ -229,29 +366,278 @@ function destroyEditor() {
   const c = $('edit-cm');
   if (c) c.innerHTML = '';
   cmThemeCompartment = null;
+  cmCompartments = null;
 }
 
 
-/* CodeMirror 主题跟随 body 的实际 data-theme（light / dark / sepia）。
-   颜色取自 style.css 的主题变量，所以编辑器与阅读区同色。 */
-let cmSepiaTheme = null;
+/* CodeMirror theme: every colour is a CSS token (tokens.css), so one theme
+   object serves light / dark / sepia and re-evaluates when body[data-theme]
+   changes. The `dark` flag only steers CodeMirror's own base styles. */
+const cmThemeCache = {};
 function cmThemeFor(theme) {
   const CM = window.ReadMDCodeMirror;
-  if (theme === 'dark') return CM.oneDark;
-  if (theme === 'sepia') {
-    if (!cmSepiaTheme && CM.EditorView && typeof CM.EditorView.theme === 'function') {
-      cmSepiaTheme = CM.EditorView.theme({
-        '&': { backgroundColor: 'var(--bg2)', color: 'var(--fg)' },
-        '.cm-gutters': { backgroundColor: 'var(--bg3)', color: 'var(--fg3)', borderRight: '1px solid var(--border)' },
-        '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: 'var(--accent-soft)' },
-        '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': { backgroundColor: 'var(--editor-selection)' },
-        '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--accent)' },
-      }, { dark: false });
-    }
-    return cmSepiaTheme || [];
-  }
-  return [];
+  const dark = theme === 'dark';
+  const key = dark ? 'dark' : 'light';
+  if (cmThemeCache[key]) return cmThemeCache[key];
+  if (!CM.EditorView || typeof CM.EditorView.theme !== 'function') return [];
+  cmThemeCache[key] = CM.EditorView.theme({
+    '&': { backgroundColor: 'var(--color-surface)', color: 'var(--color-fg)' },
+    '.cm-content': { caretColor: 'var(--editor-caret)' },
+    '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--editor-caret)', borderLeftWidth: '2px' },
+    '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': { backgroundColor: 'var(--editor-selection-bg)' },
+    '.cm-selectionBackground': { backgroundColor: 'var(--editor-selection-blur)' },
+    '.cm-activeLine': { backgroundColor: 'transparent' },
+    '.cm-gutters': { backgroundColor: 'transparent', color: 'var(--color-fg-subtle)', border: 'none' },
+    '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--color-fg)' },
+    '.cm-matchingBracket, &.cm-focused .cm-matchingBracket': { backgroundColor: 'var(--color-accent-soft)', outline: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)' },
+    '.cm-nonmatchingBracket, &.cm-focused .cm-nonmatchingBracket': { backgroundColor: 'transparent', color: 'var(--color-danger)' },
+    '.cm-placeholder': { color: 'var(--color-fg-subtle)' },
+  }, { dark });
+  return cmThemeCache[key];
 }
+
+/* Markdown source that reads like a document: headings sized and weighted,
+   emphasis rendered, syntax marks dimmed, code in the code face. */
+let cmHighlightCache = null;
+function cmHighlightStyle() {
+  const CM = window.ReadMDCodeMirror;
+  if (cmHighlightCache) return cmHighlightCache;
+  if (!CM.HighlightStyle || !CM.tags) return CM.defaultHighlightStyle;
+  const t = CM.tags;
+  cmHighlightCache = CM.HighlightStyle.define([
+    { tag: t.heading1, class: 'cmt-h cmt-h1' },
+    { tag: t.heading2, class: 'cmt-h cmt-h2' },
+    { tag: t.heading3, class: 'cmt-h cmt-h3' },
+    { tag: [t.heading4, t.heading5, t.heading6], class: 'cmt-h cmt-h4' },
+    { tag: t.heading, class: 'cmt-h' },
+    { tag: t.strong, class: 'cmt-strong' },
+    { tag: t.emphasis, class: 'cmt-em' },
+    { tag: t.strikethrough, class: 'cmt-strike' },
+    { tag: t.link, class: 'cmt-link' },
+    { tag: t.url, class: 'cmt-url' },
+    { tag: t.monospace, class: 'cmt-code' },
+    { tag: t.quote, class: 'cmt-quote' },
+    { tag: t.list, class: 'cmt-list' },
+    { tag: t.contentSeparator, class: 'cmt-hr' },
+    { tag: t.processingInstruction, class: 'cmt-mark' },
+    { tag: t.labelName, class: 'cmt-label' },
+    { tag: t.atom, class: 'cmt-atom' },
+    { tag: t.escape, class: 'cmt-mark' },
+    { tag: [t.comment, t.blockComment, t.lineComment], class: 'cmt-comment' },
+    { tag: t.meta, class: 'cmt-meta' },
+    // Fenced code languages
+    { tag: [t.keyword, t.controlKeyword, t.operatorKeyword, t.definitionKeyword, t.moduleKeyword], class: 'cmt-kw' },
+    { tag: [t.string, t.special(t.string), t.regexp], class: 'cmt-str' },
+    { tag: [t.number, t.bool, t.null], class: 'cmt-num' },
+    { tag: [t.function(t.variableName), t.function(t.propertyName)], class: 'cmt-fn' },
+    { tag: [t.typeName, t.className, t.namespace], class: 'cmt-type' },
+    { tag: [t.propertyName, t.attributeName], class: 'cmt-prop' },
+    { tag: [t.tagName, t.angleBracket], class: 'cmt-tag' },
+    { tag: [t.definition(t.variableName)], class: 'cmt-def' },
+    { tag: t.invalid, class: 'cmt-invalid' },
+  ]);
+  return cmHighlightCache;
+}
+
+/* Line-level decorations: heading lines, fenced code blocks, quotes,
+   callouts, tables, horizontal rules, front matter, task checkboxes. */
+function cmMarkdownDecorations() {
+  const CM = window.ReadMDCodeMirror;
+  if (!CM.ViewPlugin || !CM.Decoration || !CM.syntaxTree) return [];
+  const D = CM.Decoration;
+  const lineDeco = {};
+  const line = cls => lineDeco[cls] || (lineDeco[cls] = D.line({ class: cls }));
+  class TaskBox extends CM.WidgetType {
+    constructor(checked) { super(); this.checked = checked; }
+    eq(o) { return o.checked === this.checked; }
+    toDOM() {
+      const el = document.createElement('span');
+      el.className = 'cm-task-box' + (this.checked ? ' is-checked' : '');
+      el.setAttribute('aria-hidden', 'true');
+      return el;
+    }
+    ignoreEvent() { return false; }
+  }
+  const CALLOUT_RE = /^\s{0,3}>\s?\[!(note|tip|important|warning|caution|info|success|danger|abstract|question|quote|example|bug)\][+-]?/i;
+  function build(view) {
+    const b = new CM.RangeSetBuilder();
+    const doc = view.state.doc;
+    const tree = CM.syntaxTree(view.state);
+    const marks = [];
+    for (const { from, to } of view.visibleRanges) {
+      tree.iterate({
+        from, to,
+        enter: node => {
+          const n = node.name;
+          if (n === 'FencedCode' || n === 'CodeBlock') {
+            const first = doc.lineAt(node.from).number, last = doc.lineAt(node.to).number;
+            for (let i = first; i <= last; i++) {
+              const l = doc.line(i);
+              const cls = 'cm-md-code' + (i === first ? ' cm-md-code-first' : '') + (i === last ? ' cm-md-code-last' : '');
+              marks.push([l.from, line(cls)]);
+            }
+            return false;
+          }
+          if (/^(ATX|Setext)Heading(\d)$/.test(n)) {
+            const lvl = n.slice(-1);
+            marks.push([doc.lineAt(node.from).from, line('cm-md-h cm-md-h' + lvl)]);
+          } else if (n === 'Blockquote') {
+            const first = doc.lineAt(node.from);
+            const callout = CALLOUT_RE.exec(first.text);
+            const kind = callout ? callout[1].toLowerCase() : '';
+            const last = doc.lineAt(node.to).number;
+            for (let i = first.number; i <= last; i++) {
+              const l = doc.line(i);
+              const cls = (kind ? 'cm-md-callout cm-md-callout-' + kind : 'cm-md-quote') + (i === first.number ? ' cm-md-quote-first' : '') + (i === last ? ' cm-md-quote-last' : '');
+              marks.push([l.from, line(cls)]);
+            }
+            return false;
+          } else if (n === 'Table') {
+            const first = doc.lineAt(node.from).number, last = doc.lineAt(node.to).number;
+            for (let i = first; i <= last; i++) marks.push([doc.line(i).from, line('cm-md-table' + (i === first ? ' cm-md-table-head' : ''))]);
+          } else if (n === 'HorizontalRule') {
+            marks.push([doc.lineAt(node.from).from, line('cm-md-hr')]);
+          } else if (n === 'TaskMarker') {
+            const checked = /x/i.test(doc.sliceString(node.from, node.to));
+            marks.push([node.from, D.replace({ widget: new TaskBox(checked) }), node.to]);
+            const l = doc.lineAt(node.from);
+            if (checked) marks.push([l.from, line('cm-md-task-done')]);
+          }
+        },
+      });
+    }
+    // Front matter (--- ... --- at the very top)
+    if (doc.lines > 1 && doc.line(1).text === '---' && view.visibleRanges.length && view.visibleRanges[0].from === 0) {
+      for (let i = 2; i <= Math.min(doc.lines, 200); i++) {
+        if (/^(---|\.\.\.)\s*$/.test(doc.line(i).text)) {
+          for (let k = 1; k <= i; k++) marks.push([doc.line(k).from, line('cm-md-frontmatter')]);
+          break;
+        }
+      }
+    }
+    marks.sort((x, y) => x[0] - y[0] || (x[2] === undefined ? -1 : 1) - (y[2] === undefined ? -1 : 1));
+    let lastLine = -1, lastCls = '';
+    for (const m of marks) {
+      if (m[2] === undefined) {
+        // Merge multiple line classes on the same line into one decoration.
+        if (m[0] === lastLine) { lastCls += ' ' + m[1].spec.class; continue; }
+        if (lastLine >= 0) b.add(lastLine, lastLine, line(lastCls));
+        lastLine = m[0]; lastCls = m[1].spec.class;
+      } else {
+        if (lastLine >= 0 && lastLine <= m[0]) { b.add(lastLine, lastLine, line(lastCls)); lastLine = -1; }
+        b.add(m[0], m[2], m[1]);
+      }
+    }
+    if (lastLine >= 0) b.add(lastLine, lastLine, line(lastCls));
+    return b.finish();
+  }
+  return CM.ViewPlugin.fromClass(class {
+    constructor(view) { this.decorations = build(view); }
+    update(u) {
+      if (u.docChanged || u.viewportChanged || CM.syntaxTree(u.startState) !== CM.syntaxTree(u.state)) this.decorations = build(u.view);
+    }
+  }, { decorations: v => v.decorations });
+}
+
+/* Click on a rendered task checkbox toggles [ ] / [x] (one undo step). */
+function cmTaskMarkerClick(e, view) {
+  const box = e.target && e.target.closest && e.target.closest('.cm-task-box');
+  if (!box) return false;
+  const pos = view.posAtDOM(box);
+  const text = view.state.sliceDoc(pos, pos + 3);
+  if (!/^\[[ xX]\]$/.test(text)) return false;
+  e.preventDefault();
+  view.dispatch({ changes: { from: pos + 1, to: pos + 2, insert: text[1] === ' ' ? 'x' : ' ' }, userEvent: 'input.toggle' });
+  return true;
+}
+
+/* Gutter: hidden by default (prose). Line numbers + folding appear when
+   the user turns them on. */
+function cmGutterExtension() {
+  const CM = window.ReadMDCodeMirror;
+  if (!editorPrefs.lineNumbers) return [];
+  return [CM.lineNumbers(), CM.highlightActiveLineGutter(), CM.foldGutter({ openText: '⌄', closedText: '›' })];
+}
+
+/* Focus mode: every paragraph except the one holding the cursor is dimmed. */
+function cmFocusExtension() {
+  const CM = window.ReadMDCodeMirror;
+  const dim = CM.Decoration.line({ class: 'cm-focus-dim' });
+  function build(view) {
+    const b = new CM.RangeSetBuilder();
+    const doc = view.state.doc;
+    const head = view.state.selection.main.head;
+    const cur = doc.lineAt(head).number;
+    let a = cur, z = cur;
+    const blank = n => !doc.line(n).text.trim();
+    if (!blank(cur)) {
+      while (a > 1 && !blank(a - 1)) a--;
+      while (z < doc.lines && !blank(z + 1)) z++;
+    }
+    for (const { from, to } of view.visibleRanges) {
+      for (let pos = from; pos <= to;) {
+        const l = doc.lineAt(pos);
+        if (l.number < a || l.number > z) b.add(l.from, l.from, dim);
+        pos = l.to + 1;
+      }
+    }
+    return b.finish();
+  }
+  return CM.ViewPlugin.fromClass(class {
+    constructor(view) { this.decorations = build(view); }
+    update(u) { if (u.docChanged || u.selectionSet || u.viewportChanged) this.decorations = build(u.view); }
+  }, { decorations: v => v.decorations });
+}
+
+/* Typewriter mode: the cursor line stays at the vertical centre. */
+function cmTypewriterExtension() {
+  const CM = window.ReadMDCodeMirror;
+  return [
+    CM.EditorView.scrollMargins.of(view => {
+      const h = view.scrollDOM.clientHeight;
+      return { top: h * 0.45, bottom: h * 0.45 };
+    }),
+    CM.EditorView.updateListener.of(u => {
+      if (!u.selectionSet || !u.view.hasFocus) return;
+      if (!u.transactions.some(tr => tr.isUserEvent('input') || tr.isUserEvent('delete') || tr.isUserEvent('select') || tr.isUserEvent('move'))) return;
+      const head = u.state.selection.main.head;
+      requestAnimationFrame(() => {
+        if (!cmView || cmView !== u.view) return;
+        u.view.dispatch({ effects: CM.EditorView.scrollIntoView(head, { y: 'center' }) });
+      });
+    }),
+  ];
+}
+
+function applyEditorViewClasses() {
+  const wrap = $('edit-wrap');
+  if (wrap) {
+    wrap.classList.toggle('has-gutter', !!editorPrefs.lineNumbers);
+    wrap.classList.toggle('is-focus-mode', !!editorPrefs.focus);
+    wrap.classList.toggle('is-typewriter', !!editorPrefs.typewriter);
+  }
+  const map = { lineNumbers: 'edit-view-lines', focus: 'edit-view-focus', typewriter: 'edit-view-typewriter' };
+  Object.entries(map).forEach(([k, id]) => {
+    const el = $(id);
+    if (el) el.setAttribute('aria-checked', editorPrefs[k] ? 'true' : 'false');
+  });
+}
+
+function setEditorPref(key, value) {
+  editorPrefs[key] = value === undefined ? !editorPrefs[key] : !!value;
+  saveEditorPrefs();
+  applyEditorViewClasses();
+  if (!cmView || !cmCompartments) return;
+  const effects = [];
+  if (key === 'lineNumbers') effects.push(cmCompartments.gutter.reconfigure(cmGutterExtension()));
+  if (key === 'focus') effects.push(cmCompartments.focus.reconfigure(editorPrefs.focus ? cmFocusExtension() : []));
+  if (key === 'typewriter') {
+    effects.push(cmCompartments.typewriter.reconfigure(editorPrefs.typewriter ? cmTypewriterExtension() : []));
+    if (editorPrefs.typewriter) effects.push(window.ReadMDCodeMirror.EditorView.scrollIntoView(cmView.state.selection.main.head, { y: 'center' }));
+  }
+  cmView.dispatch({ effects });
+}
+window.setEditorPref = setEditorPref;
 
 function applyCmTheme() {
   if (!cmView || !window.ReadMDCodeMirror || !cmThemeCompartment) return;
@@ -335,6 +721,7 @@ function cmInsertSyntax(kind) {
 function closeMdPopups() {
   document.querySelectorAll('.md-menu, .pv-menu').forEach(el => el.classList.add('hidden'));
   const trigger = $('pv-trigger'); if (trigger) trigger.setAttribute('aria-expanded', 'false');
+  document.querySelectorAll('#edit-bar [data-menu]').forEach(b => b.setAttribute('aria-expanded', 'false'));
 }
 
 /* ============================================================
@@ -607,24 +994,32 @@ function insertFormula(tex) { const mode = $('formula-mode').value; closeFormula
    Editor Studio PRO: 表格设计器 & 统计（Zen 由 reader/render.js 统一管理）
    ============================================================ */
 
-/* 实时文档统计与阅读时长 */
+/* 实时文档统计与阅读时长：words (CJK characters count as words), visible
+   characters, reading time; a selection shows its own word count. */
+let docStatsTimer = null;
+function scheduleDocStatistics() {
+  if (docStatsTimer) return;
+  docStatsTimer = setTimeout(() => { docStatsTimer = null; updateDocStatistics(); }, 160);
+}
+
 function updateDocStatistics() {
   const statsEl = $('edit-doc-stats');
   if (!statsEl) return;
-  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : `${p.words} 字 · 阅读约 ${p.min} 分钟`;
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const T = window.ReadMDTransforms;
   const docText = typeof getEditContent === 'function' ? getEditContent() : (cmView ? cmView.state.doc.toString() : ($('edit-area') && $('edit-area').value || ''));
-  if (!docText) {
-    statsEl.textContent = _t('editor.statsFormat', { words: 0, min: 1 });
-    return;
+  const stats = T && T.textStats ? T.textStats(docText) : { words: 0, chars: docText.length, minutes: 0 };
+  const nf = n => { try { return Number(n).toLocaleString((window.i18n && window.i18n.locale) || undefined); } catch (e) { return String(n); } };
+  let selWords = 0;
+  if (cmView && T && T.textStats) {
+    const ranges = cmView.state.selection.ranges.filter(r => !r.empty);
+    if (ranges.length) selWords = T.textStats(ranges.map(r => cmView.state.sliceDoc(r.from, r.to)).join('\n')).words;
   }
-
-  const chars = docText.length;
-  // 中文字符 + 西文字数
-  const cjk = (docText.match(/[\u4e00-\u9fa5]/g) || []).length;
-  const nonCjk = docText.replace(/[\u4e00-\u9fa5]/g, ' ').trim().split(/\s+/).filter(Boolean).length;
-  const totalWords = cjk + nonCjk;
-  const minutes = Math.max(1, Math.ceil(totalWords / 300));
-  statsEl.textContent = _t('editor.statsFormat', { words: totalWords, min: minutes });
+  const params = { words: nf(stats.words), chars: nf(stats.chars), min: nf(Math.max(stats.minutes, stats.words ? 1 : 0)), total: nf(stats.words) };
+  statsEl.textContent = selWords
+    ? _t('editor.statsSelection', { words: nf(selWords), total: params.total })
+    : _t('editor.statsLine', params);
+  statsEl.title = _t('editor.statsLine', params);
 }
 
 
@@ -1068,7 +1463,9 @@ function bindEditorAiEvents() {
   const discardBtn = $('edit-ai-discard');
 
   if (btnAssistant) btnAssistant.addEventListener('click', openEditAiBar);
-  if (cmSelAi) cmSelAi.addEventListener('click', () => { hideCmSelectionToolbar(); openEditAiBar(); });
+  if (cmSelAi) cmSelAi.addEventListener('click', () => cmRequestInlineAi('selection-toolbar'));
+  bindCmSelectionToolbar();
+  bindEditBarExtras();
   if (closeBtn) closeBtn.addEventListener('click', closeEditAiBar);
   if (discardBtn) discardBtn.addEventListener('click', discardEditAiResult);
   if (applyBtn) applyBtn.addEventListener('click', applyEditAiResult);
@@ -1096,4 +1493,785 @@ function bindEditorAiEvents() {
       if (act) runEditAiAction(act);
     });
   });
+}
+
+/* ============================================================
+   Smart editing: priority keymap, input rules, paste, tables, lists
+   ============================================================ */
+
+const CM_CODE_NODE_RE = /^(FencedCode|CodeBlock|InlineCode|CodeText|HTMLBlock|CommentBlock|Comment|ProcessingInstructionBlock)$/;
+
+function cmInCode(state, pos) {
+  const CM = window.ReadMDCodeMirror;
+  if (!CM || !CM.syntaxTree) return false;
+  for (let n = CM.syntaxTree(state).resolveInner(pos, -1); n; n = n.parent) {
+    if (CM_CODE_NODE_RE.test(n.name)) return true;
+  }
+  return false;
+}
+
+function cmDispatchEdit(view, e, userEvent) {
+  if (!e) return false;
+  view.dispatch({ changes: e.changes, selection: e.selection, scrollIntoView: true, userEvent: userEvent || 'input' });
+  return true;
+}
+
+function cmSingleCursorLine(view) {
+  const ranges = view.state.selection.ranges;
+  if (ranges.length !== 1) return null;
+  const r = ranges[0];
+  const line = view.state.doc.lineAt(r.head);
+  if (r.from < line.from || r.to > line.to) return null;
+  return { range: r, line };
+}
+
+/* Tab / Shift+Tab inside a GFM table: realign pipes and jump between cells. */
+function cmTableTab(view, dir) {
+  const T = window.ReadMDTransforms;
+  const hit = cmSingleCursorLine(view);
+  if (!T || !hit || cmInCode(view.state, hit.range.head)) return false;
+  return cmDispatchEdit(view, T.tableNavEdit(view.state.doc.toString(), hit.range.head, dir), 'input.table');
+}
+
+/* Enter inside a table adds a row; Enter on an empty last row leaves it. */
+function cmTableEnter(view) {
+  const T = window.ReadMDTransforms;
+  const hit = cmSingleCursorLine(view);
+  if (!T || !hit || !hit.range.empty || cmInCode(view.state, hit.range.head)) return false;
+  return cmDispatchEdit(view, T.tableEnterEdit(view.state.doc.toString(), hit.range.head), 'input.table');
+}
+
+/* Enter at the end of an unclosed opening fence (```js) closes the block
+   and puts the cursor inside it. */
+function cmFenceEnter(view) {
+  const hit = cmSingleCursorLine(view);
+  if (!hit || !hit.range.empty || hit.range.head !== hit.line.to) return false;
+  const m = /^(\s{0,3})(`{3,}|~{3,})([^`\s]*)\s*$/.exec(hit.line.text);
+  if (!m) return false;
+  const doc = view.state.doc;
+  const fenceRe = /^\s{0,3}(`{3,}|~{3,})/;
+  let before = 0, total = 0;
+  for (let i = 1; i <= doc.lines; i++) {
+    if (fenceRe.test(doc.line(i).text)) { total++; if (i < hit.line.number) before++; }
+  }
+  if (before % 2 !== 0 || total % 2 === 0) return false;
+  const next = hit.line.number < doc.lines ? doc.line(hit.line.number + 1).text : '';
+  if (next.trim()) return false;
+  const insert = '\n' + m[1] + '\n' + m[1] + m[2];
+  view.dispatch({ changes: { from: hit.line.to, insert }, selection: { anchor: hit.line.to + 1 + m[1].length }, scrollIntoView: true, userEvent: 'input' });
+  return true;
+}
+
+const CM_LIST_LINE_RE = /^([ \t]*)([-*+]|\d{1,9}[.)])([ \t]+)(\[[ xX]\][ \t]+)?/;
+
+/* Enter on an empty top-level list item leaves the list with a blank line,
+   so the next paragraph is not a lazy continuation of the last item.
+   Nested empty items are handled by CodeMirror (they outdent one level). */
+function cmListExit(view) {
+  const hit = cmSingleCursorLine(view);
+  if (!hit || !hit.range.empty || hit.range.head !== hit.line.to) return false;
+  if (!/^([-*+]|\d{1,9}[.)])([ \t]+\[[ xX]\])?[ \t]*$/.test(hit.line.text)) return false;
+  if (hit.line.number < 2 || cmInCode(view.state, hit.line.from)) return false;
+  const prev = view.state.doc.line(hit.line.number - 1).text;
+  if (!prev.trim()) return false;
+  view.dispatch({
+    changes: { from: hit.line.from, to: hit.line.to, insert: '\n' },
+    selection: { anchor: hit.line.from + 1 },
+    scrollIntoView: true,
+    userEvent: 'input',
+  });
+  return true;
+}
+
+/* Tab / Shift+Tab on list items nests / un-nests them by the width of the
+   parent marker, so "1. " children line up with the parent's text. */
+function cmListIndent(view, dir) {
+  const { state } = view;
+  const doc = state.doc;
+  const lines = [];
+  for (const r of state.selection.ranges) {
+    const a = doc.lineAt(r.from).number, b = doc.lineAt(r.to).number;
+    for (let i = a; i <= b; i++) if (!lines.includes(i)) lines.push(i);
+  }
+  lines.sort((x, y) => x - y);
+  if (!lines.length || !lines.every(n => CM_LIST_LINE_RE.test(doc.line(n).text))) return false;
+  if (lines.some(n => cmInCode(state, doc.line(n).to))) return false;
+  const changes = [];
+  for (const n of lines) {
+    const line = doc.line(n);
+    const m = CM_LIST_LINE_RE.exec(line.text);
+    const ind = m[1].length;
+    if (dir > 0) {
+      let width = 2;
+      for (let k = n - 1; k >= 1 && k >= n - 400; k--) {
+        const t = doc.line(k).text;
+        if (!t.trim()) continue;
+        const pm = CM_LIST_LINE_RE.exec(t);
+        if (!pm) { if (/^\s/.test(t)) continue; break; }
+        if (pm[1].length === ind) { width = pm[2].length + pm[3].length; break; }
+        if (pm[1].length < ind) break;
+      }
+      changes.push({ from: line.from, insert: ' '.repeat(width) });
+      // A nested numbered list restarts at 1.
+      if (/^\d/.test(m[2]) && m[2].slice(0, -1) !== '1') {
+        changes.push({ from: line.from + ind, to: line.from + ind + m[2].length - 1, insert: '1' });
+      }
+    } else if (ind) {
+      let target = 0;
+      for (let k = n - 1; k >= 1 && k >= n - 400; k--) {
+        const t = doc.line(k).text;
+        if (!t.trim()) continue;
+        const pm = CM_LIST_LINE_RE.exec(t);
+        if (pm && pm[1].length < ind) { target = pm[1].length; break; }
+        if (!pm && !/^\s/.test(t)) break;
+      }
+      changes.push({ from: line.from, to: line.from + (ind - target) });
+    }
+  }
+  if (changes.length) view.dispatch({ changes, scrollIntoView: true, userEvent: dir > 0 ? 'input.indent' : 'delete.dedent' });
+  return true;
+}
+
+function cmPriorityKeymap() {
+  const CM = window.ReadMDCodeMirror;
+  // nonTightLists:false — Enter on an empty item always leaves the list.
+  const continueList = CM.insertNewlineContinueMarkupCommand
+    ? CM.insertNewlineContinueMarkupCommand({ nonTightLists: false })
+    : null;
+  return [
+    { key: 'ArrowDown', run: v => slashKey(v, 'down') },
+    { key: 'ArrowUp', run: v => slashKey(v, 'up') },
+    { key: 'ArrowLeft', run: v => slashKey(v, 'left') },
+    { key: 'ArrowRight', run: v => slashKey(v, 'right') },
+    { key: 'PageDown', run: v => slashKey(v, 'pagedown') },
+    { key: 'PageUp', run: v => slashKey(v, 'pageup') },
+    { key: 'Escape', run: v => slashKey(v, 'escape'), stopPropagation: true },
+    { key: 'Enter', run: v => slashKey(v, 'enter') || cmTableEnter(v) || cmFenceEnter(v) || cmListExit(v) || (continueList ? continueList(v) : false) },
+    { key: 'Tab', run: v => slashKey(v, 'enter') || cmTableTab(v, 1) || cmListIndent(v, 1) },
+    { key: 'Shift-Tab', run: v => cmTableTab(v, -1) || cmListIndent(v, -1) },
+  ];
+}
+
+/* Typed-character rules: "/" opens the block menu, "**" / "~~" pair up,
+   typing over a closing mark steps over it, a third backtick opens a fence. */
+function cmSmartInput(view, from, to, text) {
+  const { state } = view;
+  if (view.composing || state.selection.ranges.length !== 1) return false;
+  const sel = state.selection.main;
+  if (sel.from !== from || sel.to !== to) return false;
+  if (text === '/' && from === to) {
+    const line = state.doc.lineAt(from);
+    const before = state.doc.sliceString(line.from, from);
+    if ((before === '' || /\s$/.test(before)) && !cmInCode(state, from)) {
+      view.dispatch({ changes: { from, insert: '/' }, selection: { anchor: from + 1 }, userEvent: 'input.type' });
+      openSlashMenu(view, from);
+      return true;
+    }
+    return false;
+  }
+  if (text === '*' || text === '~') return cmEmphasisInput(view, from, to, text);
+  if (text === '`' && from === to) return cmBacktickInput(view, from);
+  return false;
+}
+
+function cmEmphasisInput(view, from, to, ch) {
+  const CM = window.ReadMDCodeMirror;
+  const { state } = view;
+  if (cmInCode(state, from)) return false;
+  if (from !== to) {
+    // Wrap the selection; typing the mark again wraps again (* -> **).
+    view.dispatch({
+      changes: [{ from, insert: ch }, { from: to, insert: ch }],
+      selection: { anchor: from + 1, head: to + 1 },
+      userEvent: 'input.type',
+    });
+    return true;
+  }
+  const next = state.sliceDoc(from, from + 1);
+  // Step over a closing emphasis mark instead of doubling it.
+  if (next === ch && CM.syntaxTree) {
+    const node = CM.syntaxTree(state).resolveInner(from, 1);
+    const markName = ch === '*' ? 'EmphasisMark' : 'StrikethroughMark';
+    if (node && node.name === markName && node.from <= from && from < node.to && node.parent && node.parent.lastChild &&
+        node.parent.lastChild.from === node.from) {
+      view.dispatch({ selection: { anchor: from + 1 }, userEvent: 'select' });
+      return true;
+    }
+  }
+  // Second mark typed after text: "word **" -> "word **|**".
+  const line = state.doc.lineAt(from);
+  const prev = state.sliceDoc(from - 1, from);
+  const prev2 = from - 2 >= line.from ? state.sliceDoc(from - 2, from - 1) : '';
+  const lead = state.sliceDoc(line.from, Math.max(line.from, from - 1));
+  if (prev === ch && prev2 !== ch && lead.trim() && (prev2 === '' || /[\s([{"'“‘（【「《]/.test(prev2)) &&
+      (next === '' || /[\s)\]}.,;:!?"'”’）】」》，。；：！？]/.test(next))) {
+    view.dispatch({ changes: { from, insert: ch + ch + ch }, selection: { anchor: from + 1 }, userEvent: 'input.type' });
+    return true;
+  }
+  return false;
+}
+
+function cmBacktickInput(view, from) {
+  const { state } = view;
+  const line = state.doc.lineAt(from);
+  const before = state.sliceDoc(line.from, from);
+  const after = state.sliceDoc(from, line.to);
+  if (!/^\s{0,3}``$/.test(before) || !/^`*$/.test(after)) return false;
+  view.dispatch({ changes: { from, to: line.to, insert: '`' }, selection: { anchor: from + 1 }, userEvent: 'input.type' });
+  return true;
+}
+
+/* Paste: images are saved next to the document, tab-separated cells become
+   a table (both via handleSmartExcelPaste); a URL pasted over a selection
+   becomes a link (CodeMirror's pasteURLAsLink handles that next). */
+function cmHandlePaste(event, view) {
+  if (view !== cmView) return false;
+  handleSmartExcelPaste(event);
+  return event.defaultPrevented;
+}
+
+/* ============================================================
+   Slash command menu ("/" at line start or after a space)
+   ============================================================ */
+
+const slash = {
+  open: false, view: null, el: null, from: 0, prefix: '/', mode: 'blocks',
+  query: '', items: [], index: 0, cols: 3, rows: 3, lastHitLen: 0, suppress: false,
+};
+
+const SLASH_SVG = {
+  text: '<path d="M5 7V5h14v2M12 5v14M9 19h6"/>',
+  bullet: '<path d="M10 6h10M10 12h10M10 18h10M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>',
+  numbered: '<path d="M11 6h9M11 12h9M11 18h9M4 5h1.5v4M4 9h3M7 19H4c0-1.3 3-2 3-3.3 0-.8-.7-1.2-1.5-1.2S4 15 4 15.5"/>',
+  task: '<rect x="3" y="4" width="7" height="7" rx="1.5"/><path d="m3.5 17.5 2 2 4-4.5M14 7.5h7M14 17.5h7"/>',
+  quote: '<path d="M4 6v12M9 8h11M9 12h11M9 16h7"/>',
+  divider: '<path d="M3 12h18"/><path d="M7 7h10M7 17h10" opacity=".45"/>',
+  callout: '<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v10a1.5 1.5 0 0 1-1.5 1.5H9l-5 3.5z"/><path d="M12 8v3.5M12 14h.01"/>',
+  code: '<path d="m15.5 17 5-5-5-5M8.5 7l-5 5 5 5"/>',
+  table: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.5h18M3 15h18M9.5 4v16"/>',
+  math: '<path d="M18 5H6.5l6 7-6 7H18"/>',
+  mermaid: '<rect x="3" y="3" width="7" height="6" rx="1.5"/><rect x="14" y="15" width="7" height="6" rx="1.5"/><path d="M6.5 9v3.5a2.5 2.5 0 0 0 2.5 2.5h5"/>',
+  image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m20.5 16.5-4.8-4.8L7 20"/>',
+  toc: '<path d="M4 6h.01M4 12h.01M4 18h.01M8 6h12M11 12h9M11 18h9"/>',
+  date: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+  time: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  footnote: '<path d="M4 8h10M4 13h10M4 18h6M17.5 4v5.5M16 5.2l1.5-1.2"/>',
+  lang: '<path d="m15.5 17 5-5-5-5M8.5 7l-5 5 5 5"/>',
+};
+
+function slashT(k, p) { return window.i18n ? window.i18n.t(k, p) : k; }
+
+function slashPad(n) { return String(n).padStart(2, '0'); }
+
+function slashCatalog() {
+  const T = window.ReadMDTransforms;
+  const line = prefix => (doc, from, to) => T.linePrefixEdit(doc, from, to, prefix);
+  const block = (text, a, b) => (doc, from, to) => T.blockInsertEdit(doc, from, to, text, a, b);
+  const inline = (textFn, a, b) => (doc, from, to) => {
+    const text = typeof textFn === 'function' ? textFn() : textFn;
+    return T.inlineInsertEdit(doc, from, to, text, typeof a === 'function' ? a(text) : a, typeof b === 'function' ? b(text) : b);
+  };
+  const callout = type => {
+    const head = '> [!' + type + ']\n> ';
+    return block(head, head.length);
+  };
+  const mermaid = '```mermaid\nflowchart LR\n  A[Start] --> B{Ready?}\n  B -->|Yes| C[Ship it]\n  B -->|No| D[Iterate]\n```';
+  const mermaidBody = [mermaid.indexOf('\n') + 1, mermaid.lastIndexOf('\n')];
+  const desc = slashT('editor.descWord') || 'image';
+  const items = [
+    { id: 'text', sec: 'basic', icon: 'text', kw: ['paragraph', 'plain', 'body', 'p', '正文', '文本', '段落'], run: line('') },
+    { id: 'h1', sec: 'basic', tile: 'H1', hint: '#', kw: ['h1', 'heading', 'title', '#', '标题', '一级标题'], run: line('# ') },
+    { id: 'h2', sec: 'basic', tile: 'H2', hint: '##', kw: ['h2', 'heading', 'subtitle', '##', '标题', '二级标题'], run: line('## ') },
+    { id: 'h3', sec: 'basic', tile: 'H3', hint: '###', kw: ['h3', 'heading', '###', '标题', '三级标题'], run: line('### ') },
+    { id: 'bullet', sec: 'basic', icon: 'bullet', hint: '-', kw: ['ul', 'unordered', 'list', 'bullets', '-', '无序列表', '列表'], run: line('- ') },
+    { id: 'numbered', sec: 'basic', icon: 'numbered', hint: '1.', kw: ['ol', 'ordered', 'list', 'numbers', '1.', '有序列表'], run: line('1. ') },
+    { id: 'task', sec: 'basic', icon: 'task', hint: '[ ]', kw: ['todo', 'checkbox', 'check', 'checklist', '[]', '任务', '待办'], run: line('- [ ] ') },
+    { id: 'quote', sec: 'basic', icon: 'quote', hint: '>', kw: ['blockquote', 'cite', '>', '引用'], run: line('> ') },
+    { id: 'divider', sec: 'basic', icon: 'divider', hint: '---', kw: ['hr', 'rule', 'line', 'separator', '---', '分隔线', '分割线'], run: block('---\n', 4) },
+    { id: 'code', sec: 'insert', icon: 'code', hint: '```', kw: ['codeblock', 'fence', 'snippet', 'pre', '```', '代码块', '代码'], next: 'lang' },
+    { id: 'table', sec: 'insert', icon: 'table', hint: '|', kw: ['grid', 'rows', 'columns', '|', '表格'], next: 'table' },
+    { id: 'image', sec: 'insert', icon: 'image', hint: '![]', kw: ['picture', 'photo', 'img', 'figure', '![]', '图片', '插图'],
+      run: inline('![' + desc + '](url)', t => t.length - 4, t => t.length - 1) },
+    { id: 'math', sec: 'insert', icon: 'math', hint: '$$', kw: ['latex', 'formula', 'equation', 'katex', 'tex', '$$', '公式', '数学'], run: block('$$\n\n$$', 3) },
+    { id: 'mermaid', sec: 'insert', icon: 'mermaid', kw: ['diagram', 'flowchart', 'chart', 'graph', 'sequence', 'gantt', '图表', '流程图'], run: block(mermaid, mermaidBody[0], mermaidBody[1]) },
+    { id: 'calloutNote', sec: 'callout', icon: 'callout', tone: 'note', hint: '[!NOTE]', kw: ['callout', 'admonition', 'alert', 'note', 'info', '提示', '说明', '注'], run: callout('NOTE') },
+    { id: 'calloutTip', sec: 'callout', icon: 'callout', tone: 'tip', hint: '[!TIP]', kw: ['callout', 'admonition', 'tip', 'hint', 'success', '技巧', '建议'], run: callout('TIP') },
+    { id: 'calloutImportant', sec: 'callout', icon: 'callout', tone: 'important', hint: '[!IMPORTANT]', kw: ['callout', 'admonition', 'important', 'key', '重要'], run: callout('IMPORTANT') },
+    { id: 'calloutWarning', sec: 'callout', icon: 'callout', tone: 'warning', hint: '[!WARNING]', kw: ['callout', 'admonition', 'warning', 'warn', 'attention', '警告', '注意'], run: callout('WARNING') },
+    { id: 'calloutCaution', sec: 'callout', icon: 'callout', tone: 'caution', hint: '[!CAUTION]', kw: ['callout', 'admonition', 'caution', 'danger', 'error', '危险', '小心'], run: callout('CAUTION') },
+    { id: 'toc', sec: 'more', icon: 'toc', hint: '[TOC]', kw: ['contents', 'outline', 'index', 'toc', '目录', '大纲'], run: slashTocEdit },
+    { id: 'footnote', sec: 'more', icon: 'footnote', hint: '[^1]', kw: ['note', 'reference', 'ref', 'cite', '[^]', '脚注', '注释'],
+      run: (doc, from, to) => T.footnoteEdit(doc, from, to) },
+    { id: 'date', sec: 'more', icon: 'date', kw: ['today', 'day', 'now', 'calendar', '日期', '今天'],
+      run: inline(() => { const d = new Date(); return d.getFullYear() + '-' + slashPad(d.getMonth() + 1) + '-' + slashPad(d.getDate()); }) },
+    { id: 'time', sec: 'more', icon: 'time', kw: ['now', 'clock', 'hour', 'timestamp', '时间', '现在'],
+      run: inline(() => { const d = new Date(); return slashPad(d.getHours()) + ':' + slashPad(d.getMinutes()); }) },
+  ];
+  items.forEach(it => {
+    it.label = slashT('slash.' + it.id);
+    it.desc = slashT('slash.' + it.id + 'Desc');
+  });
+  return items;
+}
+
+function slashTocEdit(doc, from, to) {
+  const T = window.ReadMDTransforms;
+  const toc = T.tocMarkdown(doc.slice(0, from) + doc.slice(to));
+  if (!toc) {
+    if (typeof showToast === 'function') showToast(slashT('slash.tocEmpty'), 2400);
+    return { changes: { from, to, insert: '' }, selection: { anchor: from, head: from } };
+  }
+  return T.blockInsertEdit(doc, from, to, toc, toc.length);
+}
+
+const SLASH_LANGS = [
+  ['javascript', 'JavaScript', ['js', 'node', 'jsx']], ['typescript', 'TypeScript', ['ts', 'tsx']],
+  ['python', 'Python', ['py']], ['bash', 'Bash', ['sh', 'shell', 'zsh', 'terminal']], ['json', 'JSON', []],
+  ['html', 'HTML', ['xml']], ['css', 'CSS', ['scss', 'style']], ['markdown', 'Markdown', ['md']],
+  ['rust', 'Rust', ['rs']], ['go', 'Go', ['golang']], ['java', 'Java', []], ['c', 'C', []],
+  ['cpp', 'C++', ['c++', 'cxx']], ['csharp', 'C#', ['cs', 'dotnet']], ['sql', 'SQL', ['mysql', 'postgres']],
+  ['yaml', 'YAML', ['yml']], ['toml', 'TOML', ['ini']], ['diff', 'Diff', ['patch']], ['php', 'PHP', []],
+  ['ruby', 'Ruby', ['rb']], ['swift', 'Swift', []], ['kotlin', 'Kotlin', ['kt']], ['latex', 'LaTeX', ['tex']],
+  ['powershell', 'PowerShell', ['ps1', 'pwsh']], ['dockerfile', 'Dockerfile', ['docker']],
+];
+
+function slashLanguageItems(q) {
+  const T = window.ReadMDTransforms;
+  const query = q.trim().toLowerCase();
+  const make = (lang, label) => ({
+    id: 'lang-' + (lang || 'plain'), icon: 'lang', label, desc: lang ? '```' + lang : '```', lang,
+    run: (doc, from, to) => T.blockInsertEdit(doc, from, to, '```' + lang + '\n\n```', 4 + lang.length),
+  });
+  const plain = make('', slashT('slash.langPlain'));
+  if (!query) return [plain, ...SLASH_LANGS.map(([id, name]) => make(id, name))];
+  const scored = SLASH_LANGS.map(([id, name, alias]) => ({
+    it: make(id, name),
+    s: Math.max(T.fuzzyScore(query, id), T.fuzzyScore(query, name), ...alias.map(a => (a === query ? 2000 : T.fuzzyScore(query, a)))),
+  })).filter(x => x.s > 0).sort((a, b) => b.s - a.s).map(x => x.it);
+  const exact = SLASH_LANGS.some(([id, , alias]) => id === query || alias.includes(query));
+  if (!exact && /^[\w+#.-]+$/.test(query)) scored.push(make(query, slashT('slash.langUse', { lang: query })));
+  return scored;
+}
+
+function slashFilter() {
+  const T = window.ReadMDTransforms;
+  const q = slash.query.trim();
+  let list;
+  if (slash.mode === 'lang') {
+    list = slashLanguageItems(q);
+  } else {
+    const all = slashCatalog();
+    list = !q ? all : all
+      .map(it => ({ it, s: Math.max(T.fuzzyScore(q, it.label), ...it.kw.map(k => T.fuzzyScore(q, k) * 0.94)) }))
+      .filter(x => x.s > 0)
+      .sort((a, b) => b.s - a.s)
+      .map(x => x.it);
+  }
+  slash.items = list;
+  if (list.length) slash.lastHitLen = slash.query.length;
+  slash.index = 0;
+}
+
+function slashEnsureEl() {
+  if (slash.el && slash.el.isConnected) return slash.el;
+  const el = document.createElement('div');
+  el.id = 'cm-slash-menu';
+  el.className = 'cm-slash-menu hidden';
+  // Keep focus (and the typed query) in the editor while using the mouse.
+  el.addEventListener('mousedown', e => e.preventDefault());
+  el.addEventListener('click', e => {
+    const cell = e.target.closest('[data-cols]');
+    if (cell) { slash.cols = +cell.dataset.cols; slash.rows = +cell.dataset.rows; slashInsertTable(); return; }
+    const opt = e.target.closest('[data-slash-index]');
+    if (opt) { slash.index = +opt.dataset.slashIndex; slashChoose(slash.items[slash.index]); }
+  });
+  el.addEventListener('mousemove', e => {
+    const cell = e.target.closest('[data-cols]');
+    if (cell) {
+      const c = +cell.dataset.cols, r = +cell.dataset.rows;
+      if (c !== slash.cols || r !== slash.rows) { slash.cols = c; slash.rows = r; slashSyncTable(); }
+      return;
+    }
+    const opt = e.target.closest('[data-slash-index]');
+    if (opt && +opt.dataset.slashIndex !== slash.index) { slash.index = +opt.dataset.slashIndex; slashSyncActive(false); }
+  });
+  document.body.appendChild(el);
+  slash.el = el;
+  return el;
+}
+
+function slashIcon(it) {
+  const ic = document.createElement('span');
+  ic.className = 'cm-slash-ic' + (it.tone ? ' is-' + it.tone : '') + (it.tile ? ' is-tile' : '');
+  ic.setAttribute('aria-hidden', 'true');
+  if (it.tile) ic.textContent = it.tile;
+  else ic.innerHTML = '<svg viewBox="0 0 24 24">' + (SLASH_SVG[it.icon] || SLASH_SVG.text) + '</svg>';
+  return ic;
+}
+
+function slashRender() {
+  const el = slashEnsureEl();
+  el.innerHTML = '';
+  el.classList.toggle('is-table', slash.mode === 'table');
+  if (slash.mode === 'table') { slashRenderTable(el); return; }
+  el.setAttribute('role', 'listbox');
+  el.setAttribute('aria-label', slashT(slash.mode === 'lang' ? 'slash.langTitle' : 'slash.menuLabel'));
+  const scroll = document.createElement('div');
+  scroll.className = 'cm-slash-scroll';
+  const showSections = slash.mode !== 'lang' && !slash.query.trim();
+  if (slash.mode === 'lang' || (!showSections && slash.items.length)) {
+    const h = document.createElement('div');
+    h.className = 'cm-slash-section';
+    h.setAttribute('role', 'presentation');
+    h.textContent = slashT(slash.mode === 'lang' ? 'slash.langTitle' : 'slash.sectionResults');
+    scroll.appendChild(h);
+  }
+  if (!slash.items.length) {
+    const empty = document.createElement('div');
+    empty.className = 'cm-slash-empty';
+    empty.setAttribute('role', 'presentation');
+    empty.textContent = slashT('slash.noResults');
+    scroll.appendChild(empty);
+  }
+  let sec = null, group = scroll;
+  slash.items.forEach((it, i) => {
+    if (showSections && it.sec !== sec) {
+      sec = it.sec;
+      group = document.createElement('div');
+      group.setAttribute('role', 'group');
+      const h = document.createElement('div');
+      h.className = 'cm-slash-section';
+      h.id = 'cm-slash-sec-' + sec;
+      h.setAttribute('role', 'presentation');
+      h.textContent = slashT('slash.section' + sec[0].toUpperCase() + sec.slice(1));
+      group.setAttribute('aria-labelledby', h.id);
+      group.appendChild(h);
+      scroll.appendChild(group);
+    }
+    const opt = document.createElement('div');
+    opt.className = 'cm-slash-item';
+    opt.id = 'cm-slash-opt-' + i;
+    opt.dataset.slashIndex = String(i);
+    opt.setAttribute('role', 'option');
+    opt.setAttribute('aria-selected', i === slash.index ? 'true' : 'false');
+    opt.appendChild(slashIcon(it));
+    const text = document.createElement('span');
+    text.className = 'cm-slash-text';
+    const label = document.createElement('span');
+    label.className = 'cm-slash-label';
+    label.textContent = it.label;
+    text.appendChild(label);
+    if (it.desc && it.desc !== 'slash.' + it.id + 'Desc') {
+      const d = document.createElement('span');
+      d.className = 'cm-slash-desc';
+      d.textContent = it.desc;
+      text.appendChild(d);
+    }
+    opt.appendChild(text);
+    if (it.hint) {
+      const k = document.createElement('kbd');
+      k.className = 'cm-slash-kbd';
+      k.textContent = it.hint;
+      opt.appendChild(k);
+    }
+    group.appendChild(opt);
+  });
+  el.appendChild(scroll);
+  const foot = document.createElement('div');
+  foot.className = 'cm-slash-foot';
+  foot.setAttribute('aria-hidden', 'true');
+  foot.textContent = slashT('slash.hint');
+  el.appendChild(foot);
+  slashSyncActive(true);
+}
+
+const SLASH_GRID = 8;
+
+function slashRenderTable(el) {
+  el.setAttribute('role', 'group');
+  el.setAttribute('aria-label', slashT('slash.tableTitle'));
+  const head = document.createElement('div');
+  head.className = 'cm-slash-table-head';
+  const title = document.createElement('span');
+  title.className = 'cm-slash-section';
+  title.textContent = slashT('slash.tableTitle');
+  const size = document.createElement('span');
+  size.className = 'cm-slash-size';
+  size.setAttribute('role', 'status');
+  size.setAttribute('aria-live', 'polite');
+  head.append(title, size);
+  const grid = document.createElement('div');
+  grid.className = 'cm-slash-grid';
+  grid.setAttribute('aria-hidden', 'true');
+  for (let r = 1; r <= SLASH_GRID; r++) {
+    for (let c = 1; c <= SLASH_GRID; c++) {
+      const cell = document.createElement('span');
+      cell.className = 'cm-slash-cell' + (r === 1 ? ' is-head' : '');
+      cell.dataset.cols = String(c);
+      cell.dataset.rows = String(Math.max(2, r));
+      grid.appendChild(cell);
+    }
+  }
+  const foot = document.createElement('div');
+  foot.className = 'cm-slash-foot';
+  foot.setAttribute('aria-hidden', 'true');
+  foot.textContent = slashT('slash.tableHint');
+  el.append(head, grid, foot);
+  slashSyncTable();
+}
+
+function slashSyncTable() {
+  const el = slash.el;
+  if (!el) return;
+  el.querySelectorAll('.cm-slash-cell').forEach((cell, i) => {
+    const r = Math.floor(i / SLASH_GRID) + 1, c = (i % SLASH_GRID) + 1;
+    cell.classList.toggle('is-on', c <= slash.cols && r <= slash.rows);
+  });
+  const size = el.querySelector('.cm-slash-size');
+  if (size) size.textContent = slashT('slash.tableSize', { cols: slash.cols, rows: slash.rows });
+}
+
+function slashSyncActive(scroll) {
+  const el = slash.el;
+  if (!el) return;
+  let active = null;
+  el.querySelectorAll('[data-slash-index]').forEach(opt => {
+    const on = +opt.dataset.slashIndex === slash.index;
+    opt.setAttribute('aria-selected', on ? 'true' : 'false');
+    if (on) active = opt;
+  });
+  const content = slash.view && slash.view.contentDOM;
+  if (content) {
+    if (active) content.setAttribute('aria-activedescendant', active.id);
+    else content.removeAttribute('aria-activedescendant');
+  }
+  if (active && scroll) active.scrollIntoView({ block: 'nearest' });
+}
+
+function positionSlashMenu() {
+  if (!slash.open || !slash.view || !slash.el) return;
+  const el = slash.el, view = slash.view;
+  const c = view.coordsAtPos(slash.from, 1);
+  const scroller = view.scrollDOM.getBoundingClientRect();
+  if (!c || c.bottom < scroller.top || c.top > scroller.bottom) { el.style.visibility = 'hidden'; return; }
+  el.style.visibility = '';
+  const vw = document.documentElement.clientWidth || window.innerWidth;
+  const vh = window.innerHeight;
+  const w = Math.min(slash.mode === 'table' ? 256 : 328, vw - 16);
+  el.style.width = w + 'px';
+  el.style.maxHeight = '';
+  const natural = el.scrollHeight;
+  const below = vh - c.bottom - 14, above = c.top - 14;
+  const placeBelow = below >= Math.min(natural, 280) || below >= above;
+  const maxH = Math.max(140, Math.min(400, placeBelow ? below : above));
+  el.style.maxHeight = maxH + 'px';
+  const h = Math.min(natural, maxH);
+  el.style.left = Math.round(Math.max(8, Math.min(vw - w - 8, c.left - 14))) + 'px';
+  el.style.top = Math.round(placeBelow ? c.bottom + 6 : c.top - 6 - h) + 'px';
+  el.classList.toggle('is-above', !placeBelow);
+}
+
+function openSlashMenu(view, from) {
+  if (!view) return;
+  slash.open = true;
+  slash.view = view;
+  slash.from = from;
+  slash.prefix = '/';
+  slash.mode = 'blocks';
+  slash.query = '';
+  slash.lastHitLen = 0;
+  hideCmSelectionToolbar();
+  slashFilter();
+  const el = slashEnsureEl();
+  slashRender();
+  el.classList.remove('hidden', 'is-settled');
+  const content = view.contentDOM;
+  content.setAttribute('aria-haspopup', 'listbox');
+  content.setAttribute('aria-expanded', 'true');
+  content.setAttribute('aria-controls', 'cm-slash-menu');
+  requestAnimationFrame(() => {
+    positionSlashMenu();
+    requestAnimationFrame(() => { if (slash.open) el.classList.add('is-settled'); });
+  });
+}
+
+/* Ctrl+/ or the edit-bar button: insert "/" at the cursor and open the menu. */
+function openSlashAtCursor(view) {
+  if (!view) return;
+  const sel = view.state.selection.main;
+  const line = view.state.doc.lineAt(sel.from);
+  const before = view.state.sliceDoc(line.from, sel.from);
+  const pad = before && !/\s$/.test(before) ? ' ' : '';
+  view.focus();
+  view.dispatch({ changes: { from: sel.from, to: sel.to, insert: pad + '/' }, selection: { anchor: sel.from + pad.length + 1 }, scrollIntoView: true, userEvent: 'input.type' });
+  openSlashMenu(view, sel.from + pad.length);
+}
+window.openSlashAtCursor = () => openSlashAtCursor(cmView);
+
+function closeSlashMenu() {
+  if (!slash.open && !(slash.el && !slash.el.classList.contains('hidden'))) return;
+  slash.open = false;
+  slash.mode = 'blocks';
+  if (slash.el) slash.el.classList.add('hidden');
+  const content = slash.view && slash.view.contentDOM;
+  if (content) {
+    content.removeAttribute('aria-activedescendant');
+    content.removeAttribute('aria-controls');
+    content.setAttribute('aria-expanded', 'false');
+  }
+}
+
+function slashChoose(item) {
+  const view = slash.view;
+  if (!view || !item) return;
+  const from = slash.from;
+  const to = view.state.selection.main.head;
+  if (item.next === 'lang') {
+    slash.mode = 'lang';
+    slash.prefix = '```';
+    slash.query = '';
+    slash.suppress = true;
+    view.dispatch({ changes: { from, to, insert: '```' }, selection: { anchor: from + 3 }, userEvent: 'input.slash' });
+    slash.suppress = false;
+    slash.from = from;
+    slashFilter();
+    slashRender();
+    requestAnimationFrame(positionSlashMenu);
+    return;
+  }
+  if (item.next === 'table') {
+    slash.mode = 'table';
+    slash.cols = 3;
+    slash.rows = 3;
+    slashRender();
+    requestAnimationFrame(positionSlashMenu);
+    return;
+  }
+  const e = item.run(view.state.doc.toString(), from, to);
+  closeSlashMenu();
+  if (e) view.dispatch({ changes: e.changes, selection: e.selection, scrollIntoView: true, userEvent: 'input.slash' });
+  view.focus();
+}
+
+function slashInsertTable() {
+  const view = slash.view;
+  const T = window.ReadMDTransforms;
+  if (!view || !T) return;
+  const tb = T.tableBlock(slash.cols, Math.max(1, slash.rows - 1), slashT('editor.tableHeaderPrefix') || 'Column');
+  const e = T.blockInsertEdit(view.state.doc.toString(), slash.from, view.state.selection.main.head, tb.text, tb.selFrom, tb.selTo);
+  closeSlashMenu();
+  view.dispatch({ changes: e.changes, selection: e.selection, scrollIntoView: true, userEvent: 'input.slash' });
+  view.focus();
+}
+
+function slashKey(view, key) {
+  if (!slash.open || view !== slash.view) return false;
+  if (slash.mode === 'table') {
+    if (key === 'left') slash.cols = Math.max(1, slash.cols - 1);
+    else if (key === 'right') slash.cols = Math.min(SLASH_GRID, slash.cols + 1);
+    else if (key === 'up') slash.rows = Math.max(2, slash.rows - 1);
+    else if (key === 'down') slash.rows = Math.min(SLASH_GRID, slash.rows + 1);
+    else if (key === 'enter') { slashInsertTable(); return true; }
+    else if (key === 'escape') { closeSlashMenu(); return true; }
+    slashSyncTable();
+    return true;
+  }
+  const n = slash.items.length;
+  if (key === 'escape') { closeSlashMenu(); return true; }
+  if (key === 'left' || key === 'right') return false;
+  if (!n) {
+    if (key === 'enter') closeSlashMenu();
+    return false;
+  }
+  if (key === 'enter') { slashChoose(slash.items[slash.index]); return true; }
+  if (key === 'down') slash.index = (slash.index + 1) % n;
+  else if (key === 'up') slash.index = (slash.index - 1 + n) % n;
+  else if (key === 'pagedown') slash.index = Math.min(n - 1, slash.index + 6);
+  else if (key === 'pageup') slash.index = Math.max(0, slash.index - 6);
+  slashSyncActive(true);
+  return true;
+}
+
+/* Keep the menu in step with the document: the query is the text typed after
+   the "/" (or after "```" when picking a language). */
+function slashOnUpdate(u) {
+  if (!slash.open || u.view !== slash.view || slash.suppress) return;
+  const st = u.state;
+  if (u.docChanged) slash.from = u.changes.mapPos(slash.from, 1);
+  if (!u.docChanged && u.selectionSet) { closeSlashMenu(); return; }
+  if (!u.docChanged) return;
+  const sel = st.selection.main;
+  const start = slash.from + slash.prefix.length;
+  const valid = st.selection.ranges.length === 1 && sel.empty && sel.head >= start &&
+    st.sliceDoc(slash.from, start) === slash.prefix && st.doc.lineAt(slash.from).number === st.doc.lineAt(sel.head).number;
+  if (!valid) { closeSlashMenu(); return; }
+  const query = st.sliceDoc(start, sel.head);
+  if (query.length > 32 || (slash.mode !== 'lang' && /^\s/.test(query)) || /\s\s/.test(query)) { closeSlashMenu(); return; }
+  if (slash.mode === 'table') slash.mode = 'blocks';
+  slash.query = query;
+  slashFilter();
+  if (!slash.items.length && query.length - slash.lastHitLen >= 3) { closeSlashMenu(); return; }
+  slashRender();
+  requestAnimationFrame(positionSlashMenu);
+}
+
+window.addEventListener('resize', () => { if (slash.open) positionSlashMenu(); });
+
+/* ============================================================
+   Edit bar: view menu (line numbers / focus / typewriter), slash button,
+   keyboard navigation inside the edit-bar menus.
+   ============================================================ */
+
+function editMenuArrowNav(e) {
+  const items = [...e.currentTarget.querySelectorAll('button')].filter(b => b.offsetParent !== null && !b.disabled);
+  if (!items.length) return;
+  const i = items.indexOf(document.activeElement);
+  let next = null;
+  if (e.key === 'ArrowDown') next = items[(i + 1) % items.length];
+  else if (e.key === 'ArrowUp') next = items[(i - 1 + items.length) % items.length];
+  else if (e.key === 'Home') next = items[0];
+  else if (e.key === 'End') next = items[items.length - 1];
+  if (next) { e.preventDefault(); next.focus(); }
+}
+
+function bindEditBarExtras() {
+  const trig = $('edit-view-trigger');
+  const menu = $('edit-view-menu');
+  if (trig && menu && !trig.dataset.bound) {
+    trig.dataset.bound = '1';
+    trig.addEventListener('click', e => {
+      e.stopPropagation();
+      const show = menu.classList.contains('hidden');
+      closeMdPopups();
+      menu.classList.toggle('hidden', !show);
+      trig.setAttribute('aria-expanded', show ? 'true' : 'false');
+      if (show && e.detail === 0) { const first = menu.querySelector('button'); if (first) first.focus(); }
+    });
+    [['edit-view-lines', 'lineNumbers'], ['edit-view-focus', 'focus'], ['edit-view-typewriter', 'typewriter']].forEach(([id, key]) => {
+      const b = $(id);
+      if (b) b.addEventListener('click', e => { e.stopPropagation(); setEditorPref(key); });
+    });
+  }
+  const slashBtn = $('edit-slash-btn');
+  if (slashBtn && !slashBtn.dataset.bound) {
+    slashBtn.dataset.bound = '1';
+    slashBtn.addEventListener('mousedown', e => e.preventDefault());
+    slashBtn.addEventListener('click', e => { e.stopPropagation(); closeMdPopups(); if (cmView) openSlashAtCursor(cmView); });
+  }
+  document.querySelectorAll('#edit-bar .md-menu').forEach(m => {
+    if (m.dataset.navBound) return;
+    m.dataset.navBound = '1';
+    m.addEventListener('keydown', editMenuArrowNav);
+  });
+  document.querySelectorAll('#md-tool [data-menu]').forEach(b => {
+    if (b.dataset.ariaBound) return;
+    b.dataset.ariaBound = '1';
+    b.addEventListener('click', e => requestAnimationFrame(() => {
+      const m = $(b.dataset.menu);
+      const open = !!(m && !m.classList.contains('hidden'));
+      b.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open && e.detail === 0) { const first = m.querySelector('button'); if (first) first.focus(); }
+    }));
+  });
+  applyEditorViewClasses();
 }
