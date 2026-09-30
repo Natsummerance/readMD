@@ -134,3 +134,68 @@ test('specific cases', () => {
   const e = computeSyntaxEdit('a\nb', 0, 3, 'list');
   assert.equal(typeof e.changes.insert, 'string');
 });
+
+// ---- Editor upgrade helpers (slash menu, tables, stats) ----
+const T = require('../../assets/js/editor/md-transforms.js');
+
+test('heading levels and callouts are single edits that toggle', () => {
+  assert.equal(run('Title', 0, 0, 'h1').doc, '# Title');
+  assert.equal(run('# Title', 3, 3, 'h1').doc, 'Title');
+  assert.equal(run('## Title', 3, 3, 'h3').doc, '### Title');
+  assert.equal(run('### a\n## b', 0, 10, 'para').doc, 'a\nb');
+  assert.equal(run('', 0, 0, 'callout').doc, '> [!NOTE]\n> text');
+  assert.equal(run('one\ntwo', 0, 7, 'callout').doc, '> [!NOTE]\n> one\n> two');
+});
+
+test('slash inserts replace the typed query in one change', () => {
+  const apply = (doc, e) => T.applySyntaxEdit(doc, e);
+  assert.equal(apply('/tab', T.blockInsertEdit('/tab', 0, 4, 'X')), 'X');
+  assert.equal(apply('intro /tab', T.blockInsertEdit('intro /tab', 6, 10, 'X')), 'intro\n\nX');
+  assert.equal(apply('a\n/x\nb', T.blockInsertEdit('a\n/x\nb', 2, 4, 'X')), 'a\n\nX\n\nb');
+  assert.equal(apply('- foo /h2', T.linePrefixEdit('- foo /h2', 6, 9, '## ')), '## foo');
+  assert.equal(apply('/h1', T.linePrefixEdit('/h1', 0, 3, '# ')), '# ');
+  const fn = T.footnoteEdit('see /fn here', 4, 7);
+  assert.equal(apply('see /fn here', fn), 'see [^1] here\n\n[^1]: ');
+  const fn2 = T.footnoteEdit('a[^1]\n\n[^1]: x', 1, 1);
+  assert.equal(apply('a[^1]\n\n[^1]: x', fn2), 'a[^2][^1]\n\n[^1]: x\n[^2]: ');
+});
+
+test('table of contents skips fenced code and nests by level', () => {
+  const toc = T.tocMarkdown('# A\n## B c\n```\n# not\n```\n### D\n## B c');
+  assert.equal(toc, '- [A](#a)\n  - [B c](#b-c)\n    - [D](#d)\n  - [B c](#b-c-2)');
+  assert.equal(T.tocMarkdown('no headings'), '');
+});
+
+test('fuzzy score prefers prefixes and rejects non-matches', () => {
+  assert.ok(T.fuzzyScore('tab', 'Table') > T.fuzzyScore('tab', 'Task list'));
+  assert.ok(T.fuzzyScore('tbl', 'Table') > 0);
+  assert.equal(T.fuzzyScore('zzz', 'Table'), 0);
+  assert.equal(T.fuzzyScore('', 'Anything'), 1);
+});
+
+test('table navigation realigns, wraps rows and adds a row at the end', () => {
+  const doc = '| a | bb |\n|---|:-:|\n| 1 | 2 |';
+  const e1 = T.tableNavEdit(doc, 2, 1);
+  const d1 = T.applySyntaxEdit(doc, e1);
+  assert.equal(d1, '| a   | bb  |\n| --- | :-: |\n| 1   |  2  |');
+  assert.equal(d1.slice(e1.selection.anchor, e1.selection.head), 'bb');
+  const end = d1.length - 3;
+  const e2 = T.tableNavEdit(d1, end, 1);
+  const d2 = T.applySyntaxEdit(d1, e2);
+  assert.equal(d2.split('\n').length, 4);
+  const e3 = T.tableEnterEdit(d2, d2.length - 2);
+  assert.equal(T.applySyntaxEdit(d2, e3), d1 + '\n');
+  // CJK cells count as double width when aligning
+  const cjk = T.formatTable(['| 名字 | x |', '|---|---|', '| a | b |']);
+  assert.equal(cjk[0], '| 名字 | x   |');
+  assert.equal(cjk[2], '| a    | b   |');
+  assert.equal(T.tableNavEdit('not a table', 2, 1), null);
+});
+
+test('text stats count CJK characters as words', () => {
+  assert.deepEqual(T.textStats(''), { words: 0, chars: 0, cjk: 0, minutes: 0 });
+  const s = T.textStats('Hello world 你好世界 **bold** - ');
+  assert.equal(s.words, 7);
+  assert.equal(s.cjk, 4);
+  assert.equal(s.minutes, 1);
+});
