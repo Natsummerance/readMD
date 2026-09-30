@@ -41,6 +41,10 @@ pub const SOURCES: &[&str] = &[
     "js/features/export.js",
     "js/features/updater.js",
     "js/features/graph.js",
+    "js/shell/command-palette.js",
+    "js/shell/shell.js",
+    "js/features/ai-inline.js",
+    "js/features/pet-stage.js",
     "app.js",
 ];
 

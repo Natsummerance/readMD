@@ -1,4 +1,44 @@
 {
+  "assets/css/ai.css": {
+    "S1": 0,
+    "S2": 0,
+    "S3": 0,
+    "S4": 0,
+    "S5": 0,
+    "S6": 0
+  },
+  "assets/css/editor.css": {
+    "S1": 0,
+    "S2": 0,
+    "S3": 0,
+    "S4": 0,
+    "S5": 0,
+    "S6": 0
+  },
+  "assets/css/pet.css": {
+    "S1": 0,
+    "S2": 0,
+    "S3": 0,
+    "S4": 0,
+    "S5": 0,
+    "S6": 0
+  },
+  "assets/css/reader.css": {
+    "S1": 0,
+    "S2": 0,
+    "S3": 0,
+    "S4": 0,
+    "S5": 0,
+    "S6": 0
+  },
+  "assets/css/shell.css": {
+    "S1": 0,
+    "S2": 0,
+    "S3": 0,
+    "S4": 0,
+    "S5": 0,
+    "S6": 0
+  },
   "assets/css/tokens.css": {
     "S1": 0,
     "S2": 0,

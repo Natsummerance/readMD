@@ -299,7 +299,7 @@ fn build_plan(root: &Path, v: &str) -> Result<Plan, String> {
         let mut s = t.original.clone();
         let anchors: [(&str, String, &str); 5] = [
             (r#"<html([^>]*\bdata-version=")[^"]+""#, format!("<html${{1}}{v}\""), "assets/index.html :: data-version"),
-            (r#"(<link[^>]*href="/assets/(?:css/tokens|style|workspace-ui|skill-workbench)\.css\?v=)[^"]+(")"#, format!("${{1}}{v}${{2}}"), "assets/index.html :: stylesheet ?v="),
+            (r#"(<link[^>]*href="/assets/(?:css/[a-z-]+|style|workspace-ui|skill-workbench)\.css\?v=)[^"]+(")"#, format!("${{1}}{v}${{2}}"), "assets/index.html :: stylesheet ?v="),
             (r#"(<span id="status-version"[^>]*>)v[^<]+(</span>)"#, format!("${{1}}v{v}${{2}}"), "assets/index.html :: #status-version"),
             (r#"(id="menu-version-label">)当前版本 v[^<]+(</em>)"#, format!("${{1}}当前版本 v{v}${{2}}"), "assets/index.html :: #menu-version-label"),
             (r#"(<script[^>]*src="/assets/readmd\.boot\.js\?v=)[^"]+(")"#, format!("${{1}}{v}${{2}}"), "assets/index.html :: readmd.boot.js ?v="),
