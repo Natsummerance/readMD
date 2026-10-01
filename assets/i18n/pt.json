@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "Olá! Sou seu companheiro de leitura~",
   "pet.widgetAria": "Companheiro de leitura",
   "pet.characterAria": "Área de interação do companheiro",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "Configurações do companheiro",

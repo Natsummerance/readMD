@@ -536,7 +536,7 @@ const state = {
     templates: [], templateId: '', skillDraft: null, messages: [], sessionId: null, sessions: [],
     usage: null, sessUsage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
   },
-  pvLayout: 'none', pvSync: false, pvSplitX: 50, pvSplitY: 46,
+  pvLayout: 'right', pvSync: true, pvSplitX: 50, pvSplitY: 46,
   export: {
     fmt: 'pdf', defaults: null, presets: {}, custom: {}, options: null, last: null, ready: false,
   },
@@ -6983,7 +6983,12 @@ async function launchPresentationMode() {
 
     const themeSelect = $('presentation-theme-select');
     if (themeSelect) {
+      try {
+        const saved = localStorage.getItem('readmd_presentation_theme');
+        if (saved && [...themeSelect.options].some(o => o.value === saved)) themeSelect.value = saved;
+      } catch (e) { /* ignore */ }
       themeSelect.addEventListener('change', () => {
+        try { localStorage.setItem('readmd_presentation_theme', themeSelect.value); } catch (e) { /* ignore */ }
         postToIframe({ type: 'set-theme', theme: themeSelect.value });
       });
     }
@@ -7123,6 +7128,10 @@ async function launchPresentationMode() {
     if (res && res.ok && res.html) {
       modal.classList.remove('hidden');
       const iframe = modal.querySelector('.presentation-iframe');
+      iframe.addEventListener('load', () => {
+        const sel = $('presentation-theme-select');
+        if (sel && sel.value) postToIframe({ type: 'set-theme', theme: sel.value });
+      }, { once: true });
       iframe.srcdoc = res.html;
       $('presentation-theme-select')?.focus({ preventScroll: true });
     } else {
@@ -7516,7 +7525,34 @@ function setPvLayout(layout) {
     pw.classList.add('hidden');
     $('pv-splitter').classList.add('hidden');
   }
-  saveSettings();
+  // AI 写入时临时收起预览（_pvLayoutBeforeAi），不能覆盖用户记住的布局。
+  if (!state._pvLayoutBeforeAi) saveSettings();
+}
+
+/* 每个文档记住上次的光标与滚动位置，再次进入编辑时恢复。 */
+function editMemoryKey() {
+  const id = state.file || state.sourceName || '';
+  return id ? 'readmd_edit_pos:' + id : '';
+}
+
+function rememberEditPosition() {
+  const key = editMemoryKey();
+  if (!key || !cmView) return;
+  try {
+    localStorage.setItem(key, JSON.stringify({ a: cmView.state.selection.main.head, t: cmView.scrollDOM.scrollTop }));
+  } catch (e) { /* storage full or disabled */ }
+}
+
+function restoreEditPosition() {
+  const key = editMemoryKey();
+  if (!key || !cmView) return;
+  try {
+    const m = JSON.parse(localStorage.getItem(key) || 'null');
+    if (!m) return;
+    const anchor = Math.max(0, Math.min(Number(m.a) || 0, cmView.state.doc.length));
+    cmView.dispatch({ selection: { anchor } });
+    requestAnimationFrame(() => { if (cmView) cmView.scrollDOM.scrollTop = Number(m.t) || 0; });
+  } catch (e) { /* ignore corrupt entry */ }
 }
 
 function applyPvSplit() {
@@ -7832,6 +7868,8 @@ async function toggleEdit() {
   if (cmMounted) {
     pvEditorEl = cmView.scrollDOM;
     pvEditorEl.addEventListener('scroll', pvSyncFromEditor);
+    restoreEditPosition();
+    cmView.focus();
   } else {
     $('edit-wrap').classList.add('hidden');
     $('edit-area').classList.remove('hidden');
@@ -7866,6 +7904,7 @@ async function confirmExitEdit() {
 }
 
 function exitEdit() {
+  if (state.editing) rememberEditPosition();
   if (typeof switchEditAiToChatPanel === 'function') switchEditAiToChatPanel();
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (pvTimer) { clearTimeout(pvTimer); pvTimer = null; }
@@ -13022,10 +13061,11 @@ function fillAiProviders(merged, current) {
   const search = $('ai-provider-search');
   if (cards) {
     const query = String(search && search.value || '').trim().toLowerCase();
-    const sourceEntries = (state.ai.upstreamCatalog || []).map(p => Object.assign({ source_only: true }, p));
+    const sourceEntries = query ? (state.ai.upstreamCatalog || []).map(p => Object.assign({ source_only: true }, p)) : [];
     const cardProviders = merged.concat(sourceEntries);
     cards.innerHTML = '';
     cardProviders.filter(p => !query || [p.name, p.note, p.website, p.category, p.format].some(v => String(v || '').toLowerCase().includes(query)))
+      .slice(0, 80)
       .forEach(p => {
         const card = document.createElement('button');
         card.type = 'button'; card.className = 'ai-provider-card' + (p.id === curId ? ' active' : '') + (p.source_only ? ' source-only' : '');
@@ -16207,11 +16247,22 @@ async function savePetSettings() {
     if (enabled && !config.in_app && !activePetSettingsStatus?.adapter?.available) {
       const installed = await installDefaultPetRuntime();
       if (!installed.ok) {
-        renderPetSettings(await fetchPetRuntimeStatus());
-        return installed;
+        // 桌面运行时装不上时退回应用内桌宠。
+        config.in_app = true;
+        if ($('pet-runtime')) $('pet-runtime').value = 'in-app';
+        if (typeof showToast === 'function') showToast(petT('pet.desktopFallback', { code: installed.code || 'install_failed' }), 3200);
       }
     }
-    const result = await requestConfigurePet(config);
+    let result = await requestConfigurePet(config);
+    if (enabled && !config.in_app && (!result || !result.ok)) {
+      // 桌面窗口启动失败时退回应用内桌宠，而不是让桌宠直接消失。
+      const fallback = await requestConfigurePet(Object.assign({}, config, { in_app: true }));
+      if (fallback && fallback.ok) {
+        if ($('pet-runtime')) $('pet-runtime').value = 'in-app';
+        if (typeof showToast === 'function') showToast(petT('pet.desktopFallback', { code: (result && result.code) || 'unknown' }), 3200);
+        result = fallback;
+      }
+    }
     if (!result || !result.ok) {
       const code = (result && result.code) || 'unknown';
       if (typeof showToast === 'function') showToast(petT('pet.configFailed', { code }));

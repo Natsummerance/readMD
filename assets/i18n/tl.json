@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "Kumusta! Ako ang iyong kasama sa pagbabasa~",
   "pet.widgetAria": "Kasama sa pagbabasa",
   "pet.characterAria": "Lugar ng pakikipag-ugnayan sa kasama",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "Mga setting ng kasama",

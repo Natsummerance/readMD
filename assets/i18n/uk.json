@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "Привіт! Я твій супутник у читанні~",
   "pet.widgetAria": "Супутник для читання",
   "pet.characterAria": "Зона взаємодії з компаньйоном",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "Налаштування компаньйона",

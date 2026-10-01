@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "မင်္ဂလာပါ! ကျွန်ုပ်သည် သင်၏ စာဖတ်အဖော်ပါ~",
   "pet.widgetAria": "စာဖတ်အဖော်",
   "pet.characterAria": "အဖော်နှင့် အပြန်အလှန်တုံ့ပြန်မှု ဧရိယာ",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "အဖော် ဆက်တင်များ",

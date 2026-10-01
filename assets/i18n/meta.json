@@ -171,6 +171,7 @@
   "plugin.sandboxReady": "Capabilities are built into the ReadMD core · no Python or pip required",
   "plugin.unsupportedBuild": "Not available in this build",
   "presentation.iframeTitle": "Presentation",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "diagram.onlineProxy": "Online proxy",

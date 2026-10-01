@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "สวัสดี! ฉันคือเพื่อนร่วมอ่านหนังสือของคุณ~",
   "pet.widgetAria": "เพื่อนร่วมอ่านหนังสือ",
   "pet.characterAria": "พื้นที่โต้ตอบกับสัตว์เลี้ยง",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "การตั้งค่าสัตว์เลี้ยง",

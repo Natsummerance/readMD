@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "Muraho! Ndi inshuti yawe yo gusoma~",
   "pet.widgetAria": "Inshuti yo gusoma",
   "pet.characterAria": "Ahantu ho kuganirira n'inshuti",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "Igenzura ry'inshuti",

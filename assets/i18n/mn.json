@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "Сайн байна уу! Би таны ном унших анд нөхөр байна~",
   "pet.widgetAria": "Уншлагын хамтрагч",
   "pet.characterAria": "Хамтрагчтай харилцах хэсэг",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "Хамтрагчийн тохиргоо",

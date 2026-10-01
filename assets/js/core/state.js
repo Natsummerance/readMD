@@ -87,7 +87,7 @@ const state = {
     templates: [], templateId: '', skillDraft: null, messages: [], sessionId: null, sessions: [],
     usage: null, sessUsage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
   },
-  pvLayout: 'none', pvSync: false, pvSplitX: 50, pvSplitY: 46,
+  pvLayout: 'right', pvSync: true, pvSplitX: 50, pvSplitY: 46,
   export: {
     fmt: 'pdf', defaults: null, presets: {}, custom: {}, options: null, last: null, ready: false,
   },

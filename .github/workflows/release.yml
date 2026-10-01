@@ -82,6 +82,9 @@ jobs:
           Copy-Item "assets" -Destination "$pkgDir\assets" -Recurse
           Copy-Item "LICENSE" -Destination "$pkgDir\LICENSE"
           Copy-Item "README.md" -Destination "$pkgDir\README.md"
+          # Desktop pet runtime: the kernel installs it from ReadMD-Pet-Rust.zip beside the exe.
+          cargo run --manifest-path rust/Cargo.toml -p xtask --release -- pet-package --platform windows --arch x86_64 --output dist\pet
+          if (Test-Path "dist\pet\ReadMD-Pet-Rust.zip") { Copy-Item "dist\pet\ReadMD-Pet-Rust.zip" -Destination "$pkgDir\ReadMD-Pet-Rust.zip" } else { Write-Warning "desktop pet package not built" }
           Compress-Archive -Path "$pkgDir\*" -DestinationPath "dist\${{ matrix.platform.asset_name }}.zip"
           & "C:\Program Files (x86)\NSIS\makensis.exe" ReadMD.nsi
 

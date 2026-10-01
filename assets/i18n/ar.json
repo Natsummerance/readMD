@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "مرحبًا! أنا رفيق القراءة الخاص بك~",
   "pet.widgetAria": "رفيق القراءة",
   "pet.characterAria": "منطقة التفاعل مع الرفيق",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "إعدادات الرفيق",

@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "Hai! Saya rakan membaca anda~",
   "pet.widgetAria": "Rakan membaca",
   "pet.characterAria": "Kawasan interaksi rakan membaca",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "Tetapan rakan membaca",

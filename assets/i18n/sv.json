@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "Hej! Jag är din läskamrat~",
   "pet.widgetAria": "Läskamrat",
   "pet.characterAria": "Interaktionsområde för följeslagare",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "Inställningar för följeslagare",

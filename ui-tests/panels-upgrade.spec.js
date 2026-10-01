@@ -44,3 +44,24 @@ test('AI config answers annotated providers without secrets', async ({ page }) =
   expect(Array.isArray(cfg.custom)).toBe(true);
   expect(cfg.presets.every(p => typeof p.has_key === 'boolean' && !('api_key' in p))).toBe(true);
 });
+
+test('editor opens with live preview and scroll sync on, and remembers the caret', async ({ page }) => {
+  await page.evaluate(() => renderVirtual('clipboard', 'mem.md', '', '# A\n\nline two\n\nline three\n', []));
+  await page.evaluate(() => toggleEdit());
+  await page.waitForFunction(() => window.cmView);
+  expect(await page.evaluate(() => [state.pvLayout, state.pvSync])).toEqual(['right', true]);
+  await expect(page.locator('#preview-wrap')).toBeVisible();
+  await page.evaluate(() => { cmView.dispatch({ selection: { anchor: 9 } }); });
+  await page.evaluate(() => toggleEdit());
+  await page.waitForFunction(() => !state.editing);
+  await page.evaluate(() => toggleEdit());
+  await page.waitForFunction(() => window.cmView);
+  expect(await page.evaluate(() => cmView.state.selection.main.head)).toBe(9);
+});
+
+test('AI provider browser renders a bounded card list', async ({ page }) => {
+  await page.evaluate(() => loadAiConfig());
+  const n = await page.evaluate(() => document.querySelectorAll('#ai-provider-cards > *').length);
+  expect(n).toBeGreaterThan(0);
+  expect(n).toBeLessThanOrEqual(80);
+});

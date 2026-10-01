@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "Hello! Jien il-kumpann tal-qari tiegħek~",
   "pet.widgetAria": "Kumpann tal-qari",
   "pet.characterAria": "Żona ta' interazzjoni mal-kumpann",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "Settings tal-kumpann",

@@ -1033,11 +1033,22 @@ async function savePetSettings() {
     if (enabled && !config.in_app && !activePetSettingsStatus?.adapter?.available) {
       const installed = await installDefaultPetRuntime();
       if (!installed.ok) {
-        renderPetSettings(await fetchPetRuntimeStatus());
-        return installed;
+        // 桌面运行时装不上时退回应用内桌宠。
+        config.in_app = true;
+        if ($('pet-runtime')) $('pet-runtime').value = 'in-app';
+        if (typeof showToast === 'function') showToast(petT('pet.desktopFallback', { code: installed.code || 'install_failed' }), 3200);
       }
     }
-    const result = await requestConfigurePet(config);
+    let result = await requestConfigurePet(config);
+    if (enabled && !config.in_app && (!result || !result.ok)) {
+      // 桌面窗口启动失败时退回应用内桌宠，而不是让桌宠直接消失。
+      const fallback = await requestConfigurePet(Object.assign({}, config, { in_app: true }));
+      if (fallback && fallback.ok) {
+        if ($('pet-runtime')) $('pet-runtime').value = 'in-app';
+        if (typeof showToast === 'function') showToast(petT('pet.desktopFallback', { code: (result && result.code) || 'unknown' }), 3200);
+        result = fallback;
+      }
+    }
     if (!result || !result.ok) {
       const code = (result && result.code) || 'unknown';
       if (typeof showToast === 'function') showToast(petT('pet.configFailed', { code }));

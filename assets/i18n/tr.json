@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "Merhaba! Ben senin okuma arkadaşınım~",
   "pet.widgetAria": "Okuma arkadaşı",
   "pet.characterAria": "Arkadaş etkileşim alanı",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "Arkadaş ayarları",

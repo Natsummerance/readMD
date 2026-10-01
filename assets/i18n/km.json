@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "សួស្តី! ខ្ញុំជាដៃគូអានសៀវភៅរបស់អ្នក~",
   "pet.widgetAria": "ដៃគូអានសៀវភៅ",
   "pet.characterAria": "តំបន់អន្តរកម្មដៃគូ",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "ការកំណត់ដៃគូ",

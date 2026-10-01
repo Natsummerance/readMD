@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "Xin chào! Mình là thú cưng đọc sách cùng bạn~",
   "pet.widgetAria": "Thú cưng cùng đọc",
   "pet.characterAria": "Khu vực tương tác thú cưng",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "Cài đặt thú cưng",

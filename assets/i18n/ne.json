@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "नमस्ते! म तपाईंको पढ्ने साथी हुँ~",
   "pet.widgetAria": "पढ्ने साथी",
   "pet.characterAria": "साथी अन्तरक्रिया क्षेत्र",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "साथी सेटिङहरू",

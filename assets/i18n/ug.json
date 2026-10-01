@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "ياخشىمۇسىز! مەن سىزنىڭ كىتاب ئوقۇش ھەمراھىڭىز~",
   "pet.widgetAria": "كىتاب ئوقۇش ھەمراھى",
   "pet.characterAria": "ھەمراھ ئۆز-ئارا تەسىرلىشىش رايونى",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "ھەمراھ تەڭشىكى",

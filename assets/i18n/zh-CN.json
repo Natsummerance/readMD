@@ -1794,6 +1794,7 @@
   "pet.bubbleHello": "你好呀！我是你的伴读桌宠~",
   "pet.widgetAria": "伴读桌宠",
   "pet.characterAria": "伴读桌宠交互区",
+  "pet.desktopFallback": "桌面桌宠启动失败（{code}），已改为在应用内显示。",
   "pet.favorite": "收藏",
   "pet.favorited": "已收藏",
   "pet.settingsTitle": "桌宠设置",

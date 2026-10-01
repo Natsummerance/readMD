@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "Bok! Ja sam tvoj suputnik u čitanju~",
   "pet.widgetAria": "Suputnik u čitanju",
   "pet.characterAria": "Područje interakcije sa suputnikom",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "Postavke suputnika",

@@ -2753,7 +2753,12 @@ async function launchPresentationMode() {
 
     const themeSelect = $('presentation-theme-select');
     if (themeSelect) {
+      try {
+        const saved = localStorage.getItem('readmd_presentation_theme');
+        if (saved && [...themeSelect.options].some(o => o.value === saved)) themeSelect.value = saved;
+      } catch (e) { /* ignore */ }
       themeSelect.addEventListener('change', () => {
+        try { localStorage.setItem('readmd_presentation_theme', themeSelect.value); } catch (e) { /* ignore */ }
         postToIframe({ type: 'set-theme', theme: themeSelect.value });
       });
     }
@@ -2893,6 +2898,10 @@ async function launchPresentationMode() {
     if (res && res.ok && res.html) {
       modal.classList.remove('hidden');
       const iframe = modal.querySelector('.presentation-iframe');
+      iframe.addEventListener('load', () => {
+        const sel = $('presentation-theme-select');
+        if (sel && sel.value) postToIframe({ type: 'set-theme', theme: sel.value });
+      }, { once: true });
       iframe.srcdoc = res.html;
       $('presentation-theme-select')?.focus({ preventScroll: true });
     } else {

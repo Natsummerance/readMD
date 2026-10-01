@@ -1794,6 +1794,7 @@
   "pet.bubbleHello": "Hello! I am your reading companion~",
   "pet.widgetAria": "Reading companion",
   "pet.characterAria": "Reading companion interaction area",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "Companion Settings",

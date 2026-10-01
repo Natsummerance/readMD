@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "Hei! Jeg er din lesekamerat~",
   "pet.widgetAria": "Lesekamerat",
   "pet.characterAria": "Interaksjonsområde for ledsager",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "Innstillinger for ledsager",

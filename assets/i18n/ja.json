@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "こんにちは！読書のお供ペットです〜",
   "pet.widgetAria": "読書のお供ペット",
   "pet.characterAria": "読書ペット操作エリア",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "お気に入りに追加",
   "pet.favorited": "お気に入り済み",
   "pet.settingsTitle": "ペット設定",

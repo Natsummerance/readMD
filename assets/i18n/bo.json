@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "བཀྲ་ཤིས་བདེ་ལེགས། ང་ནི་ཁྱེད་ཀྱི་ལྷན་དུ་དེབ་ཀློག་པའི་རོགས་པ་ཡིན~",
   "pet.widgetAria": "དེབ་ཀློག་རོགས་པ",
   "pet.characterAria": "རོགས་པའི་ཕན་ཚུན་འབྲེལ་བའི་ཁུལ",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "རོགས་པའི་སྒྲིག་བཀོད",

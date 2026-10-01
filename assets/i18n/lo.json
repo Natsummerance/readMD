@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "ສະບາຍດີ! ຂ້ອຍແມ່ນໝູ່ຄູ່ອ່ານໜັງສືຂອງເຈົ້າ~",
   "pet.widgetAria": "ໝູ່ຄູ່ອ່ານໜັງສື",
   "pet.characterAria": "ເຂດໂຕ້ຕອບໝູ່ຄູ່",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "ການຕັ້ງຄ່າໝູ່ຄູ່",

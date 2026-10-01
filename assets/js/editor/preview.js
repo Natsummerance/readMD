@@ -114,7 +114,34 @@ function setPvLayout(layout) {
     pw.classList.add('hidden');
     $('pv-splitter').classList.add('hidden');
   }
-  saveSettings();
+  // AI 写入时临时收起预览（_pvLayoutBeforeAi），不能覆盖用户记住的布局。
+  if (!state._pvLayoutBeforeAi) saveSettings();
+}
+
+/* 每个文档记住上次的光标与滚动位置，再次进入编辑时恢复。 */
+function editMemoryKey() {
+  const id = state.file || state.sourceName || '';
+  return id ? 'readmd_edit_pos:' + id : '';
+}
+
+function rememberEditPosition() {
+  const key = editMemoryKey();
+  if (!key || !cmView) return;
+  try {
+    localStorage.setItem(key, JSON.stringify({ a: cmView.state.selection.main.head, t: cmView.scrollDOM.scrollTop }));
+  } catch (e) { /* storage full or disabled */ }
+}
+
+function restoreEditPosition() {
+  const key = editMemoryKey();
+  if (!key || !cmView) return;
+  try {
+    const m = JSON.parse(localStorage.getItem(key) || 'null');
+    if (!m) return;
+    const anchor = Math.max(0, Math.min(Number(m.a) || 0, cmView.state.doc.length));
+    cmView.dispatch({ selection: { anchor } });
+    requestAnimationFrame(() => { if (cmView) cmView.scrollDOM.scrollTop = Number(m.t) || 0; });
+  } catch (e) { /* ignore corrupt entry */ }
 }
 
 function applyPvSplit() {
@@ -430,6 +457,8 @@ async function toggleEdit() {
   if (cmMounted) {
     pvEditorEl = cmView.scrollDOM;
     pvEditorEl.addEventListener('scroll', pvSyncFromEditor);
+    restoreEditPosition();
+    cmView.focus();
   } else {
     $('edit-wrap').classList.add('hidden');
     $('edit-area').classList.remove('hidden');
@@ -464,6 +493,7 @@ async function confirmExitEdit() {
 }
 
 function exitEdit() {
+  if (state.editing) rememberEditPosition();
   if (typeof switchEditAiToChatPanel === 'function') switchEditAiToChatPanel();
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (pvTimer) { clearTimeout(pvTimer); pvTimer = null; }

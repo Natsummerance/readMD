@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "Hej! Jeg er din læsemakker~",
   "pet.widgetAria": "Læsemakker",
   "pet.characterAria": "Interaktionsområde for læsemakker",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "Indstillinger for makker",

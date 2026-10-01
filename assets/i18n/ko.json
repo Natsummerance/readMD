@@ -1790,6 +1790,7 @@
   "pet.bubbleHello": "안녕하세요! 당신의 독서 도우미 펫이에요~",
   "pet.widgetAria": "독서 도우미 펫",
   "pet.characterAria": "독서 펫 상호작용 영역",
+  "pet.desktopFallback": "Desktop pet could not start ({code}); showing it inside ReadMD instead.",
   "pet.favorite": "Add to favorites",
   "pet.favorited": "In favorites",
   "pet.settingsTitle": "펫 설정",

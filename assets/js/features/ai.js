@@ -1453,10 +1453,11 @@ function fillAiProviders(merged, current) {
   const search = $('ai-provider-search');
   if (cards) {
     const query = String(search && search.value || '').trim().toLowerCase();
-    const sourceEntries = (state.ai.upstreamCatalog || []).map(p => Object.assign({ source_only: true }, p));
+    const sourceEntries = query ? (state.ai.upstreamCatalog || []).map(p => Object.assign({ source_only: true }, p)) : [];
     const cardProviders = merged.concat(sourceEntries);
     cards.innerHTML = '';
     cardProviders.filter(p => !query || [p.name, p.note, p.website, p.category, p.format].some(v => String(v || '').toLowerCase().includes(query)))
+      .slice(0, 80)
       .forEach(p => {
         const card = document.createElement('button');
         card.type = 'button'; card.className = 'ai-provider-card' + (p.id === curId ? ' active' : '') + (p.source_only ? ' source-only' : '');
