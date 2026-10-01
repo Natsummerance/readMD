@@ -10,6 +10,10 @@ let cmReady = false;
 let cmLoading = false;
 let cmThemeCompartment = null;
 
+// Bump when assets/vendor/codemirror.bundle.js changes: the stamp keeps an
+// older cached bundle from shadowing the one this editor code expects.
+const CM_BUNDLE_REV = '20261001';
+
 function loadCodeMirror() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   return new Promise((resolve, reject) => {
@@ -24,7 +28,7 @@ function loadCodeMirror() {
     }
     cmLoading = true;
     const s = document.createElement('script');
-    s.src = '/assets/vendor/codemirror.bundle.js';
+    s.src = '/assets/vendor/codemirror.bundle.js?v=' + CM_BUNDLE_REV;
     s.onload = () => { cmReady = true; cmLoading = false; resolve(); };
    s.onerror = () => { cmLoading = false; reject(new Error(_t('toast.editorLoadFail'))); };
     document.head.appendChild(s);

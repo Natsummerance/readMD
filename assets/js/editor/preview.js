@@ -403,7 +403,11 @@ async function toggleEdit() {
     applyPvUi();
     return;
   }
-  if (state.original === undefined || state.original === '') { showToast(_t('toast.noEditableContent') || '没有可编辑的内容'); return; }
+  // 欢迎页没有文档时直接新建空白文档进入编辑；空文件同样可以编辑。
+  if (state.mode !== 'file' && state.mode !== 'virtual') {
+    await renderVirtual('', '', '', '', []);
+  }
+  if (state.original == null) { showToast(_t('toast.noEditableContent') || '没有可编辑的内容'); return; }
   $('edit-bar').classList.remove('hidden');
   $('content').classList.add('hidden');
   state.editing = true;
@@ -413,12 +417,19 @@ async function toggleEdit() {
   try {
     await loadCodeMirror();
   } catch (e) { /* 退回 textarea */ }
+  let cmMounted = false;
   if (window.ReadMDCodeMirror) {
     $('edit-area').classList.add('hidden');
     $('edit-wrap').classList.remove('hidden');
-    createEditor(state.original || '');
-    pvEditorEl = cmView ? cmView.scrollDOM : null;
-    if (pvEditorEl) pvEditorEl.addEventListener('scroll', pvSyncFromEditor);
+    // 旧版或损坏的 CodeMirror 包会让 createEditor 抛错：退回 textarea，避免卡在空白编辑页。
+    try { createEditor(state.original || ''); cmMounted = !!cmView; } catch (e) {
+      console.error(e);
+      try { destroyEditor(); } catch (_) { /* ignore */ }
+    }
+  }
+  if (cmMounted) {
+    pvEditorEl = cmView.scrollDOM;
+    pvEditorEl.addEventListener('scroll', pvSyncFromEditor);
   } else {
     $('edit-wrap').classList.add('hidden');
     $('edit-area').classList.remove('hidden');

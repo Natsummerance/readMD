@@ -2415,11 +2415,12 @@ function updateStatus() {
   if (state.encoding) parts.push(state.encoding);
   $('status-right').textContent = parts.join(' · ');
   const isWelcome = state.mode === 'welcome';
-  const hasDoc = (state.mode === 'file' || state.mode === 'virtual') && !!state.original;
+  const hasDoc = (state.mode === 'file' || state.mode === 'virtual') && state.original != null;
   const canEdit = hasDoc && !state.editing;
   const canReload = state.mode === 'file';
   const canSaveas = hasDoc && (state.mode === 'virtual' || state.fixed !== '');
-  $('btn-edit').disabled = !canEdit && !state.editing;
+  // 编辑始终可用：欢迎页会新建空白文档（toggleEdit）。
+  $('btn-edit').disabled = false;
   setUnavailableReason($('btn-edit'), _t('toast.openDocumentToUse'));
   $('btn-reload').disabled = !canReload;
   $('btn-saveas').disabled = !canSaveas;
@@ -7804,7 +7805,11 @@ async function toggleEdit() {
     applyPvUi();
     return;
   }
-  if (state.original === undefined || state.original === '') { showToast(_t('toast.noEditableContent') || '没有可编辑的内容'); return; }
+  // 欢迎页没有文档时直接新建空白文档进入编辑；空文件同样可以编辑。
+  if (state.mode !== 'file' && state.mode !== 'virtual') {
+    await renderVirtual('', '', '', '', []);
+  }
+  if (state.original == null) { showToast(_t('toast.noEditableContent') || '没有可编辑的内容'); return; }
   $('edit-bar').classList.remove('hidden');
   $('content').classList.add('hidden');
   state.editing = true;
@@ -7814,12 +7819,19 @@ async function toggleEdit() {
   try {
     await loadCodeMirror();
   } catch (e) { /* 退回 textarea */ }
+  let cmMounted = false;
   if (window.ReadMDCodeMirror) {
     $('edit-area').classList.add('hidden');
     $('edit-wrap').classList.remove('hidden');
-    createEditor(state.original || '');
-    pvEditorEl = cmView ? cmView.scrollDOM : null;
-    if (pvEditorEl) pvEditorEl.addEventListener('scroll', pvSyncFromEditor);
+    // 旧版或损坏的 CodeMirror 包会让 createEditor 抛错：退回 textarea，避免卡在空白编辑页。
+    try { createEditor(state.original || ''); cmMounted = !!cmView; } catch (e) {
+      console.error(e);
+      try { destroyEditor(); } catch (_) { /* ignore */ }
+    }
+  }
+  if (cmMounted) {
+    pvEditorEl = cmView.scrollDOM;
+    pvEditorEl.addEventListener('scroll', pvSyncFromEditor);
   } else {
     $('edit-wrap').classList.add('hidden');
     $('edit-area').classList.remove('hidden');
@@ -9284,6 +9296,10 @@ let cmReady = false;
 let cmLoading = false;
 let cmThemeCompartment = null;
 
+// Bump when assets/vendor/codemirror.bundle.js changes: the stamp keeps an
+// older cached bundle from shadowing the one this editor code expects.
+const CM_BUNDLE_REV = '20261001';
+
 function loadCodeMirror() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   return new Promise((resolve, reject) => {
@@ -9298,7 +9314,7 @@ function loadCodeMirror() {
     }
     cmLoading = true;
     const s = document.createElement('script');
-    s.src = '/assets/vendor/codemirror.bundle.js';
+    s.src = '/assets/vendor/codemirror.bundle.js?v=' + CM_BUNDLE_REV;
     s.onload = () => { cmReady = true; cmLoading = false; resolve(); };
    s.onerror = () => { cmLoading = false; reject(new Error(_t('toast.editorLoadFail'))); };
     document.head.appendChild(s);
@@ -15204,7 +15220,9 @@ async function fetchPetRuntimeStatus() {
   const nativeApi = petNativeApi();
   if (nativeApi && typeof nativeApi.get_pet_runtime_status === 'function') {
     try {
-      return await nativeApi.get_pet_runtime_status();
+      // The bridge returns the raw `{ok, status}` envelope; unwrap it like the HTTP path.
+      const payload = await nativeApi.get_pet_runtime_status();
+      return (payload && payload.status) ? payload.status : payload;
     } catch (_err) { /* fallback to HTTP */ }
   }
   try {
@@ -17833,7 +17851,7 @@ async function loadExportPresets() {
   try {
     const d = (hasPy && py && typeof py.get_export_presets === 'function')
       ? await py.get_export_presets()
-      : {};
+      : await apiFetch('/api/export/presets').then(r => r.json()).catch(() => ({}));
     state.export.defaults = d.defaults || {};
     state.export.presets = d.presets || {};
     state.export.custom = d.custom || {};
@@ -18414,6 +18432,7 @@ function updateExportLivePreview() {
   const presetName = (sel && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : (_t('export.presetDefault') || '');
   const fmtLabel = fmt === 'presentation' ? (_t('export.fmtSlides') || 'Slides') : fmt.toUpperCase();
   if (badge) badge.textContent = fmtLabel + ' · ' + presetName;
+  renderExportPresetCards();
 
   const content = currentExportContent();
   const docTitle = currentExportName();
@@ -18679,24 +18698,75 @@ function normalizeExportAiPayload(value) {
   return out;
 }
 
+function exportPresetOptions(name) {
+  if (name === '__custom__') return state.export.options || {};
+  const preset = name === '__default__' ? {} : (state.export.presets[name] || state.export.custom[name] || {});
+  return expDeepMerge(state.export.defaults, preset);
+}
+
 function renderExportPresetSelect() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const sel = $('exp-preset');
   sel.textContent = '';
   const presetNames = getExportPresetNames();
   const names = Object.keys(state.export.presets || {}).concat(Object.keys(state.export.custom || {}));
-  sel.appendChild(new Option(_t('export.presetCustom') || '', '__custom__'));
+  sel.appendChild(new Option(_t('export.presetDefault') || 'Default', '__default__'));
   names.forEach(n => {
     sel.appendChild(new Option(presetNames[n] || n, n));
   });
-  sel.value = '__custom__';
+  sel.appendChild(new Option(_t('export.presetCustom') || '', '__custom__'));
+  const last = state.export.last;
+  const remembered = last && last.preset;
+  sel.value = remembered && [...sel.options].some(o => o.value === remembered)
+    ? remembered
+    : (last ? '__custom__' : '__default__');
   sel.onchange = () => {
     const v = sel.value;
-    if (v === '__custom__') return;
-    const preset = (state.export.presets[v] || state.export.custom[v] || {});
-    state.export.options = expDeepMerge(state.export.defaults, preset);
-    renderExportSections();
+    if (v !== '__custom__') {
+      state.export.options = exportPresetOptions(v);
+      renderExportSections();
+    }
+    renderExportPresetCards();
   };
+  renderExportPresetCards();
+}
+
+/* Visual preset gallery: one card per preset with its signature colours, so a
+   style can be picked by look instead of by name. Mirrors #exp-preset. */
+function renderExportPresetCards() {
+  const host = $('exp-preset-cards');
+  const sel = $('exp-preset');
+  if (!host || !sel || !state.export.defaults) return;
+  host.textContent = '';
+  [...sel.options].forEach(o => {
+    const v = o.value;
+    if (v === '__custom__' && sel.value !== '__custom__') return;
+    const opts = exportPresetOptions(v);
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'exp-preset-card';
+    card.dataset.preset = v;
+    card.setAttribute('aria-pressed', String(sel.value === v));
+    const swatch = document.createElement('span');
+    swatch.className = 'exp-preset-swatch';
+    swatch.setAttribute('aria-hidden', 'true');
+    const h1 = (opts.headings && opts.headings.h1) || {};
+    [h1.color, (opts.table || {}).headerBg, (opts.link || {}).color, (opts.quote || {}).barColor].forEach(c => {
+      const dot = document.createElement('i');
+      if (c) dot.style.background = c;
+      swatch.appendChild(dot);
+    });
+    const name = document.createElement('span');
+    name.className = 'exp-preset-name';
+    name.textContent = o.text;
+    const ty = opts.typography || {};
+    const meta = document.createElement('span');
+    meta.className = 'exp-preset-meta';
+    meta.textContent = [ty.size ? ty.size + 'pt' : '', ty.lineHeight || ''].filter(Boolean).join(' · ');
+    card.append(swatch, name, meta);
+    card.addEventListener('click', () => { sel.value = v; sel.onchange(); });
+    host.appendChild(card);
+  });
 }
 
 
@@ -18822,7 +18892,8 @@ async function runExportOnce(taskId) {
     $('export-open').onclick = async () => report(await py.open_path(r.path));
     $('export-reveal').onclick = async () => report(await py.reveal_path(r.path));
   }
-  try { if (hasPy && py.save_export_presets) py.save_export_presets({ last: { fmt: fmt, options: options } }); } catch (e) { /* ignore */ }
+  state.export.last = { fmt: fmt, options: options, preset: ($('exp-preset') || {}).value || '__custom__' };
+  try { if (hasPy && py.save_export_presets) py.save_export_presets({ last: state.export.last }); } catch (e) { /* ignore */ }
   if (warnList.length) showToast(_t('toast.exportCompleteWarns', { count: warnList.length }) || ('导出完成，' + warnList.length + ' 条提示'), 3600);
   else showToast(_t('toast.exportSuccess') || '');
 }

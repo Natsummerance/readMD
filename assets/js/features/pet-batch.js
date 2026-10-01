@@ -46,7 +46,9 @@ async function fetchPetRuntimeStatus() {
   const nativeApi = petNativeApi();
   if (nativeApi && typeof nativeApi.get_pet_runtime_status === 'function') {
     try {
-      return await nativeApi.get_pet_runtime_status();
+      // The bridge returns the raw `{ok, status}` envelope; unwrap it like the HTTP path.
+      const payload = await nativeApi.get_pet_runtime_status();
+      return (payload && payload.status) ? payload.status : payload;
     } catch (_err) { /* fallback to HTTP */ }
   }
   try {

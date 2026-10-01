@@ -1621,20 +1621,23 @@ fn serve_static(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
         if canonical.is_dir() {
             let index = canonical.join("index.html");
             if index.is_file() {
-                return send_file(req, &index, true);
+                return send_file(req, &index, false);
             }
             continue;
         }
         if canonical.is_file() {
-            return send_file(req, &canonical, immutable_hint(&canonical));
+            return send_file(req, &canonical, immutable_hint(&canonical, req.q("v").is_some()));
         }
     }
     Err(ApiError::not_found("asset_missing").noted("path", req.path.clone()))
 }
 
-fn immutable_hint(path: &Path) -> bool {
+/// Fonts and images never change in place; vendor/dist scripts only count as
+/// immutable when the URL carries a `?v=` stamp, so an upgraded bundle is not
+/// shadowed by a year-long cache entry of the previous one.
+fn immutable_hint(path: &Path, versioned: bool) -> bool {
     let name = path.to_string_lossy().replace('\\', "/");
-    name.contains("/vendor/") || name.contains("/dist/") || matches!(content::ext_of(path).as_str(), "woff2" | "woff" | "ttf" | "png" | "jpg" | "svg" | "ico" | "gif" | "webp")
+    (versioned && (name.contains("/vendor/") || name.contains("/dist/"))) || matches!(content::ext_of(path).as_str(), "woff2" | "woff" | "ttf" | "png" | "jpg" | "svg" | "ico" | "gif" | "webp")
 }
 
 fn send_file(req: &Request, path: &Path, cache: bool) -> ApiResult<Response> {
@@ -3388,90 +3391,42 @@ fn h_plugins_list(app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
     ok_json(crate::plugin_manager::load_manifest(app))
 }
 
+/// `ai.json` + the credential store (OS manager / encrypted vault): the one
+/// place AI connections live, shared with `/api/ai/chat`.
+fn ai_settings(app: &App) -> crate::ai::AiSettings {
+    crate::ai::AiSettings::new(app.paths.data_dir.join("ai.json"), crate::ai::CredentialStore::os_backend())
+}
+
+/// `GET` → `{presets, custom, upstream_catalog, current}` with every provider
+/// annotated (`has_key`, `key_source`, never `api_key`); `POST {providers?,
+/// current?}` stores keys through the credential store, then answers the same view.
 fn h_ai_config(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     let catalog = provider_catalog(app);
-
-    let raw_providers = catalog.get("providers").and_then(|v| v.as_array()).cloned().unwrap_or_default();
-    let mut presets: Vec<Value> = Vec::new();
-    for p in raw_providers {
-        let name = p.get("name").and_then(|v| v.as_str()).unwrap_or("");
-        let base_url = p.get("base_url").and_then(|v| v.as_str()).unwrap_or("");
-        let format = p.get("format").and_then(|v| v.as_str()).unwrap_or("openai");
-        let models = p.get("models").cloned().unwrap_or_else(|| json!([]));
-        let website = p.get("website").and_then(|v| v.as_str()).unwrap_or("");
-        let note = p.get("note").and_then(|v| v.as_str()).unwrap_or("");
-        let mode = if format == "anthropic" { "messages" } else { "auto" };
-        presets.push(json!({
-            "id": format!("preset:{}", name),
-            "name": name,
-            "base_url": base_url,
-            "format": format,
-            "mode": mode,
-            "models": models,
-            "website": website,
-            "note": note,
-            "category": "preset",
-            "endpoint_mode": "prefix",
-            "has_key": false,
-            "capabilities": { "chat": true, "models": true }
-        }));
+    let upstream: Vec<Value> = catalog
+        .get("upstream_entries")
+        .or_else(|| catalog.get("upstream_catalog"))
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    let settings = ai_settings(app);
+    let saving = req.method == "POST";
+    if saving {
+        if let Err(e) = settings.save_config(&body_value(req)) {
+            return Ok(Response::json_status(400, &json!({ "ok": false, "error_code": "ai_config_invalid", "error": e.to_string() })));
+        }
     }
-
-    if presets.is_empty() {
-        presets = default_providers();
+    let mut view = settings
+        .config_view(preset_provider_records(app), upstream)
+        .map_err(|e| ApiError::internal(format!("ai_config_failed: {e}")))?;
+    if let Some(obj) = view.as_object_mut() {
+        obj.insert("ok".into(), json!(true));
+        let presets = obj.get("presets").cloned().unwrap_or_else(|| json!([]));
+        obj.insert("providers".into(), presets);
+        if saving {
+            obj.insert("saved".into(), json!(true));
+        }
     }
-
-    let upstream = catalog.get("upstream_entries").or_else(|| catalog.get("upstream_catalog")).cloned().unwrap_or_else(|| json!([]));
-    let stored_custom = app.setting("ai_custom_providers");
-    let custom: Vec<Value> = stored_custom.as_array().cloned().unwrap_or_default();
-
-    let current = app.setting("ai_current");
-    let current_val = if current.is_object() {
-        current
-    } else {
-        let first_id = presets.first().and_then(|p| p.get("id")).and_then(|v| v.as_str()).unwrap_or("preset:OpenAI");
-        json!({
-            "provider_id": first_id,
-            "model": "gpt-4o-mini"
-        })
-    };
-
-    if req.method == "GET" {
-        let legacy_config = ai_config(app);
-        return ok_json(json!({
-            "ok": true,
-            "schema_version": 3,
-            "presets": presets.clone(),
-            "custom": custom,
-            "upstream_catalog": upstream,
-            "current": current_val,
-            "config": legacy_config,
-            "providers": presets,
-            "hasKey": !legacy_config.get("apiKey").and_then(|v| v.as_str()).unwrap_or("").is_empty(),
-        }));
-    }
-
-    let payload = body_value(req);
-    if let Some(new_current) = payload.get("current") {
-        app.update_settings(&json!({ "ai_current": new_current }));
-    }
-    if let Some(new_custom) = payload.get("custom").or_else(|| payload.get("providers")) {
-        app.update_settings(&json!({ "ai_custom_providers": new_custom }));
-    }
-    let patch = payload.get("config").cloned().unwrap_or(payload.clone());
-    let merged = app.update_settings(&json!({ "aiConfig": patch }));
-    let config = merged.get("aiConfig").cloned().unwrap_or_else(|| ai_config(app));
-
-    ok_json(json!({
-        "ok": true,
-        "schema_version": 3,
-        "saved": true,
-        "presets": presets,
-        "custom": custom,
-        "upstream_catalog": upstream,
-        "current": app.setting("ai_current"),
-        "config": config,
-    }))
+    ok_json(view)
 }
 
 fn ai_config(app: &Arc<App>) -> Value {
@@ -3493,20 +3448,6 @@ fn ai_config(app: &Arc<App>) -> Value {
     base
 }
 
-fn default_providers() -> Vec<Value> {
-    [
-        ("openai", "OpenAI", "https://api.openai.com/v1", "gpt-4o-mini"),
-        ("deepseek", "DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat"),
-        ("moonshot", "Moonshot", "https://api.moonshot.cn/v1", "moonshot-v1-8k"),
-        ("zhipu", "Zhipu GLM", "https://open.bigmodel.cn/api/paas/v4", "glm-4-flash"),
-        ("qwen", "Qwen", "https://dashscope.aliyuncs.com/compatible-mode/v1", "qwen-plus"),
-        ("ollama", "Ollama local", "http://127.0.0.1:11434/v1", "llama3.1"),
-        ("custom", "Custom endpoint", "", ""),
-    ]
-    .iter()
-    .map(|(id, name, base, model)| json!({ "id": id, "name": name, "baseUrl": base, "model": model }))
-    .collect()
-}
 
 fn h_ai_models(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     let config = ai_config(app);
@@ -3643,10 +3584,11 @@ struct AiProviderDirectory {
 
 impl AiProviderDirectory {
     fn new(app: &App) -> AiProviderDirectory {
+        let cfg = ai_settings(app).ensure_config().unwrap_or_else(|_| json!({}));
         AiProviderDirectory {
             presets: preset_provider_records(app),
-            custom: app.setting("ai_custom_providers").as_array().cloned().unwrap_or_default(),
-            current: app.setting("ai_current"),
+            custom: cfg.get("providers").and_then(|v| v.as_array()).cloned().unwrap_or_default(),
+            current: cfg.get("current").cloned().unwrap_or(Value::Null),
         }
     }
 }
@@ -7070,7 +7012,7 @@ fn h_export_presets(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
             if l.is_object() {
                 let fmt = l.get("fmt").and_then(|v| v.as_str()).unwrap_or("pdf");
                 let opts = l.get("options").cloned().unwrap_or_else(|| json!({}));
-                last = json!({ "fmt": fmt, "options": opts });
+                last = json!({ "fmt": fmt, "options": opts, "preset": l.get("preset").cloned().unwrap_or(Value::Null) });
             }
         }
         let doc = json!({ "custom": custom, "last": last });

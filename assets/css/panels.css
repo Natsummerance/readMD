@@ -1,0 +1,167 @@
+/* Panels: one surface language for every modal, sheet and floating panel.
+   Loaded last; colours, radii, shadows and motion all come from tokens.css,
+   so light / dark / sepia themes follow automatically. */
+
+/* ---- overlay ---- */
+:is(#export-modal, #export-preview-modal, #ai-settings-modal, #ai-history-modal, #pet-settings-modal,
+    #history-modal, #img-modal, #formula-modal, #tpl-modal, #skill-create-modal, #share-modal, #url-modal,
+    #close-confirm-modal, #choice-modal, #save-conflict-modal, #confirm-modal, #continuous-modal, #fix-modal,
+    #convert-modal, #plugin-modal, #update-modal, #lang-modal, #table-modal, #style-custom-modal,
+    #code-chunk-modal, #diagram-modal, #doc-import-modal, #frontmatter-modal) {
+  -webkit-backdrop-filter: blur(6px) saturate(1.08);
+  backdrop-filter: blur(6px) saturate(1.08);
+}
+
+/* ---- surface ---- */
+:is(#export-box, #export-preview-box, #ai-settings-box, #ai-history-box, #pet-settings-box, #history-box,
+    #img-box, #formula-box, #tpl-box, #share-box, #url-box, #close-confirm-box, #choice-box,
+    #save-conflict-box, #fix-box, #convert-box, #plugin-box, #update-box, .modal-dialog) {
+  background: var(--bg2);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-3);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :is(#export-box, #export-preview-box, #ai-settings-box, #ai-history-box, #pet-settings-box, #history-box,
+      #img-box, #formula-box, #tpl-box, #share-box, #url-box, #close-confirm-box, #choice-box,
+      #save-conflict-box, #fix-box, #convert-box, #plugin-box, #update-box, .modal-dialog) {
+    animation: rm-panel-in var(--duration-slow) var(--ease-emphasized) both;
+  }
+}
+
+@keyframes rm-panel-in {
+  from { opacity: 0; transform: translateY(8px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---- header ---- */
+:is(.export-head, .modal-header) :is(h2, h3) {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -.01em;
+}
+
+.modal-close-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--fg2);
+  cursor: pointer;
+  transition: background var(--motion-fast), color var(--motion-fast);
+}
+.modal-close-btn:hover { background: var(--color-hover); color: var(--fg); }
+.modal-close-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---- form controls inside panels ---- */
+:is(#export-box, #ai-settings-box, #pet-settings-box, #tpl-box, #share-box, #url-box, #convert-box,
+    #plugin-box, #fix-box, .modal-dialog)
+  :is(input[type="text"], input[type="number"], input[type="search"], input[type="url"],
+      input[type="password"], input:not([type]), select, textarea) {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--bg);
+  color: var(--fg);
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+:is(#export-box, #ai-settings-box, #pet-settings-box, #tpl-box, #share-box, #url-box, #convert-box,
+    #plugin-box, #fix-box, .modal-dialog)
+  :is(input, select, textarea):focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  outline: 2px solid transparent;
+}
+
+/* ---- export: format tabs + preset gallery ---- */
+#export-box .exp-fmt {
+  border-radius: var(--radius-m);
+  transition: background var(--motion-fast), color var(--motion-fast), box-shadow var(--motion-fast);
+}
+#export-box .exp-fmt.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.exp-preset-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: var(--space-2);
+  margin: var(--space-2) 0 var(--space-3);
+}
+.exp-preset-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast), transform var(--motion-fast);
+}
+.exp-preset-card:hover { border-color: var(--border2); box-shadow: var(--shadow-1); }
+.exp-preset-card[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.exp-preset-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.exp-preset-swatch { display: flex; gap: 3px; }
+.exp-preset-swatch i {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+  background: var(--border2);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.exp-preset-name { font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+.exp-preset-meta { font-size: var(--text-2xs); color: var(--fg3); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .exp-preset-card:hover { transform: translateY(-1px); }
+}
+
+/* ---- AI panel composer ---- */
+#ai-panel .composer-input-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  background: var(--bg);
+  box-shadow: var(--shadow-1);
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+#ai-panel .composer-input-card:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-1);
+}
+#ai-panel .send-btn {
+  border-radius: var(--radius-full);
+  transition: transform var(--motion-fast), filter var(--motion-fast);
+}
+#ai-panel .send-btn:hover { filter: brightness(1.06); }
+
+@media (prefers-reduced-motion: no-preference) {
+  #ai-panel .send-btn:active { transform: scale(.94); }
+}
+
+/* ---- in-app pet ---- */
+#readmd-pet-widget {
+  cursor: grab;
+  touch-action: none;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .22));
+  transition: filter var(--motion-base);
+}
+#readmd-pet-widget:hover { filter: drop-shadow(0 14px 24px rgba(0, 0, 0, .28)) brightness(1.04); }
+#readmd-pet-widget:active { cursor: grabbing; }

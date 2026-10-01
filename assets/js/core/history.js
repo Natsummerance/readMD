@@ -285,11 +285,12 @@ function updateStatus() {
   if (state.encoding) parts.push(state.encoding);
   $('status-right').textContent = parts.join(' · ');
   const isWelcome = state.mode === 'welcome';
-  const hasDoc = (state.mode === 'file' || state.mode === 'virtual') && !!state.original;
+  const hasDoc = (state.mode === 'file' || state.mode === 'virtual') && state.original != null;
   const canEdit = hasDoc && !state.editing;
   const canReload = state.mode === 'file';
   const canSaveas = hasDoc && (state.mode === 'virtual' || state.fixed !== '');
-  $('btn-edit').disabled = !canEdit && !state.editing;
+  // 编辑始终可用：欢迎页会新建空白文档（toggleEdit）。
+  $('btn-edit').disabled = false;
   setUnavailableReason($('btn-edit'), _t('toast.openDocumentToUse'));
   $('btn-reload').disabled = !canReload;
   $('btn-saveas').disabled = !canSaveas;
