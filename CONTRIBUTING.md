@@ -60,3 +60,4 @@ Be patient with platform-specific reports, avoid personal comments and keep disc
 
 Use [bug report forms](.github/ISSUE_TEMPLATE/bug_report.yml) for reproducible defects and [Security Advisories](https://github.com/Natsummerance/readMD/security/advisories/new) for private vulnerability reports. General workflow questions belong in [Discussions](https://github.com/Natsummerance/readMD/discussions).
 
+项目集成了Deepseek V4 flash 0731，Deepseek V4 pro 0813，Ox Alpha，Union Alpha，GLM 5.3 Flash，Qwen 3.8 flash next，Qwen 3.8 max，Gemini 3.7 flash，Gemini 3.8 flash，GPT 5.6 luna，GPT 5.6 Terra，GPT 5.6 sol，GPT 6 Astra，Claude sonnet 4.6，Claude opus 4.6，Claude opus 5.5的代码贡献，由Codex、Claude Code、Hermes、Openclaw、Antigravity、Zcode、Deepseek Harness、Open Code、Qoder、Qoder CN、Cursor、Kiro冠名联合赞助
