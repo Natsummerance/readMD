@@ -173,15 +173,37 @@ function convertOrOcr(p, mode) {
 /* ---------------- 插件管理中心 (Plugin Center) ---------------- */
 
 let pluginPollTimer = null;
+let pluginRefreshVersion = 0;
+let pluginTogglePending = false;
+
+function setPluginListStatus(message, retry = false) {
+  const status = $('plugin-list-status');
+  if (!status) return;
+  status.replaceChildren();
+  status.classList.toggle('hidden', !message);
+  if (!message) return;
+  const text = document.createElement('span');
+  text.textContent = message;
+  status.appendChild(text);
+  if (retry) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'tb-btn';
+    button.textContent = _t('plugin.retry');
+    button.addEventListener('click', refreshPluginList);
+    status.appendChild(button);
+  }
+}
 
 async function openPluginModal() {
   const modal = $('plugin-modal');
   if (!modal) return;
   modal.classList.remove('hidden');
+  setPluginListStatus(_t('plugin.loading'));
   await refreshPluginList();
 }
 
 function closePluginModal() {
+  pluginRefreshVersion++;
   const modal = $('plugin-modal');
   if (modal) modal.classList.add('hidden');
   if (pluginPollTimer) {
@@ -191,6 +213,7 @@ function closePluginModal() {
 }
 
 async function refreshPluginList() {
+  const version = ++pluginRefreshVersion;
   const grid = $('plugin-cards-grid');
   const ffmpegBadge = $('plugin-ffmpeg-badge');
   const sandboxPath = $('plugin-sandbox-path');
@@ -199,7 +222,8 @@ async function refreshPluginList() {
   try {
     const res = await apiFetch('/api/plugins/list');
     const data = await res.json();
-    if (!data.ok) throw new Error(data.error || 'Failed to list plugins');
+    if (version !== pluginRefreshVersion) return false;
+    if (!res.ok || !data.ok) throw new Error('Failed to list plugins');
 
     if (ffmpegBadge) {
       if (data.ffmpeg) {
@@ -220,14 +244,16 @@ async function refreshPluginList() {
 
     // 如果有安装任务进行中，保持轮询
     const hasInstalling = Object.values(data.plugins || {}).some(p => p.installing);
-    if (hasInstalling && !pluginPollTimer) {
+    if (hasInstalling && !pluginPollTimer && !$('plugin-modal').classList.contains('hidden')) {
       pluginPollTimer = setInterval(refreshPluginList, 1500);
     } else if (!hasInstalling && pluginPollTimer) {
       clearInterval(pluginPollTimer);
       pluginPollTimer = null;
     }
+    return true;
   } catch (err) {
-    console.error('refreshPluginList error:', err);
+    if (version === pluginRefreshVersion) setPluginListStatus(_t('plugin.loadFailed'), true);
+    return false;
   }
 }
 
@@ -246,7 +272,12 @@ function initPluginTabsOnce() {
     container.querySelectorAll('.plugin-tab-pill').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
     currentPluginCategory = btn.dataset.category || 'all';
+    container.querySelectorAll('.plugin-tab-pill').forEach(t => t.setAttribute('aria-selected', String(t === btn)));
     renderPluginCards(lastPluginsCache);
+  });
+  container.querySelectorAll('.plugin-tab-pill').forEach(t => {
+    t.setAttribute('role', 'tab');
+    t.setAttribute('aria-selected', String(t.classList.contains('active')));
   });
 }
 
@@ -454,7 +485,7 @@ function renderPluginCards(plugins) {
       <div class="plugin-card-head">
         <div class="plugin-app-icon" aria-hidden="true">${iconSvg}</div>
         <div class="plugin-card-meta-wrap">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+          <div class="plugin-title-row">
             <h4 class="plugin-card-title">${escapeHtml(title)}</h4>
             ${capBadge}
           </div>
@@ -474,6 +505,7 @@ function renderPluginCards(plugins) {
     // 绑定卡片内按钮事件
     const toggleInput = card.querySelector('input[data-action="toggle"]');
     if (toggleInput) {
+      toggleInput.disabled = pluginTogglePending;
       toggleInput.addEventListener('change', async (e) => {
         await setPluginToggle(id, e.target.checked, title);
       });
@@ -495,30 +527,41 @@ function renderPluginCards(plugins) {
 
     grid.appendChild(card);
   }
+  setPluginListStatus(grid.children.length ? '' : _t('plugin.emptyList'));
 }
 
 async function setPluginToggle(id, enabled, name) {
+  if (pluginTogglePending) return;
+  pluginTogglePending = true;
+  document.querySelectorAll('#plugin-cards-grid input[data-action="toggle"]').forEach(input => { input.disabled = true; });
+  setPluginListStatus(_t('plugin.saving'));
   try {
-    if (enabled && lastPluginsCache[id]) {
-      const alts = lastPluginsCache[id].alternatives || [];
-      const activeAlt = alts.find(altId => lastPluginsCache[altId] && lastPluginsCache[altId].enabled);
-      if (activeAlt) {
-        const altTitle = translatePluginText('plugin.' + activeAlt + '.name', activeAlt);
-        showToast(_t('plugin.switchedMutual', { name: name || id, other: altTitle }));
-      }
-    }
+    const alts = lastPluginsCache[id] ? (lastPluginsCache[id].alternatives || []) : [];
+    const activeAlt = enabled && alts.find(altId => lastPluginsCache[altId] && lastPluginsCache[altId].enabled);
     const res = await apiFetch('/api/plugins/toggle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ plugin_id: id, enabled: Boolean(enabled) }),
     });
     const data = await res.json();
-    if (!data.ok) throw new Error(data.error || 'Toggle failed');
-    await refreshPluginList();
+    if (!res.ok || !data.ok) throw new Error('Toggle failed');
+    if (lastPluginsCache[id]) lastPluginsCache[id].enabled = Boolean(data.enabled);
+    if (enabled) alts.forEach(altId => { if (lastPluginsCache[altId]) lastPluginsCache[altId].enabled = false; });
+    renderPluginCards(lastPluginsCache);
+    const refreshed = await refreshPluginList();
+    if (refreshed) setPluginListStatus(_t('status.saved'));
+    if (activeAlt) {
+      const altTitle = translatePluginText('plugin.' + activeAlt + '.name', activeAlt);
+      showToast(_t('plugin.switchedMutual', { name: name || id, other: altTitle }));
+    }
   } catch (err) {
-    console.warn('plugin toggle failed:', err);
-    showToast(_t('plugin.toggleFailed', { name: name || id }));
-    await refreshPluginList();
+    renderPluginCards(lastPluginsCache);
+    const message = _t('plugin.toggleFailed', { name: name || id });
+    setPluginListStatus(message);
+    showToast(message);
+  } finally {
+    pluginTogglePending = false;
+    document.querySelectorAll('#plugin-cards-grid input[data-action="toggle"]').forEach(input => { input.disabled = false; });
   }
 }
 

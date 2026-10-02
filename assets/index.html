@@ -632,12 +632,8 @@
         <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
     </div>
-    <p class="ai-settings-intro" data-i18n="ai.settingsDesc">密钥只保存在本机。连接状态会区分鉴权、限流和网络问题。</p>
-    <div class="ai-provider-browser" aria-label="AI provider browser">
-      <input id="ai-provider-search" type="search" placeholder="搜索/过滤提供商…" aria-label="搜索提供商" data-i18n-placeholder="ai.providerSearchPlaceholder" data-i18n-aria="ai.providerSearchPlaceholder" autocomplete="off" spellcheck="false">
-      <div id="ai-provider-cards" class="ai-provider-cards" role="listbox" aria-label="AI providers"></div>
-    </div>
-    <div class="conn-grid">
+    <div class="ai-settings-body">
+      <div class="conn-grid">
         <div class="conn-field">
           <label for="ai-provider" data-i18n="ai.provider">提供商</label>
           <div class="conn-inline">
@@ -647,70 +643,80 @@
           </div>
         </div>
         <div class="conn-field">
-          <label for="ai-provider-name" data-i18n="ai.customProvider">配置名称</label>
-          <input id="ai-provider-name" type="text" placeholder="我的 AI 连接" data-i18n-placeholder="ai.customNamePlaceholder" maxlength="60" autocomplete="off">
-        </div>
-        <div class="conn-field">
-          <label for="ai-mode" data-i18n="ai.protocol">响应方式</label>
-          <select id="ai-mode" title="接口协议 / 端点" data-i18n-title="ai.protocol">
-            <option value="auto" data-i18n="ai.modeAuto">自动（按提供商）</option>
-            <option value="chat">OpenAI chat/completions</option>
-            <option value="completion">OpenAI completions</option>
-            <option value="responses">OpenAI responses</option>
-            <option value="messages">Anthropic messages</option>
-          </select>
-        </div>
-        <div class="conn-field">
-          <label for="ai-endpoint-mode" data-i18n="ai.endpointMode">端点填写方式</label>
-          <select id="ai-endpoint-mode" title="选择 URL 是前缀还是完整端点" data-i18n-title="ai.endpointModeTip">
-            <option value="prefix" data-i18n="ai.endpointPrefix">Base URL（自动追加接口路径）</option>
-            <option value="full_url" data-i18n="ai.endpointFull">完整接口 URL（不追加路径）</option>
-          </select>
-        </div>
-        <details class="conn-advanced"><summary data-i18n="ai.advanced">高级参数</summary><div class="conn-advanced-grid">
-        <div class="conn-field">
-          <label for="ai-base-url" data-i18n="ai.baseUrl">Base URL</label>
-          <div class="conn-inline">
-            <input id="ai-base-url" type="text" placeholder="https://api.example.com/v1" autocomplete="off" spellcheck="false">
-            <button id="ai-url-reset" class="tb-btn icon" title="恢复预设地址" aria-label="恢复预设地址" data-i18n-title="ai.resetUrl" data-i18n-aria="ai.resetUrl">
-              <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-            </button>
-          </div>
-        </div>
-        <div class="conn-field">
-          <label for="ai-key" data-i18n="ai.apiKey">API Key</label>
-          <div class="conn-inline">
-            <input id="ai-key" type="password" placeholder="必填（本地 Ollama 可留空）" data-i18n-placeholder="ai.apiKeyPlaceholder" autocomplete="off">
-            <button id="ai-key-toggle" class="tb-btn icon" title="显示 / 隐藏" aria-label="显示或隐藏 API Key" data-i18n-title="ai.toggleKey" data-i18n-aria="ai.toggleKey">
-              <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-            <button id="ai-key-clear" class="tb-btn icon" title="清除已保存的 API Key" aria-label="清除已保存的 API Key" data-i18n-title="ai.clearKey" data-i18n-aria="ai.clearKey">
-              <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            </button>
-          </div>
-        </div>
-        <div class="conn-field conn-field-wide">
-          <label for="ai-headers" data-i18n="ai.advanced">自定义请求头（JSON，可选）</label>
-          <textarea id="ai-headers" rows="3" placeholder='{"X-Organization":"example"}' spellcheck="false" autocomplete="off"></textarea>
-        </div>
-
-        <div class="conn-field">
           <label for="ai-model" data-i18n="ai.model">模型</label>
           <div class="conn-inline">
             <select id="ai-model" title="选择模型" data-i18n-title="ai.model"></select>
             <button id="ai-models-btn" class="tb-btn" title="通过 API Key 获取可用模型列表" data-i18n="ai.fetchModels" data-i18n-title="ai.fetchModels">获取模型</button>
           </div>
         </div>
-        <div class="conn-field conn-stream">
-          <label class="ai-sel"><input id="ai-stream" type="checkbox" checked> <span data-i18n="ai.stream">流式输出</span></label>
+        <div class="conn-field conn-field-wide">
+          <label for="ai-key" data-i18n="ai.apiKey">API Key</label>
+          <div class="conn-inline">
+            <input id="ai-key" type="password" placeholder="必填（本地 Ollama 可留空）" data-i18n-placeholder="ai.apiKeyPlaceholder" autocomplete="off">
+            <button id="ai-key-toggle" aria-pressed="false" class="tb-btn icon" title="显示 / 隐藏" aria-label="显示或隐藏 API Key" data-i18n-title="ai.toggleKey" data-i18n-aria="ai.toggleKey">
+            <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            <button id="ai-key-clear" class="tb-btn icon" title="清除已保存的 API Key" aria-label="清除已保存的 API Key" data-i18n-title="ai.clearKey" data-i18n-aria="ai.clearKey">
+            <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
         </div>
-        </div></details>
-        <div class="conn-actions">
-          <button id="ai-save-key" class="tb-btn accent" data-i18n="ai.saveSettings">保存连接设置</button>
-          <button id="ai-test-connection" class="tb-btn" data-i18n="ai.testConnection">测试连接</button>
-          <span id="ai-conn-status" class="conn-status" role="status" aria-live="polite"></span>
-        </div>
+        <details class="conn-advanced">
+          <summary data-i18n="ai.advanced">高级参数</summary>
+          <div class="conn-advanced-grid">
+            <div class="conn-field">
+              <label for="ai-provider-name" data-i18n="ai.customProvider">配置名称</label>
+              <input id="ai-provider-name" type="text" placeholder="我的 AI 连接" data-i18n-placeholder="ai.customNamePlaceholder" maxlength="60" autocomplete="off">
+            </div>
+            <div class="conn-field">
+              <label for="ai-base-url" data-i18n="ai.baseUrl">Base URL</label>
+              <div class="conn-inline">
+                <input id="ai-base-url" type="text" placeholder="https://api.example.com/v1" autocomplete="off" spellcheck="false">
+                <button id="ai-url-reset" class="tb-btn icon" title="恢复预设地址" aria-label="恢复预设地址" data-i18n-title="ai.resetUrl" data-i18n-aria="ai.resetUrl">
+                <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="conn-field">
+              <label for="ai-mode" data-i18n="ai.protocol">响应方式</label>
+              <select id="ai-mode" title="接口协议 / 端点" data-i18n-title="ai.protocol">
+              <option value="auto" data-i18n="ai.modeAuto">自动（按提供商）</option>
+              <option value="chat">OpenAI chat/completions</option>
+              <option value="completion">OpenAI completions</option>
+              <option value="responses">OpenAI responses</option>
+              <option value="messages">Anthropic messages</option>
+              </select>
+            </div>
+            <div class="conn-field">
+              <label for="ai-endpoint-mode" data-i18n="ai.endpointMode">端点填写方式</label>
+              <select id="ai-endpoint-mode" title="选择 URL 是前缀还是完整端点" data-i18n-title="ai.endpointModeTip">
+              <option value="prefix" data-i18n="ai.endpointPrefix">Base URL（自动追加接口路径）</option>
+              <option value="full_url" data-i18n="ai.endpointFull">完整接口 URL（不追加路径）</option>
+              </select>
+            </div>
+            <div class="conn-field conn-field-wide">
+              <label for="ai-headers" data-i18n="ai.customHeaders">自定义请求头（JSON，可选）</label>
+              <textarea id="ai-headers" rows="3" placeholder='{"X-Organization":"example"}' spellcheck="false" autocomplete="off"></textarea>
+            </div>
+            <div class="conn-field conn-stream">
+              <label class="ai-sel"><input id="ai-stream" type="checkbox" checked> <span data-i18n="ai.stream">流式输出</span></label>
+            </div>
+          </div>
+          <details class="ai-provider-directory">
+            <summary data-i18n="ai.providerDirectory">提供商目录</summary>
+            <div class="ai-provider-browser" aria-label="AI provider browser">
+              <input id="ai-provider-search" type="search" placeholder="搜索/过滤提供商…" aria-label="搜索提供商" data-i18n-placeholder="ai.providerSearchPlaceholder" data-i18n-aria="ai.providerSearchPlaceholder" autocomplete="off" spellcheck="false">
+              <div id="ai-provider-cards" class="ai-provider-cards" role="listbox" aria-label="AI providers"></div>
+            </div>
+          </details>
+        </details>
       </div>
+    </div>
+    <div class="conn-actions">
+      <button id="ai-save-key" class="tb-btn accent" data-i18n="ai.saveSettings">保存连接设置</button>
+      <button id="ai-test-connection" class="tb-btn" data-i18n="ai.testConnection">测试连接</button>
+      <span id="ai-conn-status" class="conn-status" role="status" aria-live="polite"></span>
+    </div>
   </div>
 </div>
 
@@ -1132,27 +1138,27 @@
           </div>
         </div>
 
-        <button id="export-print" class="exp-print" title="使用浏览器打印对话框（可另存为 PDF）" data-i18n-title="export.printTitle">
-          <svg class="tb-ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-          <span data-i18n="export.printDoc">打印当前文档</span>
-        </button>
-        <div class="exp-preset-row">
-          <label for="exp-preset" data-i18n="export.stylePreset">样式预设</label>
-          <select id="exp-preset"></select>
-        </div>
+        <details class="export-preset-list">
+          <summary data-i18n="export.presetList">全部预设</summary>
+          <div class="exp-preset-row">
+            <label for="exp-preset" data-i18n="export.stylePreset">样式预设</label>
+            <select id="exp-preset"></select>
+          </div>
+        </details>
         <div id="exp-preset-cards" class="exp-preset-cards" role="group" aria-label="样式预设" data-i18n-aria="export.stylePreset"></div>
         <div class="exp-preset-actions">
           <button id="exp-save-preset" class="tb-btn" data-i18n="export.savePreset">存为预设&#8230;</button>
           <button id="exp-reset" class="tb-btn" data-i18n="export.restoreDefaults">恢复默认</button>
         </div>
         <div id="exp-save-name" class="exp-save-name hidden">
-          <input id="exp-save-input" type="text" placeholder="预设名称" aria-label="预设名称" data-i18n-placeholder="export.presetName" data-i18n-aria="export.presetName" maxlength="20" autocomplete="off">
+          <input id="exp-save-input" type="text" placeholder="预设名称" aria-label="预设名称" data-i18n-placeholder="export.presetName" data-i18n-aria="export.presetName" maxlength="64" autocomplete="off">
           <div class="exp-save-btns">
-            <button id="exp-save-ok" class="tb-btn accent" data-i18n="editor.save">保存</button>
+            <button id="exp-save-ok" class="tb-btn" data-i18n="editor.save">保存</button>
             <button id="exp-save-cancel" class="tb-btn" data-i18n="editor.cancel">取消</button>
           </div>
         </div>
-
+      </div>
+      <div class="export-main-col">
         <button id="export-preview-card" type="button" class="export-preview-card" aria-label="打开全屏排版预览" data-i18n-aria="export.previewCardTitle" title="点击打开全屏排版预览" data-i18n-title="export.previewCardTitle">
           <div class="export-preview-header">
             <span class="export-preview-title" data-i18n="export.preview">排版预览</span>
@@ -1169,21 +1175,27 @@
             </div>
           </div>
         </button>
-      </div>
-      <div class="export-main-col">
-        <!-- AI 排版 -->
-        <div class="exp-ai-style-card">
-          <div class="exp-ai-style-header">
-            <svg class="tb-ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
-            <span data-i18n="exportai.title">AI 排版</span>
+        <details class="export-customize">
+          <summary data-i18n="export.customize">定制排版</summary>
+          <button id="export-print" class="exp-print" title="使用浏览器打印对话框（可另存为 PDF）" data-i18n-title="export.printTitle">
+          <svg class="tb-ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          <span data-i18n="export.printDoc">打印当前文档</span>
+          </button>
+          <!-- AI 排版 -->
+          <div class="exp-ai-style-card">
+            <div class="exp-ai-style-header">
+              <svg class="tb-ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
+              <span data-i18n="exportai.title">AI 排版</span>
+            </div>
+            <div class="exp-ai-style-input-row">
+              <input id="exp-ai-prompt" type="text" placeholder="例如：学术顶会 LaTeX 论文排版 / 莫兰迪画册风格..." data-i18n-placeholder="exportai.placeholder" autocomplete="off">
+              <button id="exp-ai-gen-btn" class="tb-btn" data-i18n="exportai.generateBtn">AI 生成</button>
+            </div>
+            <div id="exp-ai-status" class="exp-ai-status hidden" data-i18n="exportai.generating">正在分析并设计排版参数...</div>
           </div>
-          <div class="exp-ai-style-input-row">
-            <input id="exp-ai-prompt" type="text" placeholder="例如：学术顶会 LaTeX 论文排版 / 莫兰迪画册风格..." data-i18n-placeholder="exportai.placeholder" autocomplete="off">
-            <button id="exp-ai-gen-btn" class="tb-btn accent" data-i18n="exportai.generateBtn">AI 生成</button>
-          </div>
-          <div id="exp-ai-status" class="exp-ai-status hidden" data-i18n="exportai.generating">正在分析并设计排版参数...</div>
-        </div>
-        <div class="export-opts" id="export-opts" role="tabpanel" aria-labelledby="export-tab-pdf" tabindex="0"></div>
+          <div class="export-opts" id="export-opts" role="tabpanel" aria-labelledby="export-tab-pdf" tabindex="0"></div>
+          <p class="fix-note" data-i18n="export.noteOfflineMath">PDF 中的公式为矢量排版并嵌入字体子集；DOCX 公式为 Word 原生公式，可继续编辑；EPUB 会打包本地图片；HTML 为单文件（内联 marked + MathJax），图片保持相对路径。样式参数会自动记忆。</p>
+        </details>
       </div>
     </div>
     <div class="export-foot">
@@ -1194,7 +1206,6 @@
       <button id="export-cancel" class="tb-btn hidden" data-i18n="task.cancel">取消</button>
       <button id="export-run" class="tb-btn accent" data-i18n="export.exportAction">导出</button>
     </div>
-    <p class="fix-note" data-i18n="export.noteOfflineMath">PDF 中的公式为矢量排版并嵌入字体子集；DOCX 公式为 Word 原生公式，可继续编辑；EPUB 会打包本地图片；HTML 为单文件（内联 marked + MathJax），图片保持相对路径。样式参数会自动记忆。</p>
   </div>
 </div>
 
@@ -1260,25 +1271,27 @@
     <div class="export-head plugin-sheet-head">
       <div>
         <h3 id="plugin-title" data-i18n="plugin.center.title">扩展插件管理中心</h3>
-        <p class="plugin-subtitle" data-i18n="plugin.center.subtitle">按需挂载重型解析与 AI 模型，核心保持轻量秒开，数据完全本地运行</p>
       </div>
       <button id="plugin-close" class="tb-btn icon modal-close-btn" aria-label="关闭" data-i18n-aria="toolbar.close">
         <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
     </div>
-    <div class="plugin-system-status">
-      <div class="plugin-status-pill">
-        <span class="status-indicator ready" aria-hidden="true"></span>
-        <span class="status-label" data-i18n="plugin.sandboxReady">能力由 ReadMD 内核原生提供 · 无需 Python 或 pip</span>
-      </div>
-      <div class="plugin-meta-indicators">
-        <div class="plugin-indicator-item">
-          <span class="plugin-meta-label" data-i18n="plugin.ffmpegStatus">FFmpeg 状态</span>：
-          <span id="plugin-ffmpeg-badge" class="plugin-badge" data-i18n="plugin.detecting">检测中…</span>
+    <details class="plugin-runtime-details">
+      <summary data-i18n="plugin.runtimeDetails">运行信息</summary>
+      <div class="plugin-system-status">
+        <div class="plugin-status-pill">
+          <span class="status-indicator ready" aria-hidden="true"></span>
+          <span class="status-label" data-i18n="plugin.sandboxReady">能力由 ReadMD 内核原生提供 · 无需 Python 或 pip</span>
         </div>
-        <span id="plugin-sandbox-path" class="plugin-path hidden">—</span>
+        <div class="plugin-meta-indicators">
+          <div class="plugin-indicator-item">
+            <span class="plugin-meta-label" data-i18n="plugin.ffmpegStatus">FFmpeg 状态</span>：
+            <span id="plugin-ffmpeg-badge" class="plugin-badge" data-i18n="plugin.detecting">检测中…</span>
+          </div>
+          <span id="plugin-sandbox-path" class="plugin-path hidden">—</span>
+        </div>
       </div>
-    </div>
+    </details>
     <div id="plugin-category-tabs" class="plugin-category-tabs" role="tablist" aria-label="插件能力分类">
       <button class="plugin-tab-pill active" data-category="all" data-i18n="plugin.filter.all">全部</button>
       <button class="plugin-tab-pill" data-category="ocr" data-i18n="plugin.category.ocr">光学识别</button>
@@ -1287,6 +1300,7 @@
       <button class="plugin-tab-pill" data-category="web" data-i18n="plugin.category.web">网页提取</button>
       <button class="plugin-tab-pill" data-category="tools" data-i18n="plugin.category.tools">排版与工具</button>
     </div>
+    <div id="plugin-list-status" class="plugin-list-status hidden" role="status" aria-live="polite"></div>
     <div id="plugin-cards-grid" class="plugin-grid">
       <!-- 动态填充插件卡片 -->
     </div>

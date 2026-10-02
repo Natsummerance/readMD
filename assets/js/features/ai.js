@@ -1672,6 +1672,9 @@ function syncAiKey() {
   const p = currentAiProvider();
   const inp = $('ai-key');
   const status = $('ai-conn-status');
+  inp.type = 'password';
+  $('ai-key-toggle').setAttribute('aria-pressed', 'false');
+  $('ai-key-toggle').title = _t('ai.showOrHide') || '';
   if (!p) { inp.value = ''; inp.placeholder = ''; if (status) status.textContent = ''; return; }
   // API Key 不会从后端回传；切换连接时也不保留前一个连接的输入值。
   inp.value = '';
@@ -1765,11 +1768,14 @@ async function saveAiSelection(silent) {
   try {
     var customHeaders = readAiCustomHeaders();
   } catch (e) {
-    showToast((_t('toast.saveFailedSimple') || '') + ' ' + e.message);
+    const message = _t('ai.invalidHeaders');
+    $('ai-conn-status').textContent = message;
+    showToast(message);
     return false;
   }
   const requestedName = $('ai-provider-name').value.trim() || p.name;
   if (p.custom && requestedName !== p.name && custom.some(c => c.name === requestedName)) {
+    $('ai-conn-status').textContent = _t('toast.customConnNameExists');
     showToast(_t('toast.customConnNameExists') || ''); return false;
   }
   let over = custom.find(c => c.id === p.id);
@@ -1803,18 +1809,27 @@ async function saveAiSelection(silent) {
       body: JSON.stringify({ providers: custom, current }),
     });
     if (r.ok) {
-      await loadAiConfig();
+      const result = await r.json().catch(() => ({}));
+      if (result.ok === false) throw new Error(result.error || _t('toast.saveFailedSimple'));
+      syncAiKey();
+      const refreshed = await loadAiConfig();
       const status = $('ai-conn-status');
+      if (!refreshed && silent) {
+        status.textContent = _t('ai.statusOffline');
+        return false;
+      }
       if (status) status.textContent = _t('status.saved') || '';
       if (!silent) showToast(_t('toast.connSettingsSaved') || '');
-      $('ai-settings-modal')?.classList.add('hidden');
+      if (!silent) $('ai-settings-modal')?.classList.add('hidden');
       return true;
     } else {
       const d = await r.json().catch(() => ({}));
       throw new Error(d.error || 'HTTP ' + r.status);
     }
   } catch (e) {
-    showToast((_t('toast.saveFailed') || '') + e.message);
+    const message = (_t('toast.saveFailed') || '') + e.message;
+    $('ai-conn-status').textContent = message;
+    showToast(message);
     return false;
   }
 }
@@ -1983,6 +1998,7 @@ function toggleAiKey() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const inp = $('ai-key');
   inp.type = (inp.type === 'password') ? 'text' : 'password';
+  $('ai-key-toggle').setAttribute('aria-pressed', String(inp.type === 'text'));
   $('ai-key-toggle').title = inp.type === 'password' ? (_t('ai.showOrHide') || '') : (_t('ai.hideKey') || '');
 }
 
@@ -2270,28 +2286,42 @@ async function runAi(action) {
 async function testAiConnection() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const p = currentAiProvider();
-  if (!p) return;
+  const status = $('ai-conn-status');
+  if (!p) { status.textContent = _t('ai.noProvider'); return; }
   const button = $('ai-test-connection'); const before = button.textContent;
+  if (button.disabled) return;
+  const saveButton = $('ai-save-key');
+  const modelsButton = $('ai-models-btn');
   button.disabled = true; button.textContent = _t('toast.testingConn') || '';
+  saveButton.disabled = true;
+  modelsButton.disabled = true;
+  status.textContent = _t('toast.testingConn');
+  status.setAttribute('aria-busy', 'true');
   setAiConnectionState('loading', _t('toast.testingConn') || '');
   try {
-    await saveAiSelection(true);
+    if (!(await saveAiSelection(true))) return;
     const active = currentAiProvider() || p;
+    status.textContent = _t('toast.testingConn');
     const r = await apiFetch('/api/ai/models', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ provider: active.id || '', credential_id: active.credential_id || undefined,
         base_url: $('ai-base-url').value.trim(), mode: $('ai-mode').value || 'auto',
-        endpoint_mode: $('ai-endpoint-mode') ? ($('ai-endpoint-mode').value || 'prefix') : 'prefix' })
+        endpoint_mode: $('ai-endpoint-mode') ? ($('ai-endpoint-mode').value || 'prefix') : 'prefix',
+        headers: readAiCustomHeaders() })
     });
     const data = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(data.error || 'HTTP ' + r.status);
+    if (!r.ok || data.ok === false || data.error) throw new Error(data.error || 'HTTP ' + r.status);
     setAiConnectionState('ready', _t('toast.connReady', { name: p.name }) || (p.name + ' · 连接正常'));
     $('ai-conn-status').textContent = (_t('toast.connReady', { name: p.name }) || '连接正常') + (data.models && data.models.length ? (' · ' + data.models.length + ' ' + (_t('ai.modelsAvail') || '')) : '');
     showToast(_t('toast.connTestPass') || '');
   } catch (e) {
     const hint = aiErrorHint(e); setAiConnectionState(hint.kind, hint.summary); $('ai-conn-status').textContent = hint.message; showToast(hint.message);
-  } finally { button.disabled = false; button.textContent = before; }
+  } finally {
+    button.disabled = false; button.textContent = before;
+    saveButton.disabled = false; modelsButton.disabled = false;
+    status.removeAttribute('aria-busy');
+  }
 }
 
 function aiConversationMarkdown(session) {

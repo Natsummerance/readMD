@@ -98,6 +98,7 @@ test('Plugin Center entry point and modal cards render correctly', async ({ page
   await expect(page.locator('#plugin-title')).toContainText('扩展插件管理中心');
 
   // 4. 检查 FFmpeg 状态徽章与沙箱路径
+  await page.locator('.plugin-runtime-details > summary').click();
   const ffmpegBadge = page.locator('#plugin-ffmpeg-badge');
   await expect(ffmpegBadge).toBeVisible();
   await expect(ffmpegBadge).toContainText('已就绪');

@@ -582,8 +582,9 @@ function bindEvents() {
   $('exp-save-preset').addEventListener('click', expSavePreset);
   $('exp-reset').addEventListener('click', () => {
     state.export.options = expDeepMerge(state.export.defaults, {});
+    state.export.selectedPreset = '__default__';
+    const sel = $('exp-preset'); if (sel) sel.value = '__default__';
     renderExportSections();
-    const sel = $('exp-preset'); if (sel) sel.value = '__custom__';
   });
   $('export-box').addEventListener('keydown', e => {
     if (e.key === 'Escape' && !$('export-modal').classList.contains('hidden')) { e.stopPropagation(); closeExportModal(); }

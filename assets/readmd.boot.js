@@ -13308,6 +13308,9 @@ function syncAiKey() {
   const p = currentAiProvider();
   const inp = $('ai-key');
   const status = $('ai-conn-status');
+  inp.type = 'password';
+  $('ai-key-toggle').setAttribute('aria-pressed', 'false');
+  $('ai-key-toggle').title = _t('ai.showOrHide') || '';
   if (!p) { inp.value = ''; inp.placeholder = ''; if (status) status.textContent = ''; return; }
   // API Key 不会从后端回传；切换连接时也不保留前一个连接的输入值。
   inp.value = '';
@@ -13401,11 +13404,14 @@ async function saveAiSelection(silent) {
   try {
     var customHeaders = readAiCustomHeaders();
   } catch (e) {
-    showToast((_t('toast.saveFailedSimple') || '') + ' ' + e.message);
+    const message = _t('ai.invalidHeaders');
+    $('ai-conn-status').textContent = message;
+    showToast(message);
     return false;
   }
   const requestedName = $('ai-provider-name').value.trim() || p.name;
   if (p.custom && requestedName !== p.name && custom.some(c => c.name === requestedName)) {
+    $('ai-conn-status').textContent = _t('toast.customConnNameExists');
     showToast(_t('toast.customConnNameExists') || ''); return false;
   }
   let over = custom.find(c => c.id === p.id);
@@ -13439,18 +13445,27 @@ async function saveAiSelection(silent) {
       body: JSON.stringify({ providers: custom, current }),
     });
     if (r.ok) {
-      await loadAiConfig();
+      const result = await r.json().catch(() => ({}));
+      if (result.ok === false) throw new Error(result.error || _t('toast.saveFailedSimple'));
+      syncAiKey();
+      const refreshed = await loadAiConfig();
       const status = $('ai-conn-status');
+      if (!refreshed && silent) {
+        status.textContent = _t('ai.statusOffline');
+        return false;
+      }
       if (status) status.textContent = _t('status.saved') || '';
       if (!silent) showToast(_t('toast.connSettingsSaved') || '');
-      $('ai-settings-modal')?.classList.add('hidden');
+      if (!silent) $('ai-settings-modal')?.classList.add('hidden');
       return true;
     } else {
       const d = await r.json().catch(() => ({}));
       throw new Error(d.error || 'HTTP ' + r.status);
     }
   } catch (e) {
-    showToast((_t('toast.saveFailed') || '') + e.message);
+    const message = (_t('toast.saveFailed') || '') + e.message;
+    $('ai-conn-status').textContent = message;
+    showToast(message);
     return false;
   }
 }
@@ -13619,6 +13634,7 @@ function toggleAiKey() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const inp = $('ai-key');
   inp.type = (inp.type === 'password') ? 'text' : 'password';
+  $('ai-key-toggle').setAttribute('aria-pressed', String(inp.type === 'text'));
   $('ai-key-toggle').title = inp.type === 'password' ? (_t('ai.showOrHide') || '') : (_t('ai.hideKey') || '');
 }
 
@@ -13906,28 +13922,42 @@ async function runAi(action) {
 async function testAiConnection() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const p = currentAiProvider();
-  if (!p) return;
+  const status = $('ai-conn-status');
+  if (!p) { status.textContent = _t('ai.noProvider'); return; }
   const button = $('ai-test-connection'); const before = button.textContent;
+  if (button.disabled) return;
+  const saveButton = $('ai-save-key');
+  const modelsButton = $('ai-models-btn');
   button.disabled = true; button.textContent = _t('toast.testingConn') || '';
+  saveButton.disabled = true;
+  modelsButton.disabled = true;
+  status.textContent = _t('toast.testingConn');
+  status.setAttribute('aria-busy', 'true');
   setAiConnectionState('loading', _t('toast.testingConn') || '');
   try {
-    await saveAiSelection(true);
+    if (!(await saveAiSelection(true))) return;
     const active = currentAiProvider() || p;
+    status.textContent = _t('toast.testingConn');
     const r = await apiFetch('/api/ai/models', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ provider: active.id || '', credential_id: active.credential_id || undefined,
         base_url: $('ai-base-url').value.trim(), mode: $('ai-mode').value || 'auto',
-        endpoint_mode: $('ai-endpoint-mode') ? ($('ai-endpoint-mode').value || 'prefix') : 'prefix' })
+        endpoint_mode: $('ai-endpoint-mode') ? ($('ai-endpoint-mode').value || 'prefix') : 'prefix',
+        headers: readAiCustomHeaders() })
     });
     const data = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(data.error || 'HTTP ' + r.status);
+    if (!r.ok || data.ok === false || data.error) throw new Error(data.error || 'HTTP ' + r.status);
     setAiConnectionState('ready', _t('toast.connReady', { name: p.name }) || (p.name + ' · 连接正常'));
     $('ai-conn-status').textContent = (_t('toast.connReady', { name: p.name }) || '连接正常') + (data.models && data.models.length ? (' · ' + data.models.length + ' ' + (_t('ai.modelsAvail') || '')) : '');
     showToast(_t('toast.connTestPass') || '');
   } catch (e) {
     const hint = aiErrorHint(e); setAiConnectionState(hint.kind, hint.summary); $('ai-conn-status').textContent = hint.message; showToast(hint.message);
-  } finally { button.disabled = false; button.textContent = before; }
+  } finally {
+    button.disabled = false; button.textContent = before;
+    saveButton.disabled = false; modelsButton.disabled = false;
+    status.removeAttribute('aria-busy');
+  }
 }
 
 function aiConversationMarkdown(session) {
@@ -14580,15 +14610,37 @@ function convertOrOcr(p, mode) {
 /* ---------------- 插件管理中心 (Plugin Center) ---------------- */
 
 let pluginPollTimer = null;
+let pluginRefreshVersion = 0;
+let pluginTogglePending = false;
+
+function setPluginListStatus(message, retry = false) {
+  const status = $('plugin-list-status');
+  if (!status) return;
+  status.replaceChildren();
+  status.classList.toggle('hidden', !message);
+  if (!message) return;
+  const text = document.createElement('span');
+  text.textContent = message;
+  status.appendChild(text);
+  if (retry) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'tb-btn';
+    button.textContent = _t('plugin.retry');
+    button.addEventListener('click', refreshPluginList);
+    status.appendChild(button);
+  }
+}
 
 async function openPluginModal() {
   const modal = $('plugin-modal');
   if (!modal) return;
   modal.classList.remove('hidden');
+  setPluginListStatus(_t('plugin.loading'));
   await refreshPluginList();
 }
 
 function closePluginModal() {
+  pluginRefreshVersion++;
   const modal = $('plugin-modal');
   if (modal) modal.classList.add('hidden');
   if (pluginPollTimer) {
@@ -14598,6 +14650,7 @@ function closePluginModal() {
 }
 
 async function refreshPluginList() {
+  const version = ++pluginRefreshVersion;
   const grid = $('plugin-cards-grid');
   const ffmpegBadge = $('plugin-ffmpeg-badge');
   const sandboxPath = $('plugin-sandbox-path');
@@ -14606,7 +14659,8 @@ async function refreshPluginList() {
   try {
     const res = await apiFetch('/api/plugins/list');
     const data = await res.json();
-    if (!data.ok) throw new Error(data.error || 'Failed to list plugins');
+    if (version !== pluginRefreshVersion) return false;
+    if (!res.ok || !data.ok) throw new Error('Failed to list plugins');
 
     if (ffmpegBadge) {
       if (data.ffmpeg) {
@@ -14627,14 +14681,16 @@ async function refreshPluginList() {
 
     // 如果有安装任务进行中，保持轮询
     const hasInstalling = Object.values(data.plugins || {}).some(p => p.installing);
-    if (hasInstalling && !pluginPollTimer) {
+    if (hasInstalling && !pluginPollTimer && !$('plugin-modal').classList.contains('hidden')) {
       pluginPollTimer = setInterval(refreshPluginList, 1500);
     } else if (!hasInstalling && pluginPollTimer) {
       clearInterval(pluginPollTimer);
       pluginPollTimer = null;
     }
+    return true;
   } catch (err) {
-    console.error('refreshPluginList error:', err);
+    if (version === pluginRefreshVersion) setPluginListStatus(_t('plugin.loadFailed'), true);
+    return false;
   }
 }
 
@@ -14653,7 +14709,12 @@ function initPluginTabsOnce() {
     container.querySelectorAll('.plugin-tab-pill').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
     currentPluginCategory = btn.dataset.category || 'all';
+    container.querySelectorAll('.plugin-tab-pill').forEach(t => t.setAttribute('aria-selected', String(t === btn)));
     renderPluginCards(lastPluginsCache);
+  });
+  container.querySelectorAll('.plugin-tab-pill').forEach(t => {
+    t.setAttribute('role', 'tab');
+    t.setAttribute('aria-selected', String(t.classList.contains('active')));
   });
 }
 
@@ -14861,7 +14922,7 @@ function renderPluginCards(plugins) {
       <div class="plugin-card-head">
         <div class="plugin-app-icon" aria-hidden="true">${iconSvg}</div>
         <div class="plugin-card-meta-wrap">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+          <div class="plugin-title-row">
             <h4 class="plugin-card-title">${escapeHtml(title)}</h4>
             ${capBadge}
           </div>
@@ -14881,6 +14942,7 @@ function renderPluginCards(plugins) {
     // 绑定卡片内按钮事件
     const toggleInput = card.querySelector('input[data-action="toggle"]');
     if (toggleInput) {
+      toggleInput.disabled = pluginTogglePending;
       toggleInput.addEventListener('change', async (e) => {
         await setPluginToggle(id, e.target.checked, title);
       });
@@ -14902,30 +14964,41 @@ function renderPluginCards(plugins) {
 
     grid.appendChild(card);
   }
+  setPluginListStatus(grid.children.length ? '' : _t('plugin.emptyList'));
 }
 
 async function setPluginToggle(id, enabled, name) {
+  if (pluginTogglePending) return;
+  pluginTogglePending = true;
+  document.querySelectorAll('#plugin-cards-grid input[data-action="toggle"]').forEach(input => { input.disabled = true; });
+  setPluginListStatus(_t('plugin.saving'));
   try {
-    if (enabled && lastPluginsCache[id]) {
-      const alts = lastPluginsCache[id].alternatives || [];
-      const activeAlt = alts.find(altId => lastPluginsCache[altId] && lastPluginsCache[altId].enabled);
-      if (activeAlt) {
-        const altTitle = translatePluginText('plugin.' + activeAlt + '.name', activeAlt);
-        showToast(_t('plugin.switchedMutual', { name: name || id, other: altTitle }));
-      }
-    }
+    const alts = lastPluginsCache[id] ? (lastPluginsCache[id].alternatives || []) : [];
+    const activeAlt = enabled && alts.find(altId => lastPluginsCache[altId] && lastPluginsCache[altId].enabled);
     const res = await apiFetch('/api/plugins/toggle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ plugin_id: id, enabled: Boolean(enabled) }),
     });
     const data = await res.json();
-    if (!data.ok) throw new Error(data.error || 'Toggle failed');
-    await refreshPluginList();
+    if (!res.ok || !data.ok) throw new Error('Toggle failed');
+    if (lastPluginsCache[id]) lastPluginsCache[id].enabled = Boolean(data.enabled);
+    if (enabled) alts.forEach(altId => { if (lastPluginsCache[altId]) lastPluginsCache[altId].enabled = false; });
+    renderPluginCards(lastPluginsCache);
+    const refreshed = await refreshPluginList();
+    if (refreshed) setPluginListStatus(_t('status.saved'));
+    if (activeAlt) {
+      const altTitle = translatePluginText('plugin.' + activeAlt + '.name', activeAlt);
+      showToast(_t('plugin.switchedMutual', { name: name || id, other: altTitle }));
+    }
   } catch (err) {
-    console.warn('plugin toggle failed:', err);
-    showToast(_t('plugin.toggleFailed', { name: name || id }));
-    await refreshPluginList();
+    renderPluginCards(lastPluginsCache);
+    const message = _t('plugin.toggleFailed', { name: name || id });
+    setPluginListStatus(message);
+    showToast(message);
+  } finally {
+    pluginTogglePending = false;
+    document.querySelectorAll('#plugin-cards-grid input[data-action="toggle"]').forEach(input => { input.disabled = false; });
   }
 }
 
@@ -18010,11 +18083,16 @@ async function loadExportPresets() {
   try {
     const d = (hasPy && py && typeof py.get_export_presets === 'function')
       ? await py.get_export_presets()
-      : await apiFetch('/api/export/presets').then(r => r.json()).catch(() => ({}));
+      : await apiFetch('/api/export/presets').then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      });
+    if (!d || d.ok === false || !d.defaults || !Object.keys(d.defaults).length) return false;
     state.export.defaults = d.defaults || {};
     state.export.presets = d.presets || {};
     state.export.custom = d.custom || {};
     state.export.last = d.last || null;
+    if (state.export.last && state.export.last.fmt) state.export.fmt = state.export.last.fmt;
     if (state.export.last && state.export.last.options) {
       state.export.options = expDeepMerge(state.export.defaults, state.export.last.options);
     } else {
@@ -18071,6 +18149,12 @@ function currentExportName() {
 
 function renderExportModal() {
   $('export-modal').classList.remove('hidden');
+  document.querySelectorAll('#export-box .exp-fmt').forEach(button => {
+    const selected = button.dataset.fmt === state.export.fmt;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-selected', String(selected));
+    if (selected) $('export-opts').setAttribute('aria-labelledby', button.id);
+  });
   renderExportPresetSelect();
   renderExportSections();
   initExportAiDesigner();
@@ -18110,16 +18194,13 @@ function generateExportPreviewCss(opts, fmt) {
   let quoteBg = quote.bg || '#f3f6ff';
 
   if (fmt === 'html') {
+    baseFg = '#262626';
     if (htmlTheme === 'dark') {
       pageBg = '#14161a';
       baseFg = '#d6d9de';
-      codeBg = '#1e2228';
-      quoteBg = '#1c2230';
     } else if (htmlTheme === 'sepia') {
       pageBg = '#faf4e7';
       baseFg = '#3b2f1d';
-      codeBg = '#f2ecdd';
-      quoteBg = '#f2ead6';
     }
   }
 
@@ -18142,54 +18223,54 @@ function generateExportPreviewCss(opts, fmt) {
       color: ${baseFg} !important;
       font-family: ${fontFamily} !important;
       font-size: 3.5px !important;
-      line-height: ${ty.lineHeight || 1.6} !important;
+      line-height: ${ty.lineHeight ?? 1.6} !important;
     }
     #export-preview-mini-content p, #export-preview-mini-content li, #export-preview-mini-content span, #export-preview-mini-content div {
       color: ${baseFg} !important;
-      font-size: ${(ty.size || 11) * 0.32}px !important;
-      line-height: ${ty.lineHeight || 1.6} !important;
+      font-size: ${(ty.size ?? 11) * 0.32}px !important;
+      line-height: ${ty.lineHeight ?? 1.6} !important;
       text-align: ${ty.align || 'left'} !important;
     }
     #export-preview-mini-content p {
-      margin: ${(ty.spacing || 6) * 0.25}px 0 !important;
+      margin: ${(ty.spacing ?? 6) * 0.25}px 0 !important;
     }
     #export-preview-mini-content h1 {
       color: ${h1.color || '#1a1a1a'} !important;
-      font-size: ${(h1.size || 20) * 0.35}px !important;
+      font-size: ${(h1.size ?? 20) * 0.35}px !important;
       font-weight: ${h1.bold ? 'bold' : 'normal'} !important;
       text-align: ${h1.align || 'left'} !important;
-      margin-top: ${(h1.before || 18) * 0.2}px !important;
-      margin-bottom: ${(h1.after || 10) * 0.2}px !important;
+      margin-top: ${(h1.before ?? 18) * 0.2}px !important;
+      margin-bottom: ${(h1.after ?? 10) * 0.2}px !important;
       border-bottom: none !important;
     }
     #export-preview-mini-content h2 {
       color: ${h2.color || '#1f2937'} !important;
-      font-size: ${(h2.size || 16) * 0.35}px !important;
+      font-size: ${(h2.size ?? 16) * 0.35}px !important;
       font-weight: ${h2.bold ? 'bold' : 'normal'} !important;
       text-align: ${h2.align || 'left'} !important;
-      margin-top: ${(h2.before || 14) * 0.2}px !important;
-      margin-bottom: ${(h2.after || 8) * 0.2}px !important;
+      margin-top: ${(h2.before ?? 14) * 0.2}px !important;
+      margin-bottom: ${(h2.after ?? 8) * 0.2}px !important;
       border-bottom: none !important;
     }
     #export-preview-mini-content h3 {
       color: ${h3.color || '#2d3748'} !important;
-      font-size: ${(h3.size || 14) * 0.35}px !important;
+      font-size: ${(h3.size ?? 14) * 0.35}px !important;
       font-weight: ${h3.bold ? 'bold' : 'normal'} !important;
       text-align: ${h3.align || 'left'} !important;
-      margin-top: ${(h3.before || 12) * 0.2}px !important;
-      margin-bottom: ${(h3.after || 6) * 0.2}px !important;
+      margin-top: ${(h3.before ?? 12) * 0.2}px !important;
+      margin-bottom: ${(h3.after ?? 6) * 0.2}px !important;
     }
     #export-preview-mini-content h4, #export-preview-mini-content h5, #export-preview-mini-content h6 {
       color: ${h4.color || '#374151'} !important;
-      font-size: ${(h4.size || 12) * 0.35}px !important;
+      font-size: ${(h4.size ?? 12) * 0.35}px !important;
       font-weight: ${h4.bold ? 'bold' : 'normal'} !important;
       text-align: ${h4.align || 'left'} !important;
     }
     #export-preview-mini-content table {
       border-collapse: collapse !important;
-      width: ${tb.widthPct || 100}% !important;
+      width: ${tb.widthPct ?? 100}% !important;
       margin: 3px auto !important;
-      font-size: ${(tb.cellSize || 10) * 0.32}px !important;
+      font-size: ${(tb.cellSize ?? 10) * 0.32}px !important;
     }
     #export-preview-mini-content th, #export-preview-mini-content td {
       border: 0.5px solid ${tb.borderColor || '#c8cdd4'} !important;
@@ -18211,7 +18292,7 @@ function generateExportPreviewCss(opts, fmt) {
       border: 0.5px solid ${code.borderColor || '#dfe3e8'} !important;
       border-radius: ${code.rounded ? '2px' : '0'} !important;
       padding: 2px 3px !important;
-      font-size: ${(code.size || 9.5) * 0.32}px !important;
+      font-size: ${(code.size ?? 9.5) * 0.32}px !important;
       margin: 2px 0 !important;
     }
     #export-preview-mini-content code {
@@ -18259,8 +18340,8 @@ function generateExportPreviewCss(opts, fmt) {
       background: ${pageBg} !important;
       color: ${baseFg} !important;
       font-family: ${fontFamily} !important;
-      font-size: ${ty.size || 11}pt !important;
-      line-height: ${ty.lineHeight || 1.6} !important;
+      font-size: ${ty.size ?? 11}pt !important;
+      line-height: ${ty.lineHeight ?? 1.6} !important;
       text-align: ${ty.align || 'left'} !important;
       padding: ${page.marginTop ?? 20}mm ${page.marginRight ?? 18}mm ${page.marginBottom ?? 20}mm ${page.marginLeft ?? 18}mm !important;
       width: ${exportPaperSize(page)[0]}mm; height: ${exportPaperSize(page)[1]}mm;
@@ -18282,75 +18363,76 @@ function generateExportPreviewCss(opts, fmt) {
     }
     #export-preview-full-page p, .export-preview-page-sheet p, .export-page-body p, #export-preview-full-page li, .export-page-body li, #export-preview-full-page span, .export-page-body span, #export-preview-full-page div, .export-page-body div {
       color: ${baseFg} !important;
-      font-size: ${ty.size || 11}pt !important;
-      line-height: ${ty.lineHeight || 1.6} !important;
+      font-size: ${ty.size ?? 11}pt !important;
+      line-height: ${ty.lineHeight ?? 1.6} !important;
       text-align: ${ty.align || 'left'} !important;
     }
     #export-preview-full-page p, .export-page-body p {
-      margin: ${ty.spacing || 6}pt 0 !important;
+      margin: ${ty.spacing ?? 6}pt 0 !important;
+      text-indent: ${ty.firstLineIndent ?? 0}mm;
     }
     #export-preview-full-page h1, .export-page-body h1 {
       color: ${h1.color || '#1a1a1a'} !important;
-      font-size: ${h1.size || 20}pt !important;
+      font-size: ${h1.size ?? 20}pt !important;
       font-weight: ${h1.bold ? 'bold' : 'normal'} !important;
       text-align: ${h1.align || 'left'} !important;
-      margin-top: ${h1.before || 18}pt !important;
-      margin-bottom: ${h1.after || 10}pt !important;
+      margin-top: ${h1.before ?? 18}pt !important;
+      margin-bottom: ${h1.after ?? 10}pt !important;
       line-height: 1.35 !important;
       border-bottom: none !important;
     }
     #export-preview-full-page h2, .export-page-body h2 {
       color: ${h2.color || '#1f2937'} !important;
-      font-size: ${h2.size || 16}pt !important;
+      font-size: ${h2.size ?? 16}pt !important;
       font-weight: ${h2.bold ? 'bold' : 'normal'} !important;
       text-align: ${h2.align || 'left'} !important;
-      margin-top: ${h2.before || 14}pt !important;
-      margin-bottom: ${h2.after || 8}pt !important;
+      margin-top: ${h2.before ?? 14}pt !important;
+      margin-bottom: ${h2.after ?? 8}pt !important;
       line-height: 1.35 !important;
       border-bottom: none !important;
     }
     #export-preview-full-page h3, .export-page-body h3 {
       color: ${h3.color || '#2d3748'} !important;
-      font-size: ${h3.size || 14}pt !important;
+      font-size: ${h3.size ?? 14}pt !important;
       font-weight: ${h3.bold ? 'bold' : 'normal'} !important;
       text-align: ${h3.align || 'left'} !important;
-      margin-top: ${h3.before || 12}pt !important;
-      margin-bottom: ${h3.after || 6}pt !important;
+      margin-top: ${h3.before ?? 12}pt !important;
+      margin-bottom: ${h3.after ?? 6}pt !important;
       line-height: 1.35 !important;
     }
     #export-preview-full-page h4, .export-page-body h4 {
       color: ${h4.color || '#374151'} !important;
-      font-size: ${h4.size || 12}pt !important;
+      font-size: ${h4.size ?? 12}pt !important;
       font-weight: ${h4.bold ? 'bold' : 'normal'} !important;
       text-align: ${h4.align || 'left'} !important;
-      margin-top: ${h4.before || 10}pt !important;
-      margin-bottom: ${h4.after || 6}pt !important;
+      margin-top: ${h4.before ?? 10}pt !important;
+      margin-bottom: ${h4.after ?? 6}pt !important;
     }
     #export-preview-full-page h5, .export-page-body h5 {
       color: ${h5.color || '#4a5568'} !important;
-      font-size: ${h5.size || 11}pt !important;
+      font-size: ${h5.size ?? 11}pt !important;
       font-weight: ${h5.bold ? 'bold' : 'normal'} !important;
       text-align: ${h5.align || 'left'} !important;
-      margin-top: ${h5.before || 8}pt !important;
-      margin-bottom: ${h5.after || 4}pt !important;
+      margin-top: ${h5.before ?? 8}pt !important;
+      margin-bottom: ${h5.after ?? 4}pt !important;
     }
     #export-preview-full-page h6, .export-page-body h6 {
       color: ${h6.color || '#4a5568'} !important;
-      font-size: ${h6.size || 10.5}pt !important;
+      font-size: ${h6.size ?? 10.5}pt !important;
       font-weight: ${h6.bold ? 'bold' : 'normal'} !important;
       text-align: ${h6.align || 'left'} !important;
-      margin-top: ${h6.before || 8}pt !important;
-      margin-bottom: ${h6.after || 4}pt !important;
+      margin-top: ${h6.before ?? 8}pt !important;
+      margin-bottom: ${h6.after ?? 4}pt !important;
     }
     #export-preview-full-page table, .export-page-body table {
       border-collapse: collapse !important;
-      width: ${tb.widthPct || 100}% !important;
+      width: ${tb.widthPct ?? 100}% !important;
       margin: 12pt auto !important;
-      font-size: ${tb.cellSize || 10}pt !important;
+      font-size: ${tb.cellSize ?? 10}pt !important;
     }
     #export-preview-full-page th, .export-page-body th, #export-preview-full-page td, .export-page-body td {
-      border: ${tb.borderWidth || 0.75}px solid ${tb.borderColor || '#c8cdd4'} !important;
-      padding: ${tb.cellPadding || 6}px !important;
+      border: ${tb.borderWidth ?? 0.75}px solid ${tb.borderColor || '#c8cdd4'} !important;
+      padding: ${tb.cellPadding ?? 6}px !important;
       text-align: ${tb.align || 'left'} !important;
       color: ${baseFg} !important;
     }
@@ -18365,12 +18447,12 @@ function generateExportPreviewCss(opts, fmt) {
     #export-preview-full-page pre, .export-page-body pre {
       background: ${codeBg} !important;
       color: ${code.color || '#2f3b4a'} !important;
-      border: ${code.borderWidth || 0.5}px solid ${code.borderColor || '#dfe3e8'} !important;
+      border: ${code.borderWidth ?? 0.5}px solid ${code.borderColor || '#dfe3e8'} !important;
       border-radius: ${code.rounded ? '6px' : '0'} !important;
       padding: 10pt 12pt !important;
       overflow: auto !important;
       font-family: ${code.font || 'Consolas'}, Consolas, monospace !important;
-      font-size: ${code.size || 9.5}pt !important;
+      font-size: ${code.size ?? 9.5}pt !important;
       line-height: 1.5 !important;
       margin: 8pt 0 !important;
     }
@@ -18413,24 +18495,34 @@ function generateExportPreviewCss(opts, fmt) {
       opacity: 0.65;
       border-color: ${baseFg}33 !important;
     }
-  `;
+  ` + (fmt === 'html' ? `
+    #export-preview-full-page .export-preview-html-sheet {
+      width: min(852px, 100%) !important; max-width: none; height: auto;
+      min-height: 0 !important; padding: 24px 16px 64px !important;
+    }
+    #export-preview-full-page .export-preview-html-sheet p {
+      margin-top: 1em !important; margin-bottom: ${ty.spacing ?? 6}pt !important;
+    }
+    #export-preview-full-page .export-preview-html-sheet table { margin: 8px auto !important; }
+    #export-preview-full-page .export-preview-html-sheet blockquote {
+      margin: 8px 0 !important; padding: 8px 14px !important;
+    }
+    #export-preview-full-page .export-preview-html-sheet blockquote p { margin: 4px 0 !important; }
+    #export-preview-full-page .export-preview-html-sheet hr { margin: 16px 0 !important; }
+  ` : '');
 }
 
 /**
  * 真实渲染 DOM 像素高度测量与智能切分引擎
- * 保证导出预览与真实 PDF / Word A4 导出页面 100% 完全一致
+ * 按选定纸张和边距估算分页；PDF / Word 使用各自的原生排版引擎。
  */
 function paginateHtmlIntoExportSheets(fullHtml, opts = {}) {
   const page = opts.page || {};
-  const isLandscape = page.orientation === 'landscape';
-
-  // A4 标准毫米规格与边距
-  const PAGE_WIDTH_MM = isLandscape ? 297 : 210;
-  const PAGE_HEIGHT_MM = isLandscape ? 210 : 297;
-  const marginTop = Number(page.marginTop) || 20;
-  const marginBottom = Number(page.marginBottom) || 20;
-  const marginLeft = Number(page.marginLeft) || 18;
-  const marginRight = Number(page.marginRight) || 18;
+  const [PAGE_WIDTH_MM, PAGE_HEIGHT_MM] = exportPaperSize(page);
+  const marginTop = Number(page.marginTop ?? 20);
+  const marginBottom = Number(page.marginBottom ?? 20);
+  const marginLeft = Number(page.marginLeft ?? 18);
+  const marginRight = Number(page.marginRight ?? 18);
 
   // 转换为 px (1mm = 3.7795px at 96 DPI)
   const MM_TO_PX = 3.779527559;
@@ -18607,7 +18699,7 @@ function updateExportLivePreview() {
 
   const isHtmlMode = fmt === 'html';
   const fullProt = protectMath(content || '');
-  const fullParsedHtml = marked.parse(fullProt.src, { gfm: true, breaks: false });
+  const fullParsedHtml = marked.parse(fullProt.src, { gfm: true, breaks: isHtmlMode });
   const restoredFullHtml = restoreMath(fullParsedHtml, fullProt.saved);
 
   const pageHtmlList = isHtmlMode ? [restoredFullHtml] : paginateHtmlIntoExportSheets(restoredFullHtml, opts);
@@ -18627,6 +18719,9 @@ function updateExportLivePreview() {
   if (miniHost) {
     miniHost.innerHTML = pageHtmlList[0] || restoredFullHtml;
     renderMath(miniHost);
+    const miniPage = $('export-preview-mini-page');
+    const viewport = miniPage && miniPage.parentElement;
+    if (viewport) miniPage.style.transform = 'scale(' + Math.min(2.5, (viewport.clientWidth - 32) / 110, (viewport.clientHeight - 32) / 148) + ')';
   }
 
   // Full Modal Preview 真实多页排版渲染
@@ -18651,8 +18746,9 @@ function updateExportLivePreview() {
         if (!isHtmlMode) {
           const headerEl = document.createElement('div');
           headerEl.className = 'export-page-header';
-          headerEl.innerHTML = `<span>${esc(docTitle)}</span><span>${fmt.toUpperCase()} · ${esc(presetName)}</span>`;
-          sheet.appendChild(headerEl);
+          headerEl.textContent = (opts.header || {}).text || '';
+          headerEl.style.justifyContent = ({ left: 'flex-start', center: 'center', right: 'flex-end' })[(opts.header || {}).align] || 'flex-start';
+          if (headerEl.textContent) sheet.appendChild(headerEl);
         }
 
         const bodyEl = document.createElement('div');
@@ -18663,8 +18759,9 @@ function updateExportLivePreview() {
         if (!isHtmlMode) {
           const footerEl = document.createElement('div');
           footerEl.className = 'export-page-footer';
-          footerEl.innerHTML = `<span>ReadMD</span><span>${index + 1} / ${totalPages}</span>`;
-          sheet.appendChild(footerEl);
+          const footer = opts.footer || {};
+          footerEl.innerHTML = `<span>${esc(footer.text)}</span><span>${footer.pageNumbers !== false ? index + 1 : ''}</span>`;
+          if (footer.text || footer.pageNumbers !== false) sheet.appendChild(footerEl);
         }
 
         fullPageHost.appendChild(sheet);
@@ -18765,8 +18862,10 @@ function renderExportSections() {
   // 绑定配置项实时变动事件
   host.querySelectorAll('input, select').forEach(el => {
     const onValChange = () => {
+      state.export.options = collectExportOptions();
       const sel = $('exp-preset');
       if (sel) sel.value = '__custom__';
+      state.export.selectedPreset = '__custom__';
       updateExportLivePreview();
     };
     el.addEventListener('input', onValChange);
@@ -18817,11 +18916,17 @@ function applyExportOptionsToDom() {
 }
 
 function collectExportOptions() {
-  const opts = expDeepMerge(state.export.defaults, {});
+  // Fields absent from the current format still belong to the selected preset.
+  const opts = expDeepMerge(state.export.defaults, state.export.options);
   document.querySelectorAll('#export-opts [data-k]').forEach(el => {
     let v;
     if (el.type === 'checkbox') v = el.checked;
-    else if (el.type === 'number') v = parseFloat(el.value);
+    else if (el.type === 'number') {
+      v = parseFloat(el.value);
+      if (!Number.isFinite(v)) v = expGet(opts, el.dataset.k) ?? (Number(el.min) || 0);
+      if (el.min !== '') v = Math.max(Number(el.min), v);
+      if (el.max !== '') v = Math.min(Number(el.max), v);
+    }
     else v = el.value;
     expSet(opts, el.dataset.k, v);
   });
@@ -18875,12 +18980,13 @@ function renderExportPresetSelect() {
   });
   sel.appendChild(new Option(_t('export.presetCustom') || '', '__custom__'));
   const last = state.export.last;
-  const remembered = last && last.preset;
+  const remembered = state.export.selectedPreset || (last && last.preset);
   sel.value = remembered && [...sel.options].some(o => o.value === remembered)
     ? remembered
     : (last ? '__custom__' : '__default__');
   sel.onchange = () => {
     const v = sel.value;
+    state.export.selectedPreset = v;
     if (v !== '__custom__') {
       state.export.options = exportPresetOptions(v);
       renderExportSections();
@@ -18905,6 +19011,7 @@ function renderExportPresetCards() {
     card.type = 'button';
     card.className = 'exp-preset-card';
     card.dataset.preset = v;
+    card.title = o.text;
     card.setAttribute('aria-pressed', String(sel.value === v));
     const swatch = document.createElement('span');
     swatch.className = 'exp-preset-swatch';
@@ -19094,18 +19201,43 @@ async function expSavePreset() {
   input.value = '';
   input.focus();
   $('exp-save-ok').onclick = async () => {
+    const button = $('exp-save-ok');
+    if (button.disabled) return;
     const name = input.value.trim();
     if (!name) { showToast(_t('toast.enterPresetName') || ''); return; }
     const presetNames = getExportPresetNames();
-    if (presetNames[name] || (state.export.presets && state.export.presets[name])) {
+    if (name === '__default__' || name === '__custom__' || presetNames[name] || (state.export.presets && state.export.presets[name])) {
       showToast(_t('toast.presetNameConflict') || '');
       return;
     }
-    state.export.custom[name] = collectExportOptions();
-    try { await py.save_export_presets({ custom: state.export.custom }); } catch (e) { /* ignore */ }
-    renderExportPresetSelect();
-    box.classList.add('hidden');
-    showToast(_t('toast.presetSaved', { name }) || ('预设已保存：' + name));
+    const options = collectExportOptions();
+    const custom = Object.assign({}, state.export.custom, { [name]: options });
+    const last = { fmt: state.export.fmt, options, preset: name };
+    button.disabled = true;
+    try {
+      const patch = { custom, last };
+      if (hasPy && py && typeof py.save_export_presets === 'function') {
+        if (!(await py.save_export_presets(patch))) throw new Error(_t('export.presetSaveFailed'));
+      } else {
+        const response = await apiFetch('/api/export/presets', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error(_t('export.presetSaveFailed'));
+      }
+      state.export.custom = custom;
+      state.export.last = last;
+      state.export.options = options;
+      state.export.selectedPreset = name;
+      renderExportPresetSelect();
+      updateExportLivePreview();
+      box.classList.add('hidden');
+      showToast(_t('toast.presetSaved', { name }) || ('预设已保存：' + name));
+    } catch (e) {
+      $('export-result').textContent = _t('export.presetSaveFailed');
+      $('export-result').className = 'export-result err';
+      showToast(_t('export.presetSaveFailed'));
+    } finally { button.disabled = false; }
   };
   $('exp-save-cancel').onclick = () => box.classList.add('hidden');
 }
@@ -19214,6 +19346,7 @@ async function generateExportStyleWithAi(stylePrompt) {
     state.export.options = expDeepMerge(state.export.options || state.export.defaults, parsed);
     const presetSelect = $('exp-preset');
     if (presetSelect) presetSelect.value = '__custom__';
+    state.export.selectedPreset = '__custom__';
     applyExportOptionsToDom();
     updateExportLivePreview();
 
@@ -21000,8 +21133,9 @@ function bindEvents() {
   $('exp-save-preset').addEventListener('click', expSavePreset);
   $('exp-reset').addEventListener('click', () => {
     state.export.options = expDeepMerge(state.export.defaults, {});
+    state.export.selectedPreset = '__default__';
+    const sel = $('exp-preset'); if (sel) sel.value = '__default__';
     renderExportSections();
-    const sel = $('exp-preset'); if (sel) sel.value = '__custom__';
   });
   $('export-box').addEventListener('keydown', e => {
     if (e.key === 'Escape' && !$('export-modal').classList.contains('hidden')) { e.stopPropagation(); closeExportModal(); }

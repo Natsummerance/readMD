@@ -113,9 +113,10 @@ test('export scroll, history and AI narrow layout remain usable', async ({ page 
   await page.goto('/'); await page.waitForFunction(() => typeof openHistoryModal === 'function');
   await page.evaluate(() => {
     document.querySelector('#export-modal').classList.remove('hidden');
+    document.querySelector('.export-customize').open = true;
     document.querySelector('#export-opts').innerHTML = '<div style="height:1800px">all settings</div>';
   });
-  const opts = page.locator('#export-opts');
+  const opts = page.locator('#export-box .export-main-col');
   expect(await opts.evaluate(e => e.scrollHeight > e.clientHeight)).toBeTruthy();
   await expect(page.locator('.export-foot')).toBeVisible();
   await page.locator('#export-modal').evaluate(e => e.classList.add('hidden'));
@@ -708,6 +709,7 @@ test('v2.3.1 export modal renders all settings, style presets and live preview',
   expect(secCount).toBeGreaterThanOrEqual(5);
 
   // 3. 验证预设选择器已正确填充
+  await page.locator('.export-preset-list > summary').click();
   await expect(page.locator('#exp-preset')).toBeVisible();
   const presetOptions = await page.locator('#exp-preset option').allTextContents();
   expect(presetOptions.length).toBeGreaterThanOrEqual(4);
