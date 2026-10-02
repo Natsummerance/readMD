@@ -3,7 +3,7 @@
 // in-reader pet has, then maps moods onto the Live2D stage (talking mouth,
 // drowsy eyelids, closed eyes) when that renderer is active.  All user-facing
 // wording arrives through the host bridge (`info.lines`, localized by the
-// Python host from the shared i18n files), so this module contains no copy.
+// Rust host from the shared i18n files), so this module contains no copy.
 
 import type { Live2dLifeController } from './live2d/stage'
 
@@ -148,6 +148,7 @@ export function mountPetLife(options: PetLifeOptions = {}): void {
   }
 
   window.addEventListener('resize', updateBubblePosition)
+  window.addEventListener('readmd-pet-character-changed', updateBubblePosition)
 
   let lines: Record<string, string> = {}
   let shown: { text: string; priority: Priority; until: number } | undefined
@@ -301,9 +302,10 @@ export function mountPetLife(options: PetLifeOptions = {}): void {
     if (probeActive) console.log('[pet-life] state push', JSON.stringify({ activity: state.activity, hasLines: Boolean(state.info?.lines) }))
     if (state.info?.lines) lines = state.info.lines
     const companion = state.info?.companion
+    const wasResting = resting
     resting = Boolean(companion?.resting)
     if (companion) {
-      options.live2d?.setMood(resting ? 'sleeping' : 'normal')
+      if (resting || wasResting) options.live2d?.setMood(resting ? 'sleeping' : 'normal')
       layer.classList.toggle('is-sleeping', resting)
       const event = `${companion.character}:${companion.revision}`
       if (companionEvent && event !== companionEvent && companion.last_action) {
@@ -316,7 +318,7 @@ export function mountPetLife(options: PetLifeOptions = {}): void {
     greet(state)
   })
   // Ask the host to (re)publish current state now that this listener is mounted.
-  api?.control({ type: 'ready' })
+  api?.control({ type: (window as unknown as { __readmdRustDispatch?: unknown }).__readmdRustDispatch ? 'state-request' : 'ready' })
 
   if (probeActive) {
     (window as unknown as { __petLifeDebug?: object }).__petLifeDebug = {
@@ -326,10 +328,7 @@ export function mountPetLife(options: PetLifeOptions = {}): void {
     }
   }
 
-  window.addEventListener('pointerdown', event => {
-    if (event.button !== 0) return
-    interacted()
-  })
+  window.addEventListener('readmd-pet-interacted', interacted)
   window.addEventListener('pointermove', event => {
     if (event.buttons === 0) return
     lastInteraction = now()

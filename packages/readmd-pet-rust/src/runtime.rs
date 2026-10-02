@@ -627,6 +627,14 @@ fn handle_renderer_message(
             // durable application commands; consume them here so a
             // successful mount can move health from loading to ready.
             if let Some(kind) = control.get("type").and_then(Value::as_str) {
+                if kind == "state-request" {
+                    // Subscribe/replay is separate from visible readiness.
+                    // A late character snapshot can still require model loading.
+                    if let Some(snapshot) = state.last_snapshot.as_ref() {
+                        webview.send_state(snapshot)?;
+                    }
+                    return Ok(());
+                }
                 if kind == "ready" {
                     mark_renderer_ready(webview, state)?;
                     return Ok(());

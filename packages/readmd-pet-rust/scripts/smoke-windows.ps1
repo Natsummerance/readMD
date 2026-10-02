@@ -76,11 +76,8 @@ try {
     $x = $before.Left + [int]($width * 0.5)
     $headY = switch ($Character) {
         'arch-chan' { 120 }
-        'cache-capy' { 245 }
-        'niu-lai' { 210 }
-        'hermes' { 205 }
-        'moss' { 230 }
-        default { 220 }
+        'bongocat' { 305 }
+        default { 300 } # The full sprite silhouette, including its body.
     }
     $y = $before.Top + [int]($height * ($headY / 420.0))
     [void][PetSmokeWin32]::SetCursorPos($x, $y)

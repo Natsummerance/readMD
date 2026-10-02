@@ -21,19 +21,30 @@ The generated `ReadMD-Pet-Rust.zip` contains the executable, renderer, sprite
 assets, Live2D models/vendor runtime, and `runtime-manifest.json`. The installer
 promotes it atomically to `<ReadMD>/plugins/pet/readmd-rust-host/`.
 
-The original Mochi, Hermes, Amber, Moss, Cache Capy and Niu Lai sprites keep
-their own artwork. Their desk poses retarget arm and palm cutouts from the
-unchanged source sheets. Host-delivered original sheets use the same rig;
-other imported sheets use their named action rows, frame counts and dimensions,
-with interaction regions derived from their visible pixels. BongoCat is an
-explicit choice in the overlay menu and does not replace Mochi by default.
+Only BongoCat has a keyboard/mouse scene. It is an explicit overlay-menu choice
+and does not replace Mochi. The other characters retain their full authored art:
 
-Arch-chan uses its original Cubism mouse parameters, with a reversible mesh
-rig for keyboard/mouse desk contact. Its shoulders, sleeves and skin retain the
-original texture. The renderer restores all vertex changes before the next
-Cubism update and when leaving the desk pose. The sprite and Live2D routes
-share the native Rust input capture, drag threshold, head-petting and durable
-window bounds. Model drawing still uses the packaged Cubism/PIXI WebView.
+- Mochi, Amber and Moss blink and respond with their original wave frames.
+- Hermes plays its original spell sequence on interaction and during work,
+  with pauses between casts rather than spinning through orientation frames.
+- Cache Capy stays calm, acknowledges interaction and uses its thoughtful poses.
+- Niu Lai waves and celebrates; both v2 sheets use their original look directions.
+- Imported sheets keep named rows, per-row frame counts, dimensions and timing.
+
+Task completion triggers a finite response; work, failure and rest select only
+actions that the sheet actually supplies. Alpha geometry keeps complete frames
+and props visible and derives the native interaction regions from the artwork.
+Key presses do not give these sprites artificial typing animations or sounds.
+Native hit regions convert CSS coordinates into window coordinates, so WebView
+zoom does not offset dragging or head-petting. Readiness waits for the host's
+character snapshot and actual painted art; requesting state does not mark the
+renderer ready before a sprite or model finishes loading.
+
+Arch-chan keeps its full portrait, follows the pointer with its eyes and head,
+blinks, breathes, smiles and blushes when petted. Its brief greeting uses the
+original model's mouse-hand parameter. No Cubism mesh vertices are retargeted.
+The sprite and Live2D routes share native Rust dragging, head-petting and durable
+window bounds. Model drawing uses the packaged Cubism/PIXI WebView.
 
 Offline renderer rebuild (Node 22.13+, an existing packaged library cache):
 

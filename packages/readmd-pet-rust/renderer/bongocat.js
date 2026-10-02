@@ -1,1599 +1,352 @@
-/**
- * Bongo Cat Desktop Pet Engine - Multi-Character Sprite & Live2D Edition
- * Canvas presentation for the Rust desktop host. Native Raw Input owns input.
- * Input semantics follow ayangweb/BongoCat e5922f3; see third_party/bongocat.
- *
- * Supported Characters:
- * - Mochi (小猫): White pixel cat with green scarf & pink toe beans
- * - Hermes (骑士): Blue armored winged knight with gold gauntlets & caduceus
- * - Amber (狐狸): Warm orange fox/cat with dark pads
- * - Moss (小草): Cute green sprout with leaf paws
- * - Arch-Chan (Live2D): Interactive Cubism 4 anime mascot with academy uniform
- *
- * Features:
- * - 100% Desktop Transparent DirectComposition
- * - Dual Instrument Modes: Mechanical Keyboard + Mouse OR Classic Bongo Drums
- * - Real-Time Spring-Physics Animated Paws with Character-Specific Aesthetics
- * - Real-Time Global Keystroke & Mouse Tracking via Rust InputWatcher IPC
- * - Dynamic Reaction: Idle Animation (Row 0) -> Typing Frenzy / Waving (Row 1)
- * - Head Petting: Blushing cheeks, purr audio, floating heart particles
- * - Audio Synthesis: Web Audio API mechanical switch clicks & bongo drum pops
- * - Translucent Glass Right-Click Context Menu for Character & Mode Switching
- */
-
+/** ReadMD companions: Rust owns input/drag; each character keeps its authored art.
+ * Only BongoCat uses a keyboard/mouse scene (see third_party/bongocat). */
 (function () {
   'use strict';
-
-  // --- Constants & Canvas Dimensions ---
-  const CANVAS_WIDTH = 320;
-  const CANVAS_HEIGHT = 380;
-  const CAT_CENTER_X = 160;
-
-  // --- Character Profiles ---
-  const CHARACTER_PROFILES = {
-    mochi: {
-      id: 'mochi',
-      name: 'Mochi (小猫)',
-      icon: '🐱',
-      sprite: './assets/mochi-sprite.png',
-      scale: 0.78,
-      offsetY: -55,
-      headCenterY: 180,
-      armCrop: [112, 368, 40, 88],
-      palmCrop: [104,416,60,40],
-      pawStyle: {
-        type: 'cat',
-        fill: '#fdfbf7',
-        stroke: '#4a3b32',
-        padFill: '#ffb2be',
-        armWidth: 7
-      }
-    },
-    hermes: {
-      id: 'hermes',
-      name: 'Hermes (骑士)',
-      icon: '🛡️',
-      sprite: './assets/hermes-sprite.png',
-      scale: 0.75,
-      offsetY: -45,
-      headCenterY: 165,
-      armCrop: [94, 330, 42, 85],
-      palmCrop: [94,382,37,35],
-      pawStyle: {
-        type: 'knight',
-        fill: '#2980b9',
-        stroke: '#1a252f',
-        padFill: '#f1c40f',
-        armWidth: 8
-      }
-    },
-    amber: {
-      id: 'amber',
-      name: 'Amber (狐狸)',
-      icon: '🦊',
-      sprite: './assets/amber-sprite.png',
-      scale: 0.78,
-      offsetY: -55,
-      headCenterY: 180,
-      armCrop: [112, 368, 40, 88],
-      palmCrop: [104,416,60,40],
-      pawStyle: {
-        type: 'cat',
-        fill: '#e67e22',
-        stroke: '#5c2a00',
-        padFill: '#d35400',
-        armWidth: 7
-      }
-    },
-    moss: {
-      id: 'moss',
-      name: 'Moss (小草)',
-      icon: '🌱',
-      sprite: './assets/moss-sprite.png',
-      scale: 0.82,
-      offsetY: -68,
-      headCenterY: 190,
-      armCrop: [272, 835, 64, 64],
-      palmCrop: [280,835,48,40],
-      pawStyle: {
-        type: 'sprout',
-        fill: '#a8e6cf',
-        stroke: '#2e7d32',
-        padFill: '#26de81',
-        armWidth: 7
-      }
-    },
-    'cache-capy': {
-      id: 'cache-capy',
-      name: 'Cache Capy (淡定水豚)',
-      icon: '🦫',
-      sprite: './assets/cache-capy-sprite.webp',
-      frameW: 192,
-      frameH: 208,
-      scale: 1.25,
-      offsetY: 25,
-      deskOffsetY: 85,
-      headCenterY: 120,
-      armCrop: [150, 110, 24, 45],
-      palmCrop: [150,130,24,24],
-      pawStyle: {
-        type: 'capy',
-        fill: '#ba8c59',
-        stroke: '#52341d',
-        padFill: '#38200e',
-        armWidth: 8
-      }
-    },
-    'niu-lai': {
-      id: 'niu-lai',
-      name: '牛来 (招财毛绒牛)',
-      icon: '🐂',
-      sprite: './assets/niu-lai-sprite.webp',
-      frameW: 192,
-      frameH: 208,
-      scale: 1.22,
-      offsetY: 22,
-      deskOffsetY: 70,
-      headCenterY: 100,
-      armCrop: [44, 82, 23, 62],
-      palmCrop: [43,128,22,22],
-      pawStyle: {
-        type: 'cow',
-        fill: '#f39c12',
-        stroke: '#8c4b00',
-        padFill: '#ff9ebb',
-        armWidth: 8
-      }
-    },
-    'arch-chan': {
-      id: 'arch-chan',
-      name: 'Arch-Chan (Live2D)',
-      icon: '🎀',
-      isLive2D: true,
-      headCenterY: 120,
-      pawStyle: {
-        type: 'human',
-        fill: '#fde9db',
-        stroke: '#181b22',
-        padFill: '#00d2d3', // Cyber cyan accent line
-        sleeveFill: '#1c2028', // Dark hoodie sleeve
-        armWidth: 8
-      }
-    }
+  const WIDTH = 320, HEIGHT = 380;
+  const PROFILES = {
+    mochi: { name: 'Mochi', sprite: './assets/mochi-sprite.png', blink: true },
+    hermes: { name: 'Hermes', sprite: './assets/hermes-sprite.png', spell: true },
+    amber: { name: 'Amber', sprite: './assets/amber-sprite.png', blink: true },
+    moss: { name: 'Moss', sprite: './assets/moss-sprite.png', blink: true },
+    'cache-capy': { name: 'Cache Capy', sprite: './assets/cache-capy-sprite.webp', directions: true, calm: true },
+    'niu-lai': { name: '牛来', sprite: './assets/niu-lai-sprite.webp', directions: true },
+    'arch-chan': { name: 'Arch-Chan (Live2D)' }
   };
-
-  // --- Sound Synthesis (Web Audio API) ---
-  let audioCtx = null;
-  let soundEnabled = localStorage.getItem('readmd-pet-sound') !== 'false';
-
-  function initAudio() {
-    if (!audioCtx) {
-      try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        audioCtx = new AudioContext();
-      } catch (_) {}
-    }
-  }
-
-  function playTapSound(isLeft, mode) {
-    if (!soundEnabled || !audioCtx) return;
-    try {
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      const now = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-
-      if (mode === 'bongos') {
-        // Resonant bongo pop sound
-        const freq = isLeft ? 180 : 250;
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, now);
-        osc.frequency.exponentialRampToValueAtTime(50, now + 0.08);
-        gain.gain.setValueAtTime(0.24, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
-        osc.start(now);
-        osc.stop(now + 0.09);
-      } else {
-        // Crisp mechanical keyboard switch click
-        const freq = isLeft ? 880 : 1150;
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, now);
-        osc.frequency.exponentialRampToValueAtTime(220, now + 0.04);
-        gain.gain.setValueAtTime(0.18, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
-        osc.start(now);
-        osc.stop(now + 0.045);
-      }
-    } catch (_) {}
-  }
-
-  function playPurrSound() {
-    if (!soundEnabled || !audioCtx) return;
-    try {
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      const now = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, now);
-      osc.frequency.linearRampToValueAtTime(680, now + 0.12);
-      osc.frequency.linearRampToValueAtTime(520, now + 0.22);
-      gain.gain.setValueAtTime(0.15, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-      osc.start(now);
-      osc.stop(now + 0.25);
-    } catch (_) {}
-  }
-
-  // --- Preload Sprite Sheets ---
-  const loadedImages = {};
-  for (const [key, profile] of Object.entries(CHARACTER_PROFILES)) {
-    if (profile.sprite) {
-      const img = new Image();
-      img.src = profile.sprite;
-      loadedImages[key] = img;
-    }
-  }
-  const originalImages = { ...loadedImages };
-  function sameOriginalFrame(image, original, profile) {
-    if(!original?.complete || image.naturalWidth!==original.naturalWidth || image.naturalHeight!==original.naturalHeight)return false;
-    const sample=document.createElement('canvas');sample.width=profile.frameW||384;sample.height=profile.frameH||512;
-    const painter=sample.getContext('2d',{willReadFrequently:true});
-    painter.drawImage(original,0,0);const reference=painter.getImageData(0,0,sample.width,sample.height).data;
-    painter.clearRect(0,0,sample.width,sample.height);painter.drawImage(image,0,0);
-    const candidate=painter.getImageData(0,0,sample.width,sample.height).data;
-    return candidate.every((byte,index)=>byte===reference[index]);
-  }
-
-  // --- Pet State ---
-  const urlParams = new URLSearchParams(window.location.search);
-  const isUrlLive2D = urlParams.get('renderer') === 'live2d';
-
-  const savedChar = localStorage.getItem('readmd-pet-character');
-  const initialChar = isUrlLive2D ? 'arch-chan' : (CHARACTER_PROFILES[savedChar] ? savedChar : 'mochi');
-  const savedMode = localStorage.getItem('readmd-pet-mode');
-  const initialMode = savedMode === 'bongos' ? 'bongos' : 'keyboard';
-  const savedShowDesk = localStorage.getItem('readmd-pet-showdesk');
-  const initialShowDesk = savedShowDesk !== 'false';
-  // The upstream character is an explicit presentation, never an implicit
-  // replacement for Mochi or a user's own imported sprite.
-  let classicEnabled = !isUrlLive2D && localStorage.getItem('readmd-pet-bongo-classic') === 'true';
-
+  const ROWS = ['idle','running-right','running-left','waving','jumping','failed','waiting','running','review'];
+  const api = window.hermesDesktop?.petOverlay;
+  const canvas = document.getElementById('bongocat-canvas'), ctx = canvas.getContext('2d');
+  const classicRoot = document.getElementById('bongo-classic-stage'), liveRoot = document.getElementById('live2d-stage');
+  const urlLive = new URLSearchParams(location.search).get('renderer') === 'live2d';
+  const saved = localStorage.getItem('readmd-pet-character');
+  let classicEnabled = !urlLive && localStorage.getItem('readmd-pet-bongo-classic') === 'true';
   const state = {
-    character: initialChar,
-    mode: initialMode, // 'keyboard' | 'bongos'
-    showDesk: initialShowDesk,
-    leftDown: false,
-    rightDown: false,
-    mouseDown: false,
-    mouseX: 160,
-    mouseY: 200,
-
-    // Paw Kinematics & Spring Physics
-    pawLeftY: 276,
-    pawLeftTargetY: 276,
-    pawLeftX: 95,
-    leftTapAt: -Infinity,
-    pawLeftSquish: 1.0,
-
-    pawRightY: 300,
-    pawRightTargetY: 300,
-    pawRightX: 260,
-    rightTapAt: -Infinity,
-    pawRightSquish: 1.0,
-
-    // Petting & Expression
-    pettingLevel: 0,
-    typingBpm: 0,
-    lastTapTime: 0,
-
-    // Particles & FX
-    hearts: [],
-    sparks: [],
-    drumRings: [],
-    keyGlows: [],
-    pressedKeys: new Set(),
-    lastKey: null,
-    pointerX: 0,
-    pointerY: 0,
-    mouseOffsetX: 0,
-    mouseOffsetY: 0,
-    mouseButtons: 0,
-    tapCounts: { left: 0, right: 0 },
-    dragging: false
+    character: urlLive ? 'arch-chan' : (PROFILES[saved] ? saved : 'mochi'),
+    leftDown: false, rightDown: false, mouseDown: false, mouseButtons: 0,
+    pressedKeys: new Set(), lastKey: null, leftTapAt: -Infinity, rightTapAt: -Infinity,
+    pointerX: 0, pointerY: 0, tapCounts: { left: 0, right: 0 },
+    pettingLevel: 0, hearts: [], dragging: false, mood: 'normal', activity: {}, petInfo: {}
   };
-  const deskPoseOffset = profile => state.showDesk !== false && state.mode === 'keyboard' ? profile.deskOffsetY || 0 : 0;
-  const profileHeadY = profile => (profile.headCenterY || 180) + deskPoseOffset(profile);
-
-  // --- Companion behaviours: typing combo, dozing off when idle, stroke to pet ---
-  const SLEEP_AFTER_MS = 45000;
-  const life = { combo: 0, comboAt: 0, comboPop: 0, lastInput: performance.now(), zz: [], zzAt: 0, stroke: 0, strokeAt: 0, lastX: null };
-
-  function noteInput() {
-    const now = performance.now();
-    life.combo = now - life.comboAt < 900 ? life.combo + 1 : 1;
-    life.comboAt = now;
-    life.comboPop = 1;
-    life.lastInput = now;
-    life.zz.length = 0;
+  let scale = 1, offsetX = 0, offsetY = 0;
+  let classicController, classicPromise, liveController, livePromise;
+  let spritePose = null, spriteRegions = { rects: [] }, geometryKey = '';
+  let reaction = null, pointerMovedAt = -Infinity, busyStartedAt = 0;
+  let lastInput, lastSnapshotCharacter, lastSheet, lastSheetCharacter;
+  let lastFrameAt = performance.now(), sceneActive = true, hostBounds;
+  let resolveFirstPaint;
+  window.readmdSpriteReady = new Promise(resolve => { resolveFirstPaint = resolve; });
+  let soundEnabled = localStorage.getItem('readmd-pet-sound') !== 'false', audio;
+  const images = {}, characterInfo = {}, geometry = new WeakMap();
+  for (const [id, profile] of Object.entries(PROFILES)) {
+    if (profile.sprite) { const img = new Image(); img.src = profile.sprite; images[id] = img; }
   }
-
-  function isSleeping(now) {
-    return now - life.lastInput > SLEEP_AFTER_MS && state.pettingLevel <= 0;
-  }
-
-  // Moving the cursor back and forth over the head strokes the pet.
-  function noteStroke(x, y) {
-    const profile = CHARACTER_PROFILES[state.character] || CHARACTER_PROFILES.mochi;
-    const hy = profileHeadY(profile);
-    const now = performance.now();
-    if (Math.hypot(x - CAT_CENTER_X, y - hy) > 64) { life.lastX = null; return; }
-    if (now - life.strokeAt > 600) life.stroke = 0;
-    if (life.lastX != null) life.stroke += Math.abs(x - life.lastX);
-    life.lastX = x;
-    life.strokeAt = now;
-    if (life.stroke > 240) {
-      life.stroke = 0;
-      life.lastInput = now;
-      petPet();
-    }
-  }
-
-  // --- DOM Setup & Responsive Geometry ---
-  const canvas = document.getElementById('bongocat-canvas');
-  const ctx = canvas.getContext('2d');
-  const live2dStage = document.getElementById('live2d-stage');
-  const instrumentsCanvas = document.getElementById('pet-instruments-canvas');
-  const instrumentsContext = instrumentsCanvas.getContext('2d');
-
-  let currentScale = 1.0;
-  let currentOffsetX = 0;
-  let currentOffsetY = 0;
-
   function setupDpi() {
-    const dpr = window.devicePixelRatio || 1;
-    const viewW = window.innerWidth || CANVAS_WIDTH;
-    const viewH = window.innerHeight || CANVAS_HEIGHT;
-    canvas.width = Math.round(viewW * dpr);
-    canvas.height = Math.round(viewH * dpr);
-    instrumentsCanvas.width=canvas.width;instrumentsCanvas.height=canvas.height;
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-
-    // Scale uniformly to fit within window while preserving 320x380 aspect ratio
-    currentScale = Math.min(viewW / CANVAS_WIDTH, viewH / CANVAS_HEIGHT);
-    currentOffsetX = (viewW - CANVAS_WIDTH * currentScale) / 2;
-    // Bottom-align so desk rests naturally on window base
-    currentOffsetY = (viewH - CANVAS_HEIGHT * currentScale);
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(innerWidth * dpr); canvas.height = Math.round(innerHeight * dpr);
+    scale = Math.min(innerWidth / WIDTH, innerHeight / HEIGHT);
+    offsetX = (innerWidth - WIDTH * scale) / 2; offsetY = innerHeight - HEIGHT * scale; geometryKey = '';
   }
-  setupDpi();
-  window.addEventListener('resize', setupDpi);
-
-  // --- Live2D Lazy Mounting ---
-  let live2dMounted = false;
-  let live2dController = null;
-  let classicController = null;
-  let classicPromise = null;
-  let live2dPromise = null;
-  const classicRoot = document.getElementById('bongo-classic-stage');
-  const wantsClassic = () => classicEnabled && state.mode === 'keyboard' && state.showDesk !== false;
+  setupDpi(); window.addEventListener('resize', setupDpi);
+  function sound(tap) {
+    if (!soundEnabled || (tap && !classicEnabled)) return;
+    try {
+      audio ||= new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === 'suspended') audio.resume();
+      const oscillator = audio.createOscillator(), gain = audio.createGain(), now = audio.currentTime;
+      oscillator.connect(gain); gain.connect(audio.destination); oscillator.type = tap ? 'triangle' : 'sine';
+      oscillator.frequency.setValueAtTime(tap ? 880 : 440, now);
+      oscillator.frequency.exponentialRampToValueAtTime(tap ? 220 : 560, now + (tap ? .04 : .2));
+      gain.gain.setValueAtTime(tap ? .10 : .08, now);
+      gain.gain.exponentialRampToValueAtTime(.001, now + (tap ? .045 : .22));
+      oscillator.start(now); oscillator.stop(now + (tap ? .045 : .22));
+    } catch (_) { /* Audio is optional until the user interacts. */ }
+  }
   function ensureClassic() {
-    if (!classicPromise && classicRoot && window.readmdMountBongoClassic) {
-      classicPromise = window.readmdMountBongoClassic(classicRoot, () => state).then(controller => {
-        classicController = controller;
-        syncInteractionRegions();
-        return controller;
-      });
-    }
+    if (!classicPromise) classicPromise = window.readmdMountBongoClassic(classicRoot, () => state).then(controller => {
+      classicController = controller; syncInteractionRegions(); return controller;
+    });
     return classicPromise;
   }
-
-  function ensureLive2d() {
-    if (live2dPromise) return live2dPromise;
-    live2dMounted = true;
-    live2dPromise = (async () => {
-      if (typeof window.readmdMountLive2d !== 'function') throw new Error('Live2D stage unavailable');
-      live2dController = await window.readmdMountLive2d(live2dStage);
-      syncInteractionRegions();
-      return live2dController;
-    })();
-    return live2dPromise;
+  function ensureLive() {
+    if (!livePromise) livePromise = window.readmdMountLive2d(liveRoot).then(controller => {
+      liveController = controller; controller.setMood(state.mood); syncInteractionRegions(); return controller;
+    });
+    return livePromise;
+  }
+  function currentRegions() {
+    if (classicEnabled) return classicController?.interactionRegions() || { rects: [] };
+    if (state.character === 'arch-chan') return liveController?.interactionRegions() || { rects: [] };
+    return spriteRegions;
+  }
+  function headInCanvas() {
+    const h = currentRegions().head;
+    return h ? { x: (h.x + h.width / 2 - offsetX) / scale, y: (h.y + h.height / 2 - offsetY) / scale } : { x: WIDTH / 2, y: 180 };
+  }
+  function respond(kind = 'pet') {
+    const now = performance.now(); reaction = { kind, start: now, until: now + (kind === 'complete' ? 1300 : 1100) };
+    if (state.mood !== 'normal' && !state.petInfo.companion?.resting) state.mood = 'normal';
+    if (!classicEnabled && state.character === 'arch-chan') liveController?.celebrate();
+  }
+  function petPet() {
+    respond(); sound(false); state.pettingLevel = 45;
+    const h = headInCanvas();
+    for (let i = 0; i < 4; i++) state.hearts.push({ x: h.x + Math.random() * 36 - 18,
+      y: h.y - 24, vx: (Math.random() - .5) * 24, vy: -35 - Math.random() * 25, age: 0 });
+    window.dispatchEvent(new Event('readmd-pet-interacted'));
   }
   window.readmdLive2dLife = {
-    setMood: value => live2dController?.setMood(value),
-    setTalking: value => live2dController?.setTalking(value),
-    celebrate: () => live2dController?.celebrate(),
-    getCharacterTop: () => state.character === 'arch-chan' ? live2dController?.getCharacterTop() : undefined
+    setMood(value) { state.mood = value; if (!classicEnabled && state.character === 'arch-chan') liveController?.setMood(value); },
+    setTalking(value) { if (!classicEnabled && state.character === 'arch-chan') liveController?.setTalking(value); },
+    celebrate: () => respond('complete'),
+    getCharacterTop() { const r = currentRegions(); return r.rects.length ? Math.min(...r.rects.map(rect => rect.y)) : undefined; }
   };
-
-  async function applyCharacter(charId, preserveClassic = false) {
-    if (!charId) return;
-    if (!preserveClassic) {
-      classicEnabled = false;
-      localStorage.setItem('readmd-pet-bongo-classic', 'false');
-    }
-    state.character = charId;
-    localStorage.setItem('readmd-pet-character', charId);
-
-    if (CHARACTER_PROFILES[charId] && CHARACTER_PROFILES[charId].sprite && !loadedImages[charId]) {
-      const img = new Image();
-      img.src = CHARACTER_PROFILES[charId].sprite;
-      loadedImages[charId] = img;
-    }
-
-    if (charId === 'arch-chan') {
-      if (live2dStage) live2dStage.style.display = 'block';
-      await ensureLive2d();
-    } else {
-      if (live2dStage) live2dStage.style.display = 'none';
-    }
-    updateContextMenu();
-    syncInteractionRegions();
+  async function applyCharacter(id, preserveClassic = false) {
+    if (!id) return;
+    if (id === 'bongocat') return useClassic();
+    if (!preserveClassic) { classicEnabled = false; localStorage.setItem('readmd-pet-bongo-classic', 'false'); }
+    state.character = id; localStorage.setItem('readmd-pet-character', id);
+    state.petInfo = characterInfo[id] || {};
+    state.hearts.length = 0; state.pettingLevel = 0; reaction = null; spritePose = null; spriteRegions = { rects: [] };
+    geometryKey = ''; pointerMovedAt = -Infinity; classicController?.setActive(false);
+    liveRoot.style.display = !classicEnabled && id === 'arch-chan' ? 'block' : 'none';
+    liveController?.setPresentation({ active: !classicEnabled && id === 'arch-chan' });
+    if (!classicEnabled && id === 'arch-chan') await ensureLive();
+    updateMenu(); syncInteractionRegions(); window.dispatchEvent(new Event('readmd-pet-character-changed'));
   }
-
-  // --- Context menu: compact and text-only, matching the app's quiet style ---
-  const menu = document.createElement('div');
-  menu.setAttribute('role', 'menu');
-  menu.style.cssText = `
-    position: absolute;
-    display: none;
-    z-index: 9999;
-    min-width: 168px;
-    max-height: calc(100% - 8px);
-    overflow-y: auto;
-    padding: 4px;
-    background: rgba(28, 30, 36, 0.96);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-    font: 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-    color: #e8e8ea;
-    user-select: none;
-  `;
-
-  function createMenuItem(label, onClick, checked) {
-    const item = document.createElement('div');
-    item.setAttribute('role', checked === undefined ? 'menuitem' : 'menuitemradio');
-    if (checked !== undefined) item.setAttribute('aria-checked', String(!!checked));
-    item.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;';
-    const text = document.createElement('span');
-    text.style.cssText = 'flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-    text.textContent = label;
-    const mark = document.createElement('span');
-    mark.style.cssText = 'width:12px;text-align:right;color:#8ab4ff;';
-    mark.textContent = checked ? '✓' : '';
-    item.append(text, mark);
-    item.addEventListener('mouseenter', () => item.style.background = 'rgba(255, 255, 255, 0.08)');
-    item.addEventListener('mouseleave', () => item.style.background = 'transparent');
-    item.addEventListener('click', (e) => {
-      e.stopPropagation();
-      menu.style.display = 'none';
-      onClick();
+  function useClassic() {
+    classicEnabled = true; localStorage.setItem('readmd-pet-bongo-classic', 'true');
+    state.hearts.length = 0; spritePose = null; liveRoot.style.display = 'none'; liveController?.setPresentation({ active: false });
+    updateMenu(); return ensureClassic();
+  }
+  // Inspect alpha geometry once. The union keeps every complete authored action
+  // frame inside the viewport; transparent sheet padding does not shrink the pet.
+  function sheetGeometry(img, fw, fh) {
+    const cached = geometry.get(img); if (cached?.fw === fw && cached?.fh === fh) return cached;
+    const columns = Math.max(1, Math.floor(img.naturalWidth / fw)), rows = Math.max(1, Math.floor(img.naturalHeight / fh));
+    const sample = document.createElement('canvas'); sample.width = img.naturalWidth; sample.height = img.naturalHeight;
+    const c = sample.getContext('2d', { willReadFrequently: true }); c.drawImage(img, 0, 0);
+    const data = c.getImageData(0, 0, sample.width, sample.height).data;
+    const frames = Array.from({ length: rows * columns }, () => ({ left: fw, top: fh, right: 0, bottom: 0 }));
+    const union = { left: fw, top: fh, right: 0, bottom: 0 };
+    for (let y = 0; y < rows * fh; y++) for (let x = 0; x < columns * fw; x++) {
+      if (data[(y * sample.width + x) * 4 + 3] <= 32) continue;
+      const px = x % fw, py = y % fh, b = frames[Math.floor(y / fh) * columns + Math.floor(x / fw)];
+      b.left = Math.min(b.left, px); b.top = Math.min(b.top, py); b.right = Math.max(b.right, px + 1); b.bottom = Math.max(b.bottom, py + 1);
+      union.left = Math.min(union.left, px); union.top = Math.min(union.top, py); union.right = Math.max(union.right, px + 1); union.bottom = Math.max(union.bottom, py + 1);
+    }
+    const counts = Array.from({ length: rows }, (_, row) => {
+      let n = columns; while (n > 1 && frames[row * columns + n - 1].right === 0) n--; return n;
     });
-    return item;
+    const result = { fw, fh, columns, rows, frames, union, counts }; geometry.set(img, result); return result;
   }
-
-  function createSeparator() {
-    const sep = document.createElement('div');
-    sep.style.cssText = 'height:1px;background:rgba(255,255,255,0.08);margin:4px 6px;';
-    return sep;
+  function rowFor(names, candidates, rows) {
+    for (const name of candidates) { const i = names.indexOf(name); if (i >= 0 && i < rows) return i; } return -1;
   }
-
-  function createLabel(text) {
-    const label = document.createElement('div');
-    label.style.cssText = 'padding:6px 10px 2px;font-size:11px;color:#8b8f99;';
-    label.textContent = text;
-    return label;
-  }
-
-  function setInstrument(mode, showDesk) {
-    state.mode = mode;
-    state.showDesk = showDesk;
-    localStorage.setItem('readmd-pet-mode', mode);
-    localStorage.setItem('readmd-pet-showdesk', String(showDesk));
-    if (lastNativeInput) consumeInput(lastNativeInput, true);
-    updateContextMenu();
-    syncInteractionRegions();
-  }
-
-  function updateContextMenu() {
-    menu.innerHTML = '';
-    menu.appendChild(createLabel('角色'));
-    for (const [id, prof] of Object.entries(CHARACTER_PROFILES)) {
-      menu.appendChild(createMenuItem(prof.name, () => applyCharacter(id), !classicEnabled && state.character === id));
+  function drawSprite(now) {
+    const img = images[state.character]; if (!img?.complete || !img.naturalWidth) return;
+    const profile = PROFILES[state.character] || {}, info = state.petInfo;
+    const v2 = img.naturalWidth === 1536 && img.naturalHeight === 2288, duo = img.naturalWidth === 1536 && img.naturalHeight === 1024;
+    let fw = Number(info.frameW) || (v2 ? 192 : duo ? 384 : img.naturalWidth);
+    let fh = Number(info.frameH) || (v2 ? 208 : duo ? 512 : img.naturalHeight);
+    fw = Math.max(1, Math.min(img.naturalWidth, Math.floor(fw))); fh = Math.max(1, Math.min(img.naturalHeight, Math.floor(fh)));
+    const g = sheetGeometry(img, fw, fh);
+    const names = Array.isArray(info.stateRows) ? info.stateRows : (g.rows === 2 ? ['idle', 'wave'] : ROWS);
+    const resting = state.mood !== 'normal' || info.companion?.resting;
+    const quiet = state.animation?.enabled === false || state.animation?.fpsCap === 0;
+    let candidates = ['idle'], once = false, actionStart = 0;
+    if (resting) candidates = ['sleeping','sleep','waiting','idle'];
+    else if (reaction && now < reaction.until) {
+      candidates = reaction.kind === 'complete' && !profile.calm ? ['jumping','jump','waving','wave','idle'] : ['waving','wave','idle'];
+      once = true; actionStart = reaction.start;
+    } else if (state.dragging) candidates = ['running-right','running','idle'];
+    else if (state.activity.error) candidates = ['failed','idle'];
+    else if (state.activity.busy) {
+      // Hermes performs its own spell once, with a rest between casts.
+      if (profile.spell && (now - busyStartedAt) % 6500 < 950) {
+        candidates = ['wave','waving','idle']; once = true; actionStart = now - (now - busyStartedAt) % 6500;
+      } else candidates = ['review','waiting','idle'];
     }
-    menu.appendChild(createMenuItem('BongoCat', () => {
-      classicEnabled = true;
-      localStorage.setItem('readmd-pet-bongo-classic', 'true');
-      setInstrument('keyboard', true);
-      ensureClassic();
-    }, wantsClassic()));
-    menu.appendChild(createSeparator());
-    menu.appendChild(createLabel('乐器'));
-    const desk = state.showDesk !== false;
-    menu.appendChild(createMenuItem('键盘与鼠标', () => setInstrument('keyboard', true), desk && state.mode === 'keyboard'));
-    menu.appendChild(createMenuItem('邦戈鼓', () => setInstrument('bongos', true), desk && state.mode === 'bongos'));
-    menu.appendChild(createMenuItem('不显示乐器', () => setInstrument(state.mode, false), !desk));
-    menu.appendChild(createSeparator());
-    menu.appendChild(createMenuItem(soundEnabled ? '关闭按键音效' : '开启按键音效', () => {
-      soundEnabled = !soundEnabled;
-      localStorage.setItem('readmd-pet-sound', String(soundEnabled));
-      updateContextMenu();
-    }));
-    menu.appendChild(createMenuItem('摸摸头', () => petPet()));
-    menu.appendChild(createSeparator());
-    menu.appendChild(createMenuItem('隐藏桌宠', () => {
-      window.hermesDesktop?.petOverlay?.close?.();
-    }));
+    let row = rowFor(names, candidates, g.rows); if (row < 0) row = 0;
+    let action = names[row] || 'idle';
+    const available = g.counts[row];
+    const explicitCount = Number(info.framesByRow?.[names[row]] || info.framesByState?.[action] || (!PROFILES[state.character] ? info.framesPerState : 0));
+    const count = Math.max(1, Math.min(available, explicitCount || available));
+    const loop = Math.max(100, Number(info.loopMs) || count * (profile.calm ? 190 : 160));
+    let frameIndex = quiet || resting ? 0 : Math.floor((once ? Math.min(.999, (now - actionStart) / loop) : now % loop / loop) * count);
+    // Hermes' idle views are orientations. Other two-row pets blink using the
+    // original closed-eye frame, rather than continuously spinning their views.
+    if (action === 'idle' && duo && !quiet) frameIndex = profile.blink && now % 4300 < 150 ? Math.min(2, count - 1) : 0;
+    if (resting && duo && profile.blink) frameIndex = Math.min(2, count - 1);
+    if (!resting && !quiet && action === 'idle' && profile.directions && v2 && now - pointerMovedAt < 1800) {
+      const sector = ((Math.round(Math.atan2(-state.pointerY, state.pointerX) / (Math.PI * 2) * 16) % 16) + 16) % 16;
+      row = 9 + Math.floor(sector / 8); frameIndex = sector % 8; action = 'look';
+    }
+    const b = g.union; if (b.right <= b.left || b.bottom <= b.top) return;
+    const factor = Math.min(1, Math.max(.45, (Number(info.scale) || .33) / .33));
+    const s = Math.min(260 / (b.right - b.left), 275 / (b.bottom - b.top), 3) * factor;
+    const dx = WIDTH / 2 - (b.left + b.right) / 2 * s;
+    const dy = HEIGHT - 10 - b.bottom * s + (quiet ? 0 : Math.sin(now * (resting ? .0016 : .003)));
+    spritePose = { img, fw, fh, sx: frameIndex * fw, sy: row * fh, dx, dy, dw: fw * s, dh: fh * s, row, frameIndex, action };
+    ctx.imageSmoothingEnabled = false; ctx.drawImage(img, spritePose.sx, spritePose.sy, fw, fh, dx, dy, fw * s, fh * s);
+    const rect = (x,y,w,h) => ({ x: offsetX + x * scale, y: offsetY + y * scale, width: w * scale, height: h * scale });
+    const ib = g.frames[0].right > 0 ? g.frames[0] : b;
+    const x = dx + ib.left * s, y = dy + ib.top * s, w = (ib.right - ib.left) * s, h = (ib.bottom - ib.top) * s;
+    spriteRegions = { head: rect(x + w * .18, y + h * .06, w * .64, h * .42),
+      rects: [rect(dx + b.left * s, dy + b.top * s, (b.right - b.left) * s, (b.bottom - b.top) * s)] };
+    const key = [state.character,fw,fh,s,scale,offsetX,offsetY].join('/');
+    if (key !== geometryKey) { geometryKey = key; queueMicrotask(() => { syncInteractionRegions(); window.dispatchEvent(new Event('readmd-pet-character-changed')); }); }
   }
-
-  document.body.appendChild(menu);
-  updateContextMenu();
-
-  // If initially arch-chan, mount Live2D
-  if (initialChar === 'arch-chan') window.readmdLive2dReady = applyCharacter('arch-chan');
-
-  // --- Interaction & Petting ---
-  canvas.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    initAudio();
-    updateContextMenu();
-    menu.style.display = 'block';
-    const maxX = (window.innerWidth || CANVAS_WIDTH) - menu.offsetWidth - 4;
-    const maxY = (window.innerHeight || CANVAS_HEIGHT) - menu.offsetHeight - 4;
-    const x = Math.min(e.clientX, maxX);
-    const y = Math.min(e.clientY, maxY);
-    menu.style.left = `${Math.max(4, x)}px`;
-    menu.style.top = `${Math.max(4, y)}px`;
+  // Only BongoCat attacks key/mouse controls. Native counters retain fast edges.
+  function consumeInput(payload) {
+    if (!payload) return;
+    const previous = lastInput;
+    if (previous && Number.isInteger(payload.sequence) && Number.isInteger(previous.sequence) && ((payload.sequence - previous.sequence) >>> 0) > 0x7fffffff) return;
+    lastInput = payload;
+    const x = Number.isFinite(payload.pointer_x) ? payload.pointer_x : state.pointerX, y = Number.isFinite(payload.pointer_y) ? payload.pointer_y : state.pointerY;
+    if (Math.hypot(x - state.pointerX,y - state.pointerY) > .03) pointerMovedAt = performance.now();
+    state.pointerX = x; state.pointerY = y; state.lastKey = payload.last_key ?? state.lastKey;
+    state.pressedKeys = new Set(Array.isArray(payload.pressed_keys) ? payload.pressed_keys.slice(0,256) : []);
+    state.mouseButtons = payload.mouse_buttons || 0; state.mouseDown = !!payload.mouse_down;
+    state.leftDown = !!(payload.keyboard_down ?? (payload.left_down || payload.right_down)); state.rightDown = state.mouseDown;
+    const changed = key => Number.isInteger(payload[key]) && payload[key] !== (previous?.[key] ?? 0);
+    if (classicEnabled) {
+      if (changed('keyboard_taps')) { state.leftTapAt = performance.now(); state.tapCounts.left++; sound(true); }
+      if (changed('mouse_taps')) { state.rightTapAt = performance.now(); state.tapCounts.right++; sound(true); }
+    }
+  }
+  api?.onBongoInput?.(consumeInput);
+  api?.onState?.(snapshot => {
+    if (!snapshot) return;
+    if (snapshot.bounds) hostBounds = snapshot.bounds;
+    let character = snapshot.character || snapshot.info?.character || snapshot.info?.slug || state.character;
+    if (urlLive) character = 'arch-chan';
+    if (snapshot.info) characterInfo[character] = snapshot.info;
+    if (character !== lastSnapshotCharacter) {
+      const preserve = lastSnapshotCharacter === undefined && character === state.character;
+      lastSnapshotCharacter = character; applyCharacter(character,preserve);
+    }
+    if (snapshot.info && character === state.character) state.petInfo = snapshot.info;
+    const sheet = snapshot.info?.spritesheetBase64 || snapshot.spritesheetBase64;
+    if (sheet && (sheet !== lastSheet || character !== lastSheetCharacter)) {
+      lastSheet = sheet; lastSheetCharacter = character;
+      const img = new Image(); img.readmdImported = true;
+      img.onload = () => { if (lastSheet !== sheet || lastSheetCharacter !== character) return; images[character] = img; geometryKey = ''; };
+      img.src = `data:${snapshot.info?.mime || snapshot.mime || 'image/png'};base64,${sheet}`;
+    }
+    const activity = snapshot.activity || {};
+    if (activity.busy && !state.activity.busy) busyStartedAt = performance.now();
+    if (activity.justCompleted && !state.activity.justCompleted) respond('complete');
+    state.activity = activity; state.animation = snapshot.info?.animation;
+    sceneActive = !snapshot.fullscreen && snapshot.visible !== false;
+    updateMenu(); syncInteractionRegions();
   });
-
-  window.addEventListener('click', () => {
-    menu.style.display = 'none';
+  api?.onControl?.(payload => {
+    if (payload?.type === 'character') applyCharacter(payload.character);
+    if (payload?.type === 'pet') petPet();
+    if (payload?.type === 'play') respond('complete');
   });
-
-  let gesture = null;
-  canvas.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0) return;
-    initAudio();
-    gesture = { x: e.screenX, y: e.screenY, pointer: e.pointerId, started: false };
-    canvas.setPointerCapture?.(e.pointerId);
+  // One drag request after the threshold. Cancelled/moved gestures never pet.
+  let gesture = null, strokeX, strokeDistance = 0, strokeAt = 0;
+  canvas.addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    gesture = { x: event.screenX, y: event.screenY, pointer: event.pointerId, started: false }; canvas.setPointerCapture?.(event.pointerId);
   });
-
-  canvas.addEventListener('pointermove', (e) => {
+  canvas.addEventListener('pointermove', event => {
     if (gesture) {
-      if (!gesture.started && (e.buttons & 1) && Math.hypot(e.screenX - gesture.x, e.screenY - gesture.y) > 4) {
-        gesture.started = true;
-        state.dragging = true;
-        canvas.style.cursor = 'grabbing';
-        // user32 keeps the grab offset, cursor capture and per-monitor DPI.
-        window.hermesDesktop?.petOverlay?.startDrag?.();
+      if (!gesture.started && (event.buttons & 1) && Math.hypot(event.screenX - gesture.x,event.screenY - gesture.y) > 4) {
+        gesture.started = true; state.dragging = true; canvas.style.cursor = 'grabbing'; api?.startDrag?.();
       }
       return;
     }
-    if (e.buttons) return;
-    const rect = canvas.getBoundingClientRect();
-    noteStroke((e.clientX - rect.left - currentOffsetX) / (currentScale || 1.0), (e.clientY - rect.top - currentOffsetY) / (currentScale || 1.0));
+    if (event.buttons) return;
+    const h = currentRegions().head;
+    if (!h || Math.hypot((event.clientX-h.x-h.width/2)/(h.width/2),(event.clientY-h.y-h.height/2)/(h.height/2)) > 1) { strokeX = undefined; strokeDistance = 0; return; }
+    const now = performance.now(); if (now - strokeAt > 600) strokeDistance = 0;
+    if (strokeX !== undefined) strokeDistance += Math.abs(event.clientX - strokeX);
+    strokeAt = now; strokeX = event.clientX;
+    if (strokeDistance > Math.max(80,h.width * 1.5)) { strokeDistance = 0; petPet(); }
   });
-
-  const finishGesture = (e, cancelled) => {
-    const ended = gesture;
-    gesture = null;
-    state.dragging = false;
-    canvas.style.cursor = 'grab';
-    if (!ended) return;
+  function finishGesture(event,cancelled) {
+    const ended = gesture; gesture = null; state.dragging = false; canvas.style.cursor = 'grab'; if (!ended) return;
     try { canvas.releasePointerCapture?.(ended.pointer); } catch (_) {}
     if (!cancelled && !ended.started && !window.__readmdRustDispatch) {
-      const x = (e.clientX - currentOffsetX) / currentScale;
-      const y = (e.clientY - currentOffsetY) / currentScale;
-      const hy = (CHARACTER_PROFILES[state.character] || CHARACTER_PROFILES.mochi).headCenterY || 180;
-      if (Math.hypot(x - CAT_CENTER_X, y - hy) < 64) petPet();
-    }
-  };
-  window.addEventListener('pointerup', e => finishGesture(e, false));
-  window.addEventListener('pointercancel', e => finishGesture(e, true));
-  canvas.addEventListener('lostpointercapture', e => finishGesture(e, true));
-  window.addEventListener('blur', e => finishGesture(e, true));
-
-  function petPet() {
-    initAudio();
-    playPurrSound();
-    state.pettingLevel = 45;
-
-    if (state.character === 'arch-chan') {
-      live2dController?.celebrate?.();
-    }
-
-    const head = wantsClassic() && classicController ? classicController.interactionRegions().head
-      : state.character === 'arch-chan' ? live2dController?.interactionRegions().head : null;
-    const headY = head ? (head.y + head.height / 2 - currentOffsetY) / currentScale
-      : profileHeadY(CHARACTER_PROFILES[state.character] || CHARACTER_PROFILES.mochi);
-    // Spawn floating heart particles
-    for (let i = 0; i < 4; i++) {
-      state.hearts.push({
-        x: CAT_CENTER_X + (Math.random() * 50 - 25),
-        y: headY - 35 + (Math.random() * 20 - 10),
-        vx: (Math.random() - 0.5) * 1.6,
-        vy: -1.8 - Math.random() * 1.5,
-        alpha: 1.0,
-        scale: 0.8 + Math.random() * 0.5,
-        color: Math.random() > 0.3 ? '#ff6b8b' : '#ff9ebb'
-      });
+      const h = currentRegions().head;
+      if (h && event.clientX >= h.x && event.clientX <= h.x+h.width && event.clientY >= h.y && event.clientY <= h.y+h.height) petPet();
     }
   }
-
-  // --- Input Reactivity ---
-  function recordTap() {
-    const now = performance.now();
-    const delta = now - state.lastTapTime;
-    state.lastTapTime = now;
-    if (delta < 500) {
-      state.typingBpm = Math.min(180, state.typingBpm + 8);
-    } else {
-      state.typingBpm = Math.min(180, state.typingBpm + 4);
-    }
+  window.addEventListener('pointerup', e => finishGesture(e,false)); window.addEventListener('pointercancel', e => finishGesture(e,true));
+  canvas.addEventListener('lostpointercapture', e => finishGesture(e,true)); window.addEventListener('blur', e => finishGesture(e,true));
+  const menu = document.createElement('div'); menu.setAttribute('role','menu');
+  menu.style.cssText = 'position:absolute;display:none;z-index:9999;min-width:168px;max-height:calc(100% - 8px);overflow:auto;padding:4px;background:rgba(28,30,36,.96);border:1px solid #ffffff14;border-radius:10px;font:13px/1.4 system-ui;color:#eee;user-select:none';
+  const text = (key,fallback) => state.petInfo.lines?.[key] || fallback;
+  function menuItem(label,run,checked) {
+    const item = document.createElement('button'); item.type = 'button'; item.textContent = `${checked ? '✓ ' : ''}${label}`;
+    item.setAttribute('role',checked === undefined ? 'menuitem' : 'menuitemradio'); if (checked !== undefined) item.setAttribute('aria-checked',String(checked));
+    item.style.cssText = 'display:block;width:100%;min-height:44px;padding:8px 10px;border:0;border-radius:6px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer';
+    item.addEventListener('mouseenter',() => item.style.background = '#ffffff14'); item.addEventListener('mouseleave',() => item.style.background = 'transparent');
+    item.addEventListener('click',event => { event.stopPropagation(); menu.style.display = 'none'; run(); }); return item;
   }
-
-  function triggerLeftTap(isDown, retrigger = false) {
-    if (state.leftDown === isDown && !retrigger) return;
-    state.leftDown = isDown;
-    if (isDown) {
-      state.leftTapAt = performance.now();
-      state.tapCounts.left++;
-      initAudio();
-      playTapSound(true, state.mode);
-      recordTap();
-      noteInput();
-      state.pawLeftSquish = 0.93;
-
-      if (state.mode === 'bongos') {
-        state.drumRings.push({ x: 95, y: 275, r: 15, alpha: 0.9, color: 'rgba(230, 126, 34, 0.8)' });
-      } else {
-        lightKey(state.lastKey);
-      }
-    }
+  function updateMenu() {
+    menu.replaceChildren();
+    for (const [id,profile] of Object.entries(PROFILES)) menu.appendChild(menuItem(profile.name,() => applyCharacter(id),!classicEnabled && state.character === id));
+    menu.appendChild(menuItem('BongoCat',useClassic,classicEnabled));
+    menu.appendChild(menuItem(text('pet.action.pet','摸摸头'),petPet));
+    menu.appendChild(menuItem(text('pet.action.play','玩耍'),() => respond('complete')));
+    if (classicEnabled) menu.appendChild(menuItem(soundEnabled ? '关闭按键音效' : '开启按键音效',() => {
+      soundEnabled = !soundEnabled; localStorage.setItem('readmd-pet-sound',String(soundEnabled)); updateMenu();
+    }));
+    menu.appendChild(menuItem(text('pet.hideTitle','隐藏桌宠'),() => api?.close?.()));
   }
-
-  function triggerRightTap(isDown, retrigger = false) {
-    if (state.rightDown === isDown && !retrigger) return;
-    state.rightDown = isDown;
-    if (isDown) {
-      state.rightTapAt = performance.now();
-      state.tapCounts.right++;
-      initAudio();
-      playTapSound(false, state.mode);
-      recordTap();
-      noteInput();
-      state.pawRightSquish = 0.96;
-
-      if (state.mode === 'bongos') {
-        state.drumRings.push({ x: 225, y: 275, r: 16, alpha: 0.9, color: 'rgba(243, 156, 18, 0.8)' });
-      } else {
-        // Mouse clicks affect the mouse hand, never a random keyboard key.
-      }
-    }
-  }
-
-  // Reliable press counters survive several edges between two rendered frames.
-  // Held sets are independent: releasing a mouse button cannot release a key.
-  let lastNativeInput = null;
-  function consumeInput(payload, poseOnly = false) {
-    if (!payload) return;
-    const previous = lastNativeInput;
-    if (previous && Number.isInteger(payload.sequence) && Number.isInteger(previous.sequence)
-        && ((payload.sequence - previous.sequence) >>> 0) > 0x7fffffff) return;
-    lastNativeInput = payload;
-    state.lastKey = payload.last_key ?? state.lastKey;
-    state.pressedKeys = new Set(Array.isArray(payload.pressed_keys) ? payload.pressed_keys.slice(0, 256) : []);
-    state.mouseButtons = payload.mouse_buttons || 0;
-    state.mouseDown = !!payload.mouse_down;
-    if (Number.isFinite(payload.mouse_x)) state.mouseX = (payload.mouse_x - currentOffsetX) / currentScale;
-    if (Number.isFinite(payload.mouse_y)) state.mouseY = (payload.mouse_y - currentOffsetY) / currentScale;
-    if (Number.isFinite(payload.pointer_x)) state.pointerX = payload.pointer_x;
-    if (Number.isFinite(payload.pointer_y)) state.pointerY = payload.pointer_y;
-    const leftCounter = state.mode === 'keyboard' ? 'keyboard_taps' : 'left_taps';
-    const rightCounter = state.mode === 'keyboard' ? 'mouse_taps' : 'right_taps';
-    const countChanged = key => Number.isInteger(payload[key]) && payload[key] !== (previous?.[key] ?? 0);
-    const leftHeld = state.mode === 'keyboard' ? (payload.keyboard_down ?? (payload.left_down || payload.right_down)) : payload.left_down;
-    const rightHeld = state.mode === 'keyboard' ? payload.mouse_down : (payload.right_down || payload.mouse_down);
-    if(!poseOnly){
-      triggerLeftTap(!!leftHeld || countChanged(leftCounter), countChanged(leftCounter));
-      triggerRightTap(!!rightHeld || countChanged(rightCounter) || (state.mode === 'bongos' && countChanged('mouse_taps')),
-        countChanged(rightCounter) || (state.mode === 'bongos' && countChanged('mouse_taps')));
-    }
-    // Counters trigger an attack; the held state remains authoritative afterwards.
-    state.leftDown = !!leftHeld;
-    state.rightDown = !!rightHeld;
-  }
-
-  // --- Global IPC Listener from Rust ---
-  if (window.hermesDesktop?.petOverlay?.onBongoInput) {
-    window.hermesDesktop.petOverlay.onBongoInput(consumeInput);
-  }
-
-  // Support state updates from host snapshot
-  let lastSeenSnapshotChar = null;
-  let lastSpritesheet = null;
-  let lastSpritesheetCharacter = null;
-  if (window.hermesDesktop?.petOverlay?.onState) {
-    window.hermesDesktop.petOverlay.onState((snap) => {
-      if (!snap) return;
-
-      // Multi-source character detection
-      let char = snap.character ||
-                 (snap.info && snap.info.character) ||
-                 (snap.info && snap.info.slug) ||
-                 (snap.companion && snap.companion.character) ||
-                 (snap.info && snap.info.companion && snap.info.companion.character);
-
-      if (!char && snap.info && snap.info.displayName) {
-        const name = String(snap.info.displayName).toLowerCase();
-        if (name.includes('mochi') || name.includes('糯米') || name.includes('小猫')) char = 'mochi';
-        else if (name.includes('amber') || name.includes('狐狸')) char = 'amber';
-        else if (name.includes('hermes') || name.includes('骑士')) char = 'hermes';
-        else if (name.includes('moss') || name.includes('小草')) char = 'moss';
-        else if (name.includes('capy') || name.includes('水豚')) char = 'cache-capy';
-        else if (name.includes('niu') || name.includes('牛')) char = 'niu-lai';
-        else if (name.includes('arch') || name.includes('live2d')) char = 'arch-chan';
-      }
-
-      if (snap.info) {
-        state.petInfo = snap.info;
-      }
-
-      if (isUrlLive2D) char = 'arch-chan';
-      if (char && char !== lastSeenSnapshotChar) {
-        const preserveClassic=lastSeenSnapshotChar===null && char===state.character;
-        lastSeenSnapshotChar = char;
-        applyCharacter(char,preserveClassic);
-      }
-
-      // Dynamic custom spritesheet loading from base64
-      const spritesheetB64 = (snap.info && snap.info.spritesheetBase64) || snap.spritesheetBase64;
-      const sheetCharacter=char || state.character;
-      if (spritesheetB64 && (spritesheetB64 !== lastSpritesheet || sheetCharacter !== lastSpritesheetCharacter)) {
-        lastSpritesheet = spritesheetB64;lastSpritesheetCharacter=sheetCharacter;
-        const mime = (snap.info && snap.info.mime) || snap.mime || 'image/png';
-        const targetKey = char || state.character;
-        const img = new Image();
-        img.onload = async () => {
-          const original=originalImages[targetKey],profile=CHARACTER_PROFILES[targetKey];
-          if(original)try{await original.decode();}catch(_){/* Imported art remains usable without a built-in reference. */}
-          img.readmdOriginalAsset=!!profile && sameOriginalFrame(img,original,profile);
-          loadedImages[targetKey] = img;
-          syncInteractionRegions();
-        };
-        img.readmdImported = true;
-        img.src = `data:${mime};base64,${spritesheetB64}`;
-      }
-
-      const m = snap.mode || (snap.info && snap.info.mode);
-      if (m && (m === 'keyboard' || m === 'bongos')) {
-        setInstrument(m, state.showDesk);
-      }
-      state.activity = snap.activity || {};
-      state.animation = snap.info?.animation;
-      syncInteractionRegions();
-    });
-  }
-
-  // Support host control events (character switch, mode, pet, tap)
-  if (window.hermesDesktop?.petOverlay?.onControl) {
-    window.hermesDesktop.petOverlay.onControl((payload) => {
-      if (!payload) return;
-      if (payload.type === 'character' && payload.character) {
-        applyCharacter(payload.character);
-      }
-      if (payload.type === 'mode' && payload.mode) {
-        setInstrument(payload.mode, state.showDesk);
-      }
-      if (payload.type === 'pet') {
-        petPet();
-      }
-      if (payload.type === 'tap') {
-        if (payload.side === 'left') triggerLeftTap(!!payload.down);
-        else if (payload.side === 'right') triggerRightTap(!!payload.down);
-        else {
-          triggerLeftTap(!!payload.down);
-          triggerRightTap(!!payload.down);
-        }
-      }
-    });
-  }
-
-  // Global helper for diagnostic tests
-  window.__bongoPet = {
-    state,
-    applyCharacter,
-    petPet,
-    triggerLeftTap,
-    triggerRightTap,
-    consumeInput,
-    setInstrument,
-    useClassic: () => { classicEnabled = true; setInstrument('keyboard', true); return ensureClassic(); },
-    get spritePose() { return spritePose; },
-    get armPose() { return armPose; },
-    get keyCells() { return keyCells; },
-    updatePhysics
-  };
-
-  // Local window keyboard fallback
-  window.addEventListener('keydown', (e) => {
-    if (window.__readmdRustDispatch || e.repeat) return;
-    initAudio();
-    const code = e.code;
-    if (['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyZ', 'KeyX', 'KeyC', 'KeyV', 'Space', 'Tab', 'ShiftLeft'].includes(code)) {
-      triggerLeftTap(true);
-    } else {
-      triggerRightTap(true);
-    }
+  document.body.appendChild(menu); updateMenu();
+  canvas.addEventListener('contextmenu',event => {
+    event.preventDefault(); updateMenu(); menu.style.display = 'block';
+    menu.style.left = `${Math.max(4,Math.min(event.clientX,innerWidth-menu.offsetWidth-4))}px`;
+    menu.style.top = `${Math.max(4,Math.min(event.clientY,innerHeight-menu.offsetHeight-4))}px`;
   });
-
-  window.addEventListener('keyup', (e) => {
-    if (window.__readmdRustDispatch) return;
-    const code = e.code;
-    if (['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyZ', 'KeyX', 'KeyC', 'KeyV', 'Space', 'Tab', 'ShiftLeft'].includes(code)) {
-      triggerLeftTap(false);
-    } else {
-      triggerRightTap(false);
+  window.addEventListener('click',() => menu.style.display = 'none');
+  function drawHearts(dt) {
+    ctx.save(); ctx.font = '18px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#ff7b9c';
+    for (let i = state.hearts.length-1; i >= 0; i--) {
+      const h = state.hearts[i]; h.age += dt; h.x += h.vx*dt; h.y += h.vy*dt;
+      ctx.globalAlpha = Math.max(0,1-h.age/.9); ctx.fillText('♥',h.x,h.y); if (h.age >= .9) state.hearts.splice(i,1);
     }
-  });
-
-  // --- Rendering Functions ---
-
-  let spritePose = null;
-  let spriteGeometryKey = '';
-  const armPose = [];
-  const DEFAULT_STATE_ROWS = ['idle','running-right','running-left','waving','jumping','failed','waiting','running','review'];
-  // 1. Draw Character (Sprite or Live2D)
-  function drawCharacter(ctx) {
-    if (state.character === 'arch-chan') {
-      // Live2D Arch-Chan runs in #live2d-stage
-      return;
-    }
-
-    const charKey = state.character;
-    const profile = CHARACTER_PROFILES[charKey] || {
-      id: charKey,
-      name: charKey,
-      icon: '🐾',
-      scale: 1.0,
-      offsetY: 0,
-      headCenterY: 180,
-      pawStyle: { type: 'cat', fill: '#fdfbf7', stroke: '#4a3b32', padFill: '#ffb2be', armWidth: 7 }
-    };
-    const img = loadedImages[charKey];
-    if (!img || !img.complete) return;
-
-    let fw = img.readmdImported ? Number(state.petInfo?.frameW) : profile.frameW;
-    let fh = img.readmdImported ? Number(state.petInfo?.frameH) : profile.frameH;
-    if (!fw || !fh) {
-      if (img.naturalWidth === 1536 && img.naturalHeight === 2288) {
-        fw = 192;
-        fh = 208;
-      } else if (img.naturalWidth === 1536 && img.naturalHeight === 1024) {
-        fw = 384;
-        fh = 512;
-      } else if (state.petInfo && state.petInfo.frameW && state.petInfo.frameH) {
-        fw = state.petInfo.frameW;
-        fh = state.petInfo.frameH;
-      } else {
-        fw = 384;
-        fh = 512;
+    ctx.restore();
+  }
+  function syncInteractionRegions() {
+    // WebView zoom changes CSS pixels independently of the native window's
+    // logical size. DOM gestures keep CSS coordinates; native hit testing gets
+    // window coordinates, including after DPI changes and resizing.
+    const sx = hostBounds?.width ? hostBounds.width / innerWidth : 1;
+    const sy = hostBounds?.height ? hostBounds.height / innerHeight : 1;
+    const nativeRect = r => ({ x:r.x*sx,y:r.y*sy,width:r.width*sx,height:r.height*sy });
+    const regions = currentRegions();
+    api?.control?.({ type:'interaction-regions',rects:regions.rects.map(nativeRect),
+      ...(regions.head ? {head:nativeRect(regions.head)} : {}) });
+  }
+  window.addEventListener('readmd-bongo-layout',syncInteractionRegions);
+  let renderErrors = 0, lastPaintAt = -Infinity;
+  function render(now) {
+    const dt = Math.min(.05,Math.max(0,(now-lastFrameAt)/1000)); lastFrameAt = now;
+    state.pettingLevel = Math.max(0,state.pettingLevel-dt*60);
+    const active = sceneActive;
+    classicController?.setActive(classicEnabled && active);
+    liveController?.setPresentation({ active: !classicEnabled && state.character === 'arch-chan' && active });
+    const cap = Number(state.animation?.fpsCap), interval = 1000/(cap > 0 ? Math.min(60,cap) : 60);
+    if ((active || resolveFirstPaint) && now-lastPaintAt >= interval) try {
+      lastPaintAt = now; ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height);
+      const dpr = Math.min(2,devicePixelRatio || 1); ctx.setTransform(dpr*scale,0,0,dpr*scale,dpr*offsetX,dpr*offsetY);
+      if (!classicEnabled && state.character !== 'arch-chan') drawSprite(now); drawHearts(dt);
+      if (resolveFirstPaint && lastSnapshotCharacter !== undefined && (classicEnabled ? classicController : state.character === 'arch-chan' ? liveController : spritePose)) {
+        syncInteractionRegions(); resolveFirstPaint(); resolveFirstPaint = undefined;
       }
-    }
-
-    fw = Math.max(1, Math.min(img.naturalWidth, fw));
-    fh = Math.max(1, Math.min(img.naturalHeight, fh));
-    const scale = Math.min(profile.scale || (fw === 192 ? 1.25 : 0.78), 290 / fw, 350 / fh);
-    const offsetY = (profile.offsetY !== undefined ? profile.offsetY : (fw === 192 ? 25 : -55)) + deskPoseOffset(profile);
-
-    const now = performance.now();
-    const asleep = isSleeping(now) || state.petInfo?.companion?.resting;
-    const rows = Math.max(1, Math.floor(img.naturalHeight / fh));
-    const isHappy = state.pettingLevel > 0;
-    const imported = img.readmdImported || rows > 2;
-    const names = state.petInfo?.stateRows || DEFAULT_STATE_ROWS;
-    let action = asleep ? 'waiting' : state.activity?.error ? 'failed'
-      : isHappy ? 'waving' : state.activity?.justCompleted ? 'jumping'
-      : state.activity?.busy || state.leftDown || state.rightDown || now - state.lastTapTime < 160 ? 'review' : 'idle';
-    // Named rows, per-row frame counts and loop duration survive an import.
-    // Two-row Hermes sheets have an idle and a celebration row instead.
-    const aliases=action==='waving'?['waving','wave']:action==='jumping'?['jumping','jump']:[action];
-    let row = imported ? names.findIndex(name=>aliases.includes(name)) : isHappy && state.showDesk === false ? 1 : 0;
-    if (row < 0 || row >= rows) { row = 0; action = 'idle'; }
-    const ownRig=!!profile.armCrop && (!img.readmdImported || img.readmdOriginalAsset);
-    if (state.showDesk !== false && ownRig) row = 0;
-    const cols = Math.floor(img.naturalWidth / fw) || 4;
-    const requestedFrames = Number(state.petInfo?.framesByRow?.[names[row]] || state.petInfo?.framesByState?.[action]
-      || state.petInfo?.framesPerState || (cols === 8 ? (row === 3 ? 4 : 7) : cols));
-    const maxCols = Math.max(1, Math.min(cols, requestedFrames));
-    const loopMs = Math.max(100, Number(state.petInfo?.loopMs) || maxCols * 160);
-    let frameIndex = asleep ? 0 : Math.floor(now % loopMs / loopMs * maxCols);
-    // Keep the shoulders facing the desk; the idle knight sheet also contains
-    // side and back views that cannot share a front-facing arm rig.
-    if (state.showDesk !== false && ownRig && cols === 4) {
-      frameIndex = state.character === 'hermes' ? 0 : (now % 4300 < 160 ? 2 : 0);
-    }
-
-    const sx = frameIndex * fw;
-    const sy = row * fh;
-
-    const dw = fw * scale;
-    const dh = fh * scale;
-    const dx = (CANVAS_WIDTH - dw) / 2;
-    const dy = offsetY;
-
-    // Subtle breathing vertical oscillation
-    const attack = Math.max(0, 1 - (now - Math.max(state.leftTapAt, state.rightTapAt)) / 95);
-    const breathe = Math.sin(now * (asleep ? 0.0016 : 0.003)) * (asleep ? 2.2 : 1.2) + attack * 1.5;
-    spritePose = { img, fw, fh, sx, sy, dx, dy: dy + breathe, dw, dh, row, frameIndex, action,
-      originalArms: ownRig };
-    const geometryKey=[state.character,fw,fh,ownRig,img.readmdImported].join('/');
-    if(geometryKey!==spriteGeometryKey){spriteGeometryKey=geometryKey;queueMicrotask(syncInteractionRegions);}
-
-    ctx.save();
-    ctx.imageSmoothingEnabled = false; // Pixel-perfect sharp rendering
-    if(state.showDesk!==false && state.mode==='keyboard'){
-      ctx.beginPath();ctx.rect(0,0,CANVAS_WIDTH,260);ctx.clip();
-    }
-    if (spritePose.originalArms && state.showDesk !== false && ['mochi','amber','niu-lai'].includes(state.character)) {
-      // Cut only the baked idle arms out of the body pass. Their original
-      // pixels are drawn once below, in the current typing/mouse pose.
-      const [ax, ay, aw, ah] = profile.armCrop;
-      ctx.beginPath(); ctx.rect(dx,dy+breathe,dw,dh);
-      for (const x of [ax, fw-ax-aw]) ctx.rect(dx+x*scale,dy+breathe+ay*scale,aw*scale,ah*scale);
-      ctx.clip('evenodd');
-    }
-    ctx.drawImage(img, sx, sy, fw, fh, dx, dy + breathe, dw, dh);
-
-    // Blushing cheek effect during petting
-    if (state.pettingLevel > 0) {
-      const blushAlpha = Math.min(0.65, state.pettingLevel / 40);
-      ctx.fillStyle = `rgba(255, 110, 150, ${blushAlpha})`;
-      const hx = CAT_CENTER_X;
-      const hy = profileHeadY(profile);
-      ctx.beginPath();
-      ctx.ellipse(hx - 28, hy, 10, 6, 0, 0, Math.PI * 2);
-      ctx.ellipse(hx + 28, hy, 10, 6, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.restore();
-  }
-
-  // 2. Desk: only a soft contact shadow, so the character stays the subject.
-  function drawDeskSurface(ctx) {
-    ctx.save();
-    ctx.fillStyle='#f6f3f9';ctx.strokeStyle='#bbb5c7';ctx.lineWidth=1.2;
-    ctx.beginPath();ctx.moveTo(12,260);ctx.lineTo(305,260);
-    ctx.quadraticCurveTo(313,260,313,268);ctx.lineTo(313,351);
-    ctx.lineTo(7,351);ctx.lineTo(7,268);ctx.quadraticCurveTo(7,260,12,260);
-    ctx.closePath();ctx.fill();ctx.stroke();
-    const g = ctx.createRadialGradient(CANVAS_WIDTH / 2, 342, 8, CANVAS_WIDTH / 2, 342, 150);
-    g.addColorStop(0, 'rgba(0, 0, 0, 0.30)');
-    g.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.ellipse(CANVAS_WIDTH / 2, 342, 150, 15, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // A real compact keyboard. HID identities come from the Rust pressed set;
-  // lighting and the contact point follow the actual key, without randomness.
-  const KB = { x: 18, y: 274, w: 190, h: 76, pad: 6, gap: 1.8, keyH: 10.8 };
-  const KEY_IDLE = '#fbfafc', KEY_LIT = '#cfbef7';
-  const KEY_ROWS = [
-    [[0x29,'Esc'],[0x1e,'1'],[0x1f,'2'],[0x20,'3'],[0x21,'4'],[0x22,'5'],[0x23,'6'],[0x24,'7'],[0x25,'8'],[0x26,'9'],[0x27,'0'],[0x2d,'−'],[0x2e,'='],[0x2a,'←',1.5]],
-    [[0x2b,'Tab',1.3],[0x14,'Q'],[0x1a,'W'],[0x08,'E'],[0x15,'R'],[0x17,'T'],[0x1c,'Y'],[0x18,'U'],[0x0c,'I'],[0x12,'O'],[0x13,'P'],[0x2f,'['],[0x30,']'],[0x31,'/',1.2]],
-    [[0x39,'Caps',1.6],[0x04,'A'],[0x16,'S'],[0x07,'D'],[0x09,'F'],[0x0a,'G'],[0x0b,'H'],[0x0d,'J'],[0x0e,'K'],[0x0f,'L'],[0x33,';'],[0x34,"'"],[0x28,'↵',1.9]],
-    [[0xe1,'Shift',2],[0x1d,'Z'],[0x1b,'X'],[0x06,'C'],[0x19,'V'],[0x05,'B'],[0x11,'N'],[0x10,'M'],[0x36,','],[0x37,'.'],[0x38,'/'],[0xe5,'Shift',2.5]],
-    [[0xe0,'Ctrl',1.3],[0xe3,'◆',1.1],[0xe2,'Alt',1.2],[0x2c,'',6.4],[0xe6,'Alt',1.1],[0x50,'←'],[0x51,'↓'],[0x52,'↑'],[0x4f,'→']]
-  ];
-  const keyCells = [];
-  for (let row=0; row<KEY_ROWS.length; row++) {
-    const keys=KEY_ROWS[row], units=keys.reduce((sum,key)=>sum+(key[2]||1),0);
-    const unit=(KB.w-KB.pad*2-KB.gap*(keys.length-1))/units;
-    let x=KB.x+KB.pad;
-    for (const [hid,label,width=1] of keys) {
-      keyCells.push({ hid,label,x,y:KB.y+KB.pad+row*(KB.keyH+KB.gap),w:unit*width,h:KB.keyH });
-      x+=unit*width+KB.gap;
-    }
-  }
-  const KEY_COUNT = keyCells.length;
-  state.keyGlows=new Array(KEY_COUNT).fill(0);
-  function keyRect(i) { return keyCells[i]; }
-  function lightKey(hid) {
-    const index=keyCells.findIndex(key=>key.hid===hid);
-    if(index>=0)state.keyGlows[index]=1;
-  }
-  function mixHex(a,b,t) {
-    const pa=parseInt(a.slice(1),16),pb=parseInt(b.slice(1),16);
-    const ch=shift=>Math.round(((pa>>shift)&255)+(((pb>>shift)&255)-((pa>>shift)&255))*t);
-    return 'rgb('+ch(16)+','+ch(8)+','+ch(0)+')';
-  }
-  function drawKeyboard(ctx) {
-    ctx.save();
-    ctx.shadowColor='rgba(25,20,35,.20)';ctx.shadowBlur=8;ctx.shadowOffsetY=4;
-    ctx.fillStyle='#9691a3';ctx.beginPath();ctx.roundRect(KB.x,KB.y+3,KB.w,KB.h,7);ctx.fill();
-    ctx.shadowColor='transparent';
-    ctx.fillStyle='#e3e0e9';ctx.strokeStyle='#514c61';ctx.lineWidth=1.7;
-    ctx.beginPath();ctx.roundRect(KB.x,KB.y,KB.w,KB.h-2,7);ctx.fill();ctx.stroke();
-    ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='6px "Segoe UI", sans-serif';
-    for(let i=0;i<KEY_COUNT;i++) {
-      const k=keyRect(i), held=state.pressedKeys.has(k.hid), glow=held?1:state.keyGlows[i];
-      const y=k.y+(held?1.3:0);
-      ctx.fillStyle='#a9a3b6';ctx.beginPath();ctx.roundRect(k.x,k.y+1.5,k.w,k.h,2);ctx.fill();
-      ctx.fillStyle=mixHex(KEY_IDLE,KEY_LIT,Math.min(1,glow));ctx.strokeStyle='#c6c1ce';ctx.lineWidth=.6;
-      ctx.beginPath();ctx.roundRect(k.x,y,k.w,k.h,2);ctx.fill();ctx.stroke();
-      ctx.fillStyle=held?'#514379':'#666070';
-      ctx.fillText(k.label,k.x+k.w/2,y+k.h/2+.2,k.w-1);
-    }
-    ctx.restore();
-  }
-  function drawMouse(ctx) {
-    ctx.save();
-    const mx=260+state.mouseOffsetX,my=314+state.mouseOffsetY;
-    ctx.translate(mx,my);
-    ctx.shadowColor='rgba(25,20,35,.18)';ctx.shadowBlur=8;ctx.shadowOffsetY=3;
-    ctx.fillStyle='#dfdbe7';ctx.strokeStyle='#514c61';ctx.lineWidth=1.8;
-    ctx.beginPath();ctx.moveTo(-20,2);ctx.bezierCurveTo(-23,-34,22,-34,20,2);
-    ctx.bezierCurveTo(21,36,-22,36,-20,2);ctx.closePath();ctx.fill();ctx.stroke();
-    ctx.shadowColor='transparent';
-    // Separate left/right buttons; right-clicking never presses the left half.
-    for(const [bit,side] of [[1,-1],[2,1]]) {
-      if(!(state.mouseButtons&bit))continue;
-      ctx.fillStyle='#cfbef7';ctx.beginPath();
-      ctx.ellipse(side*9,-10,8,13,side*.12,0,Math.PI*2);ctx.fill();
-    }
-    ctx.strokeStyle='#a29aad';ctx.lineWidth=1;ctx.beginPath();
-    ctx.moveTo(0,-25);ctx.lineTo(0,-2);ctx.stroke();
-    ctx.fillStyle=state.mouseButtons&4?'#9680be':'#8c829c';
-    ctx.beginPath();ctx.roundRect(-2,-19,4,10,2);ctx.fill();
-    ctx.restore();
-  }
-
-  // 5. Classic Bongo Drums (Bongo Mode)
-  function drawBongos(ctx) {
-    ctx.save();
-
-    function drawDrum(x, y, radiusX, radiusY, angle, isHit) {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(angle);
-
-      // Drum body
-      const bodyGrad = ctx.createLinearGradient(-radiusX, 0, radiusX, 45);
-      bodyGrad.addColorStop(0, '#8c4819');
-      bodyGrad.addColorStop(0.5, '#b86221');
-      bodyGrad.addColorStop(1, '#5e2b08');
-
-      ctx.fillStyle = bodyGrad;
-      ctx.strokeStyle = '#2d1504';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(-radiusX, 0);
-      ctx.lineTo(-radiusX + 8, 48);
-      ctx.quadraticCurveTo(0, 56, radiusX - 8, 48);
-      ctx.lineTo(radiusX, 0);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      // Steel tuning rings
-      ctx.strokeStyle = '#bdc3c7';
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.ellipse(0, 16, radiusX - 3, radiusY - 1, 0, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Drum skin top
-      ctx.fillStyle = isHit ? '#fffbf0' : '#fdf6e2';
-      ctx.strokeStyle = '#2d1504';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // Hit depression ring
-      if (isHit) {
-        ctx.strokeStyle = 'rgba(230, 126, 34, 0.7)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, radiusX * 0.65, radiusY * 0.65, 0, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-
-      ctx.restore();
-    }
-
-    // Desk surface beneath bongos
-    ctx.save();
-    const deskGrad = ctx.createLinearGradient(0, 260, 0, 355);
-    deskGrad.addColorStop(0, '#242831');
-    deskGrad.addColorStop(1, '#1b1d24');
-    ctx.fillStyle = deskGrad;
-    ctx.strokeStyle = '#3d4452';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(25, 262);
-    ctx.lineTo(295, 262);
-    ctx.quadraticCurveTo(312, 262, 312, 280);
-    ctx.lineTo(312, 345);
-    ctx.quadraticCurveTo(310, 355, 290, 355);
-    ctx.lineTo(30, 355);
-    ctx.quadraticCurveTo(10, 355, 8, 345);
-    ctx.lineTo(8, 280);
-    ctx.quadraticCurveTo(10, 262, 25, 262);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
-
-    // Center connecting wooden bracket
-    ctx.fillStyle = '#4a2206';
-    ctx.strokeStyle = '#2d1504';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.roundRect(130, 274, 60, 24, 4);
-    ctx.fill();
-    ctx.stroke();
-
-    // Steel bracket plate
-    ctx.fillStyle = '#95a5a6';
-    ctx.beginPath();
-    ctx.roundRect(138, 281, 44, 9, 2);
-    ctx.fill();
-
-    // Left Bongo
-    drawDrum(95, 275, 38, 18, 0.12, state.leftDown);
-
-    // Right Bongo
-    drawDrum(225, 275, 42, 19, -0.12, state.rightDown);
-
-    // Shockwave expansion rings
-    for (let i = state.drumRings.length - 1; i >= 0; i--) {
-      const ring = state.drumRings[i];
-      ctx.strokeStyle = ring.color;
-      ctx.globalAlpha = ring.alpha;
-      ctx.lineWidth = 2.2;
-      ctx.beginPath();
-      ctx.ellipse(ring.x, ring.y, ring.r, ring.r * 0.45, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.globalAlpha = 1.0;
-
-      ring.r += 2.2;
-      ring.alpha -= 0.04;
-      if (ring.alpha <= 0) state.drumRings.splice(i, 1);
-    }
-
-    ctx.restore();
-  }
-
-  // Retarget cutouts of the character's own arm art. The source sheets stay
-  // unchanged; nearest-neighbour sampling preserves pixel art and the cow's
-  // original fur/hand texture instead of replacing them with flat vector paws.
-  function drawPaws(ctx) {
-    armPose.length = 0;
-    const profile=CHARACTER_PROFILES[state.character];
-    if (!profile?.armCrop || !spritePose?.originalArms || state.character === 'arch-chan') return;
-    const anchors = {
-      mochi: [114,208,244], amber: [118,205,245], hermes: [114,205,229],
-      moss: [118,205,246], 'cache-capy': [146,220,160], 'niu-lai': [115,205,175]
-    }[state.character];
-    const drawArm=(shoulderX,shoulderY,pawX,pawY,side)=> {
-      const [sx,sy,sw,sh]=profile.armCrop;
-      const sourceScale=spritePose.dw/spritePose.fw;
-      const length=Math.hypot(pawX-shoulderX,pawY-shoulderY);
-      const width=sw*sourceScale;
-      const dx=pawX-shoulderX,dy=pawY-shoulderY,d=Math.max(.01,length),reach=d*1.14;
-      const a=reach*.48,b=reach*.52,along=(a*a-b*b+d*d)/(2*d),across=Math.sqrt(Math.max(0,a*a-along*along))*-side;
-      const elbow={x:shoulderX+dx/d*along-dy/d*across,y:shoulderY+dy/d*along+dx/d*across};
-      const points=[{x:shoulderX,y:shoulderY},elbow,{x:pawX,y:pawY}];
-      for(let part=0;part<2;part++) {
-        const start=points[part],end=points[part+1],span=Math.hypot(end.x-start.x,end.y-start.y);
-        const cut=part===0?0:Math.floor(sh*.48),cropH=part===0?Math.ceil(sh*.48)+4:sh-cut;
-        ctx.save();ctx.imageSmoothingEnabled=false;
-        ctx.translate(start.x,start.y);ctx.rotate(Math.atan2(end.y-start.y,end.x-start.x)-Math.PI/2);
-        if(side>0)ctx.scale(-1,1);
-        ctx.drawImage(spritePose.img,sx,sy+cut,sw,cropH,-width/2,-4,width,span+8);
-        ctx.restore();
-      }
-      if(profile.palmCrop){
-        const [px,py,pw,ph]=profile.palmCrop;
-        ctx.save();ctx.imageSmoothingEnabled=false;ctx.translate(pawX,pawY);
-        ctx.rotate(side*.12);if(side>0)ctx.scale(-1,1);
-        const handWidth=state.character==='hermes'?24:state.character==='moss'?26:state.character==='niu-lai'?21:28;
-        ctx.drawImage(spritePose.img,px,py,pw,ph,-handWidth/2,-8,handWidth,18);
-        ctx.restore();
-      }
-      armPose.push({ shoulderX,shoulderY,elbow,x:pawX,y:pawY,source:[sx,sy,sw,sh],kind:'source-cutout' });
-    };
-    const breathe = spritePose.dy - (profile.offsetY + deskPoseOffset(profile));
-    drawArm(anchors[0],anchors[2]+deskPoseOffset(profile)+breathe,state.pawLeftX,state.pawLeftY,-1);
-    drawArm(anchors[1],anchors[2]+deskPoseOffset(profile)+breathe,state.pawRightX,state.pawRightY,1);
-  }
-
-  function drawPawHead(ctx, style, rotation) {
-    ctx.save();
-    ctx.rotate(rotation);
-
-    if (style.type === 'knight') {
-      // Blue armor gauntlet plate
-      ctx.fillStyle = style.fill;
-      ctx.strokeStyle = style.stroke;
-      ctx.lineWidth = 2.5;
-
-      ctx.beginPath();
-      ctx.roundRect(-16, -12, 32, 22, 6);
-      ctx.fill();
-      ctx.stroke();
-
-      // Gold trim rim
-      ctx.fillStyle = style.padFill;
-      ctx.beginPath();
-      ctx.roundRect(-12, -4, 24, 6, 2);
-      ctx.fill();
-
-      // Rivets
-      ctx.fillStyle = '#f39c12';
-      ctx.beginPath();
-      ctx.arc(-8, 5, 1.8, 0, Math.PI * 2);
-      ctx.arc(8, 5, 1.8, 0, Math.PI * 2);
-      ctx.fill();
-
-    } else if (style.type === 'sprout') {
-      // Cute plant sprout bulb
-      ctx.fillStyle = style.fill;
-      ctx.strokeStyle = style.stroke;
-      ctx.lineWidth = 2.5;
-
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 18, 14, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // Leaf accent
-      ctx.fillStyle = style.padFill;
-      ctx.beginPath();
-      ctx.ellipse(0, -2, 7, 4, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-    } else if (style.type === 'human') {
-      // Dark hoodie sleeve cuff
-      ctx.fillStyle = style.sleeveFill;
-      ctx.strokeStyle = style.stroke;
-      ctx.lineWidth = 2.2;
-      ctx.beginPath();
-      ctx.roundRect(-16, -15, 32, 12, 4);
-      ctx.fill();
-      ctx.stroke();
-
-      // Cyber cyan cuff trim stripe
-      ctx.fillStyle = style.padFill;
-      ctx.beginPath();
-      ctx.roundRect(-14, -6, 28, 3.5, 1.5);
-      ctx.fill();
-
-      // Hand
-      ctx.fillStyle = style.fill;
-      ctx.strokeStyle = style.stroke;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.ellipse(0, 5, 12, 9, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-    } else if (style.type === 'capy') {
-      // Rounded cozy capybara paw with gentle claws
-      ctx.fillStyle = style.fill;
-      ctx.strokeStyle = style.stroke;
-      ctx.lineWidth = 2.5;
-
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 18, 14, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // Cocoa capy pads
-      ctx.fillStyle = style.padFill;
-      ctx.beginPath();
-      ctx.ellipse(-6, -4, 2.8, 3.8, -0.2, 0, Math.PI * 2);
-      ctx.ellipse(0, -6, 3.0, 4.0, 0, 0, Math.PI * 2);
-      ctx.ellipse(6, -4, 2.8, 3.8, 0.2, 0, Math.PI * 2);
-      ctx.ellipse(0, 3, 7, 4.5, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-    } else if (style.type === 'cow') {
-      // Rounded golden calf hoof with cloven notch & pink pad
-      ctx.fillStyle = style.fill;
-      ctx.strokeStyle = style.stroke;
-      ctx.lineWidth = 2.5;
-
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 18, 14, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // Cloven center groove
-      ctx.strokeStyle = style.stroke;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(0, -14);
-      ctx.lineTo(0, -2);
-      ctx.stroke();
-
-      // Sweet pink heart-shaped hoof pad
-      ctx.fillStyle = style.padFill;
-      ctx.beginPath();
-      ctx.ellipse(-5, 0, 4, 5, -0.2, 0, Math.PI * 2);
-      ctx.ellipse(5, 0, 4, 5, 0.2, 0, Math.PI * 2);
-      ctx.fill();
-
-    } else {
-      // Classic Cute Cat / Fox Paw with Toe Beans!
-      ctx.fillStyle = style.fill;
-      ctx.strokeStyle = style.stroke;
-      ctx.lineWidth = 2.5;
-
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 19, 14, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // Toe Beans
-      ctx.fillStyle = style.padFill;
-      ctx.beginPath();
-      ctx.ellipse(-7, -4, 3.2, 4.0, -0.2, 0, Math.PI * 2);
-      ctx.ellipse(0, -7, 3.4, 4.3, 0, 0, Math.PI * 2);
-      ctx.ellipse(7, -4, 3.2, 4.0, 0.2, 0, Math.PI * 2);
-      ctx.ellipse(0, 2, 6, 4.2, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.restore();
-  }
-
-  // 7. Particles (Hearts, Sparks)
-  function drawParticles(ctx) {
-    ctx.save();
-
-    // Sparks
-    for (let i = state.sparks.length - 1; i >= 0; i--) {
-      const sp = state.sparks[i];
-      ctx.fillStyle = sp.color;
-      ctx.globalAlpha = sp.alpha;
-      ctx.beginPath();
-      ctx.arc(sp.x, sp.y, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      sp.x += sp.vx;
-      sp.y += sp.vy;
-      sp.alpha -= 0.06;
-      if (sp.alpha <= 0) state.sparks.splice(i, 1);
-    }
-
-    // Dozing z's
-    ctx.font = '600 12px -apple-system, "Segoe UI", sans-serif';
-    ctx.textAlign = 'left';
-    for (let i = life.zz.length - 1; i >= 0; i--) {
-      const z = life.zz[i];
-      ctx.globalAlpha = z.alpha;
-      ctx.fillStyle = '#c9d6ff';
-      ctx.font = `600 ${z.size}px -apple-system, "Segoe UI", sans-serif`;
-      ctx.fillText('z', z.x, z.y);
-      z.x += 0.25; z.y -= 0.35; z.size += 0.04; z.alpha -= 0.006;
-      if (z.alpha <= 0) life.zz.splice(i, 1);
-    }
-
-    // Typing combo: a small pill that pops on each hit and fades when typing stops.
-    const comboAge = performance.now() - life.comboAt;
-    if (life.combo >= 8 && comboAge < 1400) {
-      ctx.globalAlpha = Math.min(1, (1400 - comboAge) / 400);
-      const label = String(life.combo);
-      ctx.font = '600 11px -apple-system, "Segoe UI", sans-serif';
-      const w = ctx.measureText(label).width + 34;
-      const x = 286 - w, y = 62, s = 1 + life.comboPop * 0.12;
-      ctx.save();
-      ctx.translate(x + w / 2, y + 10);
-      ctx.scale(s, s);
-      ctx.fillStyle = 'rgba(28, 30, 36, 0.88)';
-      ctx.beginPath();
-      ctx.roundRect(-w / 2, -10, w, 20, 10);
-      ctx.fill();
-      ctx.fillStyle = '#8b8f99';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('连击', -w / 2 + 9, 0.5);
-      ctx.fillStyle = '#9cc0ff';
-      ctx.textAlign = 'right';
-      ctx.fillText(label, w / 2 - 9, 0.5);
-      ctx.restore();
-    }
-    ctx.globalAlpha = 1;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
-
-    // Hearts
-    ctx.font = 'bold 20px -apple-system, sans-serif';
-    for (let i = state.hearts.length - 1; i >= 0; i--) {
-      const h = state.hearts[i];
-      ctx.fillStyle = h.color;
-      ctx.globalAlpha = h.alpha;
-      ctx.save();
-      ctx.translate(h.x, h.y);
-      ctx.scale(h.scale, h.scale);
-      ctx.fillText('♥', 0, 0);
-      ctx.restore();
-
-      h.x += h.vx;
-      h.y += h.vy;
-      h.alpha -= 0.022;
-      h.scale = Math.min(1.4, h.scale + 0.015);
-      if (h.alpha <= 0) state.hearts.splice(i, 1);
-    }
-
-    ctx.globalAlpha = 1.0;
-    ctx.restore();
-  }
-
-  // --- Main Animation & Physics Loop ---
-  let lastFrameTime=performance.now();
-  function updatePhysics() {
-    const nowMs=performance.now(), dt=Math.min(.05,Math.max(0,(nowMs-lastFrameTime)/1000));
-    lastFrameTime=nowMs;
-    // The same elapsed-time smoothing as BongoCat, rather than FPS-dependent lerp.
-    const follow=1-Math.pow(.75,dt*60), strike=1-Math.pow(.15,dt*60);
-    const leftPressed=state.leftDown||nowMs-state.leftTapAt<55;
-    const rightPressed=state.rightDown||nowMs-state.rightTapAt<55;
-    if(state.mode==='keyboard') {
-      const key=keyCells.find(k=>k.hid===state.lastKey);
-      const targetX=key?Math.min(137,Math.max(78,key.x+key.w/2)):95;
-      const targetY=key?key.y+key.h/2:284;
-      state.pawLeftX+=(targetX-state.pawLeftX)*strike;
-      state.pawLeftTargetY=targetY+(leftPressed?1:-7);
-      state.mouseOffsetX+=(-state.pointerX*7-state.mouseOffsetX)*follow;
-      state.mouseOffsetY+=(-state.pointerY*4-state.mouseOffsetY)*follow;
-      state.pawRightX=260+state.mouseOffsetX;
-      state.pawRightTargetY=300+state.mouseOffsetY+(rightPressed?3:0);
-    } else {
-      state.pawLeftX=95;state.pawRightX=225;
-      state.pawLeftTargetY=leftPressed?274:255;
-      state.pawRightTargetY=rightPressed?274:255;
-    }
-    state.pawLeftY+=(state.pawLeftTargetY-state.pawLeftY)*strike;
-    state.pawRightY+=(state.pawRightTargetY-state.pawRightY)*strike;
-    state.pawLeftSquish+=(1-state.pawLeftSquish)*follow;
-    state.pawRightSquish+=(1-state.pawRightSquish)*follow;
-    if(state.pettingLevel>0)state.pettingLevel=Math.max(0,state.pettingLevel-dt*60);
-    if(isSleeping(nowMs)&&nowMs-life.zzAt>1400) {
-      life.zzAt=nowMs;
-      const hy=(CHARACTER_PROFILES[state.character]||CHARACTER_PROFILES.mochi).headCenterY||180;
-      life.zz.push({x:CAT_CENTER_X+34,y:hy-40,alpha:.9,size:11});
-    }
-    life.comboPop=Math.max(0,life.comboPop-dt*4.8);
-    for(let i=0;i<state.keyGlows.length;i++)state.keyGlows[i]=Math.max(0,state.keyGlows[i]-dt*6);
-    if(nowMs-state.lastTapTime>600)state.typingBpm=Math.max(0,state.typingBpm-dt*120);
-  }
-
-  let renderErrors = 0;
-  function render() {
-    try {
-      updatePhysics();
-
-      const dpr = window.devicePixelRatio || 1;
-      ctx.save();
-      // Identity clear across total canvas buffer
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Scaled & centered transform
-      ctx.setTransform(
-        dpr * currentScale, 0,
-        0, dpr * currentScale,
-        dpr * currentOffsetX, dpr * currentOffsetY
-      );
-
-      // 1. Draw Character (Sprite sheet frame or Live2D)
-      if (wantsClassic()) ensureClassic();
-      const classicActive = wantsClassic() && !!classicController;
-      classicController?.setActive(classicActive);
-      live2dController?.setPresentation?.({ active: state.character === 'arch-chan' && !classicActive,
-        desk: state.showDesk !== false, scale: currentScale, offsetX: currentOffsetX, offsetY: currentOffsetY,
-        mouse:{x:currentOffsetX+(state.mode==='bongos'?state.pawLeftX:74+state.mouseOffsetX)*currentScale,
-          y:currentOffsetY+(state.mode==='bongos'?state.pawLeftY:state.pawRightY)*currentScale},
-        keyboard:{x:currentOffsetX+(state.mode==='bongos'?state.pawRightX:210)*currentScale,
-          y:currentOffsetY+(state.mode==='bongos'?state.pawRightY:state.pawLeftY)*currentScale} });
-      if (!classicActive) drawCharacter(ctx);
-
-      // 2. Draw Desk & Instruments (if desk is enabled)
-      if (state.showDesk !== false && !classicActive) {
-        if (state.mode === 'bongos') {
-          drawBongos(ctx);
-        } else {
-          drawDeskSurface(ctx);
-          ctx.save();if(state.character==='arch-chan')ctx.translate(95,0);
-          drawKeyboard(ctx);ctx.restore();
-          ctx.save();if(state.character==='arch-chan')ctx.translate(-186,0);
-          drawMouse(ctx);ctx.restore();
-        }
-
-        // 3. Draw Character-Specific Animated Paws
-        drawPaws(ctx);
-      }
-      instrumentsContext.clearRect(0,0,instrumentsCanvas.width,instrumentsCanvas.height);
-      if(state.character==='arch-chan' && !classicActive){
-        // Devices sit behind the original model hands; particles and the
-        // shared drag surface remain in the front canvas.
-        instrumentsContext.drawImage(canvas,0,0);
-        ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,canvas.width,canvas.height);ctx.restore();
-      }
-
-      // 4. Draw Interactive Particles & Glows
-      drawParticles(ctx);
-
-      ctx.restore();
-    } catch (e) {
-      if (renderErrors < 5) {
-        renderErrors++;
-        console.error('[BongoPet] Render error:', e);
-      }
-    }
+    } catch (error) { if (renderErrors++ < 3) console.error('pet scene failed',error); }
     requestAnimationFrame(render);
   }
-
-  // --- Interaction Regions for Rust Click-Through ---
-  function syncInteractionRegions() {
-    const profile = CHARACTER_PROFILES[state.character] || CHARACTER_PROFILES.mochi;
-    const rect = (x,y,width,height) => ({ x: currentOffsetX+x*currentScale, y: currentOffsetY+y*currentScale,
-      width: width*currentScale, height: height*currentScale });
-    let head = rect(96,profileHeadY(profile)-64,128,128);
-    const generic = { head, rects: [head, rect(65,190,190,95)] };
-    if(spritePose?.img.readmdImported && !spritePose.img.readmdOriginalAsset && state.character!=='arch-chan') {
-      const p=spritePose,img=p.img;
-      if(!img.readmdAlphaBounds || img.readmdAlphaBounds.fw!==p.fw || img.readmdAlphaBounds.fh!==p.fh){
-        const sample=document.createElement('canvas');sample.width=p.fw;sample.height=p.fh;
-        const c=sample.getContext('2d',{willReadFrequently:true});c.drawImage(img,0,0);
-        const pixels=c.getImageData(0,0,p.fw,p.fh).data;
-        let left=p.fw,top=p.fh,right=0,bottom=0;
-        for(let y=0;y<p.fh;y++)for(let x=0;x<p.fw;x++)if(pixels[(y*p.fw+x)*4+3]>32){
-          left=Math.min(left,x);top=Math.min(top,y);right=Math.max(right,x+1);bottom=Math.max(bottom,y+1);
-        }
-        img.readmdAlphaBounds={fw:p.fw,fh:p.fh,left,top,right,bottom};
-      }
-      const b=img.readmdAlphaBounds,s=p.dw/p.fw;
-      const x=p.dx+b.left*s,y=p.dy+b.top*s,w=(b.right-b.left)*s,h=(b.bottom-b.top)*s;
-      if(w>0 && h>0){
-        head=rect(x+w*.18,y,w*.64,h*.4);generic.head=head;
-        generic.rects=[rect(x,y,w,state.showDesk!==false?Math.min(h,Math.max(0,260-y)):h)];
-      }
-    }
-    if (state.showDesk !== false) generic.rects.push(rect(8,255,305,105));
-    let regions = wantsClassic() && classicController ? classicController.interactionRegions()
-      : state.character === 'arch-chan' && live2dController ? live2dController.interactionRegions() : generic;
-    if (state.character === 'arch-chan' && state.showDesk !== false && !wantsClassic()) {
-      regions = { head: regions.head, rects: [...regions.rects, rect(8,255,305,105)] };
-    }
-    window.hermesDesktop?.petOverlay?.control?.({
-      type: 'interaction-regions',
-      ...regions
-    });
-  }
-  window.addEventListener('readmd-bongo-layout', syncInteractionRegions);
-
-  // Start Animation Loop
-  requestAnimationFrame(render);
-  setInterval(syncInteractionRegions, 1000);
-  syncInteractionRegions();
-
-  // Signal Host that Renderer is Ready
-  window.readmdClassicReady = wantsClassic() ? ensureClassic() : Promise.resolve();
-
-  console.log('[BongoPet] Multi-Character Bongo Pet Engine active');
+  window.__bongoPet = { state,applyCharacter,useClassic,petPet,consumeInput,
+    get spritePose() { return spritePose; }, get presentation() { return classicEnabled ? 'bongocat' : state.character; },
+    get interactionRegions() { return currentRegions(); } };
+  if (state.character === 'arch-chan') window.readmdLive2dReady = applyCharacter('arch-chan');
+  window.readmdClassicReady = classicEnabled ? ensureClassic() : Promise.resolve();
+  api?.control?.({ type:window.__readmdRustDispatch ? 'state-request' : 'ready' });
+  requestAnimationFrame(render); const timer = setInterval(syncInteractionRegions,1000);
+  window.addEventListener('pagehide',() => clearInterval(timer),{ once: true });
 })();
