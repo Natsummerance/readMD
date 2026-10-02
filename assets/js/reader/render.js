@@ -2707,6 +2707,7 @@ async function launchPresentationMode() {
   if (!modal) {
     modal = document.createElement('div');
     modal.id = 'presentation-modal';
+    modal.dataset.backdrop = 'static';
     modal.className = 'hidden';
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');

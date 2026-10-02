@@ -277,6 +277,10 @@
               <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z"/></svg>
               <span data-i18n="app.folder">打开文件夹</span>
             </button>
+            <button id="w-new" class="big-btn welcome-cta" title="新建文档" data-i18n-title="menu.new">
+              <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 12v6M9 15h6"/></svg>
+              <span data-i18n="menu.new">新建文档</span><span class="welcome-cta-keys" data-kbd="Mod+N" aria-hidden="true"></span>
+            </button>
           </div>
           <button type="button" class="welcome-search" data-action="palette" aria-haspopup="dialog">
             <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>
@@ -788,7 +792,7 @@
 <div id="formula-modal" class="hidden" role="dialog" aria-modal="true" aria-label="公式选择器" data-i18n-aria="formula.title"><div class="formula-box"><div class="export-head"><h3 data-i18n="formula.title">公式选择器</h3><button id="formula-close" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">×</button></div><div class="formula-top"><input id="formula-search" type="search" placeholder="搜索名称或 TeX…" aria-label="搜索名称或 TeX" data-i18n-placeholder="formula.searchPlaceholder" data-i18n-aria="formula.searchPlaceholder"><select id="formula-mode" aria-label="行内公式"><option value="inline" data-i18n="formula.inline">行内公式</option><option value="block" data-i18n="formula.block">块级公式</option></select></div><div id="formula-cats" class="formula-cats"></div><div id="formula-list" class="formula-list"></div><div id="formula-preview" class="formula-preview" data-i18n="formula.previewPrompt">选择公式模板查看预览</div></div></div>
 
 <!-- Prompt 模板管理弹窗 -->
-<div id="tpl-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="tpl-title">
+<div id="tpl-modal" data-backdrop="static" class="hidden" role="dialog" aria-modal="true" aria-labelledby="tpl-title">
   <div id="tpl-box">
     <div class="export-head">
       <h3 id="tpl-title" data-i18n="tpl.title">Skill 工作台</h3>
@@ -873,7 +877,7 @@
 </div>
 
 <!-- Skill AI 创作第一步：询问名称与用途 -->
-<div id="skill-create-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="skill-create-title">
+<div id="skill-create-modal" data-backdrop="static" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="skill-create-title">
   <div class="modal-dialog skill-create-dialog">
     <div class="modal-header">
       <h3 id="skill-create-title" data-i18n="tpl.createTitle">创建新 Skill</h3>
@@ -991,7 +995,7 @@
   </div>
 </div>
 
-<div id="close-confirm-modal" class="hidden" role="dialog" aria-modal="true" aria-label="未保存修改提示" data-i18n-aria="dialog.unsavedTitle">
+<div id="close-confirm-modal" data-backdrop="static" class="hidden" role="dialog" aria-modal="true" aria-label="未保存修改提示" data-i18n-aria="dialog.unsavedTitle">
   <div id="close-confirm-box">
     <div class="close-confirm-head">
       <div class="close-confirm-icon-wrap">
@@ -1025,7 +1029,7 @@
   </div>
 </div>
 
-<div id="save-conflict-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="save-conflict-title" aria-describedby="save-conflict-desc">
+<div id="save-conflict-modal" data-backdrop="static" class="hidden" role="dialog" aria-modal="true" aria-labelledby="save-conflict-title" aria-describedby="save-conflict-desc">
   <div id="save-conflict-box" class="close-confirm-box">
     <div class="close-confirm-head">
       <div class="close-confirm-icon-wrap">
@@ -1044,7 +1048,7 @@
   </div>
 </div>
 
-<div id="confirm-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+<div id="confirm-modal" data-backdrop="static" class="hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
   <div class="close-confirm-box">
     <div class="close-confirm-head">
       <div class="close-confirm-icon-wrap">
@@ -1062,7 +1066,7 @@
   </div>
 </div>
 
-<div id="continuous-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="continuous-title">
+<div id="continuous-modal" data-backdrop="static" class="hidden" role="dialog" aria-modal="true" aria-labelledby="continuous-title">
   <div class="close-confirm-box">
     <div class="close-confirm-head">
       <div class="close-confirm-icon-wrap">
@@ -1417,7 +1421,7 @@
   </button>
 </footer>
 
-<div id="style-custom-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="style-modal-title">
+<div id="style-custom-modal" data-backdrop="static" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="style-modal-title">
   <div class="modal-dialog style-modal-dialog">
     <div class="modal-header">
       <div>

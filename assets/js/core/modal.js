@@ -207,6 +207,28 @@
     });
   }
 
+  // A click on the dim backdrop (pressed and released outside the dialog box)
+  // closes the top layer through its own close button, like Esc.  Dialogs that
+  // hold unsaved input or ask for a decision opt out with data-backdrop="static".
+  let pressedBackdrop = null;
+  document.addEventListener('mousedown', event => {
+    const top = stack[stack.length - 1];
+    pressedBackdrop = top && event.target === top.el ? top.el : null;
+  }, true);
+  document.addEventListener('click', event => {
+    const top = stack[stack.length - 1];
+    const el = top && top.el;
+    if (!el || event.target !== el) return;
+    // Static dialogs ignore backdrop clicks entirely, including legacy per-modal handlers.
+    if (el.dataset.backdrop === 'static') { event.stopImmediatePropagation(); return; }
+    if (pressedBackdrop !== el) return;
+    pressedBackdrop = null;
+    if (!isShown(el)) return;
+    const closer = el.querySelector('[data-modal-close]') ||
+      [...el.querySelectorAll('button')].find(b => /(^|-)(close|close-x|cancel)$/.test(b.id) && !b.disabled && !b.closest('.hidden'));
+    if (closer) closeTop();
+  }, true);
+
   // Capture phase: runs before the legacy per-modal Esc listeners, so exactly
   // one layer closes per key press.
   document.addEventListener('keydown', onKeyDown, true);

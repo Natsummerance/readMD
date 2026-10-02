@@ -1626,6 +1626,9 @@
   "ai.action.code_review": "コードレビュー",
   "skill.readmd-code-review.name": "コードレビュー",
   "ai.action.fix_format": "書式修正",
+  "ai.connectAction": "Connect",
+  "ai.connectDesc": "Add a key once to summarise, polish and translate any document.",
+  "ai.connectTitle": "Connect an AI service",
   "skill.readmd-format-fix.name": "書式修正",
   "pet.updateTitle": "デスクトップペットパッケージとアップデート",
   "pet.checkUpdate": "アップデートを確認",
@@ -1874,5 +1877,13 @@
   "ai.endpointMode": "エンドポイント入力方式",
   "ai.endpointModeTip": "URLがプレフィックスか完全なエンドポイントかを選択",
   "ai.endpointPrefix": "ベースURL（エンドポイントパスを自動追加）",
-  "ai.endpointFull": "完全なエンドポイントURL（パスを追加しない）"
+  "ai.endpointFull": "完全なエンドポイントURL（パスを追加しない）",
+  "ai.starter.explainAsk": "List the technical terms in this document and explain each in plain language.",
+  "ai.starter.explainHint": "Plain-language glossary",
+  "ai.starter.outlineAsk": "Create a clear, nested outline of this document as a Markdown list.",
+  "ai.starter.outlineHint": "A clear, nested outline",
+  "ai.starter.polishAsk": "Find the passages in this document that read awkwardly and suggest polished versions, before and after.",
+  "ai.starter.polishHint": "Smoother, clearer wording",
+  "ai.starter.translateAsk": "Translate this document (Chinese into English, any other language into Chinese), keeping its Markdown structure.",
+  "ai.starter.translateHint": "Keeps the Markdown structure"
 }

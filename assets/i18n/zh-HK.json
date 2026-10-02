@@ -1626,6 +1626,9 @@
   "ai.action.code_review": "代碼審查",
   "skill.readmd-code-review.name": "代碼審查",
   "ai.action.fix_format": "修正格式",
+  "ai.connectAction": "去連接",
+  "ai.connectDesc": "設定一次金鑰，即可對任意文件摘要、潤飾與翻譯。",
+  "ai.connectTitle": "連接 AI 服務",
   "skill.readmd-format-fix.name": "修正格式",
   "pet.updateTitle": "桌面桌寵獨立包與更新",
   "pet.checkUpdate": "檢查更新",
@@ -1874,5 +1877,13 @@
   "ai.endpointMode": "端點填寫方式",
   "ai.endpointModeTip": "選擇 URL 是前綴還是完整端點",
   "ai.endpointPrefix": "Base URL（自動附加介面路徑）",
-  "ai.endpointFull": "完整介面 URL（不附加路徑）"
+  "ai.endpointFull": "完整介面 URL（不附加路徑）",
+  "ai.starter.explainAsk": "請列出這份文件中的專業術語，並逐一用淺白語言解釋。",
+  "ai.starter.explainHint": "用淺白語言解釋術語",
+  "ai.starter.outlineAsk": "請為這份文件產生層級清晰的大綱，用 Markdown 清單輸出。",
+  "ai.starter.outlineHint": "層級清晰的結構大綱",
+  "ai.starter.polishAsk": "請找出這份文件中表達不夠通順的段落，給出潤飾後的版本，並附修改前後對照。",
+  "ai.starter.polishHint": "讓表達更通順、準確",
+  "ai.starter.translateAsk": "請翻譯這份文件：中文譯為英文，其他語言譯為中文，保留原有 Markdown 結構。",
+  "ai.starter.translateHint": "保留 Markdown 結構"
 }

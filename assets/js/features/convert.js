@@ -164,7 +164,8 @@ async function uploadFile(file) {
 }
 
 function convertOrOcr(p, mode) {
-  if (mode === 'ocr' || (mode !== 'convert' && IMG_RE.test(p))) ocrFile(p);
+  // Images only have an OCR lane; PDFs convert and fall back to OCR in the kernel.
+  if (mode === 'ocr' || IMG_RE.test(p)) ocrFile(p);
   else convertFile(p);
 }
 

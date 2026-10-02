@@ -378,7 +378,13 @@ pub fn convert_triple(path: &str, form_tables: bool) -> ConvertTriple {
     }
     if ext == ".pdf" {
         return match pdf_to_md(path, form_tables) {
-            Ok(res) if res.success => ConvertTriple::ok(res.content.unwrap_or_default(), "pdf"),
+            Ok(res) if res.success => {
+                let text = res.content.unwrap_or_default();
+                match pdf_ocr_upgrade(path, &text) {
+                    Some(better) => ConvertTriple::ok(better, "ocr"),
+                    None => ConvertTriple::ok(text, "pdf"),
+                }
+            }
             r => {
                 // convert.py:554-575 - the failed text lane tries per-page OCR first, then
                 // MarkItDown, and only then reports the error.  An OCR answer that is nothing
@@ -504,6 +510,11 @@ pub fn convert_triple(path: &str, form_tables: bool) -> ConvertTriple {
     }
     if is_code_ext(&ext) {
         return triple(code_to_md(path, &ext), "code", Some("代码/配置格式化转换失败："));
+    }
+
+    // Images only have an OCR lane: recognise them instead of refusing them.
+    if crate::ocr::OCR_IMAGE_EXTS.contains(&ext.to_lowercase().as_str()) {
+        return ConvertTriple::ok(crate::ocr::ocr_image_to_md(path), "ocr");
     }
 
     // Binary payloads must fail explicitly instead of becoming unreadable
@@ -3816,6 +3827,23 @@ fn pdf_per_page_markdown(
 /// joined with `'\n\n'` and stripped, `_merge_split_tables` stitches tables a page break
 /// cut in half, and a document that still has no text raises so `convert_verbose` can run
 /// its OCR ladder (`convert.py:2295-2296`).
+/// A PDF whose text layer came out garbled, or whose pages survived only as
+/// images, gets one OCR pass; the OCR text wins only when it carries clearly
+/// more readable characters than the text layer.
+fn pdf_ocr_upgrade(path: &str, text: &str) -> Option<String> {
+    let image_only = text.contains("OCR unavailable; page image preserved");
+    if !(image_only || crate::ocr::text_looks_garbled(text)) || crate::ocr::pick_engine().is_none() {
+        return None;
+    }
+    let ocr = crate::ocr::ocr_pdf_to_md(path, crate::ocr::OCR_MAX_PAGES).ok()?;
+    let ocr = ocr.trim();
+    if ocr.is_empty() || ocr.starts_with(crate::ocr::OCR_PDF_EMPTY_PLACEHOLDER) {
+        return None;
+    }
+    let readable = |s: &str| s.chars().filter(|c| c.is_alphanumeric()).count();
+    (readable(ocr) * 100 > readable(text) * 115).then(|| ocr.to_string() + "\n")
+}
+
 fn pdf_to_md(path: &str, form_tables: bool) -> Result<ConvertResult, String> {
     let res = pdf_tier_ladder(path, form_tables)?;
     if !res.success {

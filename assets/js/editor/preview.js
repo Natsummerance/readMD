@@ -132,6 +132,13 @@ function rememberEditPosition() {
   } catch (e) { /* storage full or disabled */ }
 }
 
+/* 新建空白文档并直接进入编辑（欢迎页按钮、Ctrl+N、命令面板共用）。 */
+async function newDocument() {
+  if (state.editing && !await confirmExitEdit()) return;
+  await renderVirtual('', '', '', '', []);
+  await toggleEdit();
+}
+
 function restoreEditPosition() {
   const key = editMemoryKey();
   if (!key || !cmView) return;

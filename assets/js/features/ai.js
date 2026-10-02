@@ -93,22 +93,41 @@ function toggleAiFullscreen() {
   if (icCompress) icCompress.classList.toggle('hidden', !isFull);
 }
 
+/* [id, title key, hint key, prompt key, icon path] — one-click starters in the empty AI panel. */
+const AI_STARTERS = [
+  ['summary', 'ai.summarize', 'ux.starterSummaryHint', 'ux.askSummary', 'M4 6h16M4 12h10M4 18h7'],
+  ['outline', 'ai.outline', 'ai.starter.outlineHint', 'ai.starter.outlineAsk', 'M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01'],
+  ['polish', 'ai.polish', 'ai.starter.polishHint', 'ai.starter.polishAsk', 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'],
+  ['translate', 'ai.translate', 'ai.starter.translateHint', 'ai.starter.translateAsk', 'M4 5h9M8.5 3v2M11 13c-2.5-1.5-4.5-4-5.5-8M6 13c2.5-1.5 4.5-4 5.5-8M13 21l4-9 4 9M14.5 18h5'],
+  ['explain', 'ai.explain', 'ai.starter.explainHint', 'ai.starter.explainAsk', 'M12 17h.01M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z'],
+  ['questions', 'ux.starterQuestions', 'ux.starterQuestionsHint', 'ux.askQuestions', 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'],
+];
+
 function renderAiEmptyState() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const out = $('ai-output');
   if (!out) return;
   if (state.ai.messages && state.ai.messages.length > 0) return;
+  const esc = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const configured = (state.ai.providers || []).some(p => p.has_key || p.key_source || p.credential_id || isLocalAiProvider(p));
+  const starters = AI_STARTERS.map(([id, title, hint, ask, d]) => `
+        <button type="button" data-starter="${ask}" data-starter-id="${id}">
+          <svg class="ai-starter-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>
+          <strong>${esc(_t(title))}</strong><span>${esc(_t(hint))}</span>
+        </button>`).join('');
+  const connect = configured ? '' : `
+      <div class="ai-connect-card">
+        <div class="ai-connect-text"><strong>${esc(_t('ai.connectTitle'))}</strong><span>${esc(_t('ai.connectDesc'))}</span></div>
+        <button type="button" class="tb-btn accent" data-ai-connect>${esc(_t('ai.connectAction'))}</button>
+      </div>`;
   out.innerHTML = `
     <div class="ai-empty-state">
-      <svg class="ai-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-        <circle cx="12" cy="12" r="3.5"/>
-      </svg>
-      <div class="ai-empty-title">${_t('ai.emptyTitle') || ''}</div>
-      <div class="ai-empty-desc">${_t('ai.emptyDesc') || ''}</div>
-      <div class="ai-starter-grid">
-        <button type="button" data-starter="ux.askSummary"><strong>${_t('ux.starterSummary')}</strong><span>${_t('ux.starterSummaryHint')}</span></button>
-        <button type="button" data-starter="ux.askQuestions"><strong>${_t('ux.starterQuestions')}</strong><span>${_t('ux.starterQuestionsHint')}</span></button>
+      <div class="ai-empty-badge" aria-hidden="true">
+        <svg class="ai-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
+      </div>
+      <div class="ai-empty-title">${esc(_t('ai.emptyTitle'))}</div>
+      <div class="ai-empty-desc">${esc(_t('ai.emptyDesc'))}</div>${connect}
+      <div class="ai-starter-grid">${starters}
       </div>
     </div>
   `;
@@ -116,8 +135,13 @@ function renderAiEmptyState() {
     $('ai-prompt').value = _t(button.dataset.starter);
     $('ai-prompt').dispatchEvent(new Event('input'));
     $('ai-prompt').focus();
+    // Connected: one click asks. Not connected: the prompt waits in the composer.
+    if (configured && typeof runAi === 'function') runAi('ask');
   }));
+  const connectBtn = out.querySelector('[data-ai-connect]');
+  if (connectBtn) connectBtn.addEventListener('click', () => openAiModal('ai-settings-modal', $('ai-settings-open')));
 }
+window.addEventListener('readmd:ai-config-changed', () => renderAiEmptyState());
 
 function updateAiContextStrip() {
   const label = $('ai-context-file');
@@ -130,6 +154,16 @@ function initAiComposerUx() {
   const input = $('ai-prompt'), out = $('ai-output'), latest = $('ai-jump-latest');
   if (!input || !out || !latest) return;
   input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = Math.min(180, input.scrollHeight) + 'px'; });
+  // The connection pill doubles as the shortcut to connection settings.
+  const conn = document.querySelector('#ai-panel .ai-connection-summary');
+  if (conn) {
+    const openSettings = () => openAiModal('ai-settings-modal', $('ai-settings-open'));
+    conn.setAttribute('role', 'button');
+    conn.tabIndex = 0;
+    conn.title = ($('ai-settings-open') && $('ai-settings-open').title) || '';
+    conn.addEventListener('click', openSettings);
+    conn.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSettings(); } });
+  }
   out.addEventListener('scroll', () => latest.classList.toggle('hidden', out.scrollHeight - out.scrollTop - out.clientHeight < 100));
   latest.addEventListener('click', () => { out.scrollTop = out.scrollHeight; input.focus({ preventScroll: true }); });
   document.addEventListener('readmd:document-loaded', updateAiContextStrip);

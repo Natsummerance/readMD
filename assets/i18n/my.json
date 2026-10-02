@@ -1626,6 +1626,9 @@
   "ai.action.code_review": "ကုဒ်စစ်ဆေးသုံးသပ်ခြင်း",
   "skill.readmd-code-review.name": "ကုဒ်စစ်ဆေးသုံးသပ်ခြင်း",
   "ai.action.fix_format": "ဖော်မတ်ပြင်ဆင်ခြင်း",
+  "ai.connectAction": "Connect",
+  "ai.connectDesc": "Add a key once to summarise, polish and translate any document.",
+  "ai.connectTitle": "Connect an AI service",
   "skill.readmd-format-fix.name": "ဖော်မတ်ပြင်ဆင်ခြင်း",
   "pet.updateTitle": "ဒက်စ်တော့အိမ်မွေးတိရစ္ဆာန် ပက်ကေ့ဂျ်နှင့် အပ်ဒိတ်များ",
   "pet.checkUpdate": "အပ်ဒိတ်ကို စစ်ဆေးပါ",
@@ -1874,5 +1877,13 @@
   "ai.endpointMode": "Endpoint Mode",
   "ai.endpointModeTip": "Select whether the URL is a prefix or full endpoint",
   "ai.endpointPrefix": "Base URL (auto-append endpoint path)",
-  "ai.endpointFull": "Full Endpoint URL (no appended path)"
+  "ai.endpointFull": "Full Endpoint URL (no appended path)",
+  "ai.starter.explainAsk": "List the technical terms in this document and explain each in plain language.",
+  "ai.starter.explainHint": "Plain-language glossary",
+  "ai.starter.outlineAsk": "Create a clear, nested outline of this document as a Markdown list.",
+  "ai.starter.outlineHint": "A clear, nested outline",
+  "ai.starter.polishAsk": "Find the passages in this document that read awkwardly and suggest polished versions, before and after.",
+  "ai.starter.polishHint": "Smoother, clearer wording",
+  "ai.starter.translateAsk": "Translate this document (Chinese into English, any other language into Chinese), keeping its Markdown structure.",
+  "ai.starter.translateHint": "Keeps the Markdown structure"
 }

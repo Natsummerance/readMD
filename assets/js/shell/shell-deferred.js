@@ -150,6 +150,7 @@
 
   [
     // File
+    { id: 'file.new', group: 'file', title: 'menu.new', icon: 'file', shortcut: 'Mod+N', keywords: 'new blank document create', run: () => call('newDocument') },
     { id: 'file.open', group: 'file', title: 'menu.open', icon: 'file', shortcut: 'Mod+O', keywords: 'open file markdown load', run: () => call('loadFileDialog') },
     { id: 'file.openFolder', group: 'file', title: 'menu.openFolder', icon: 'folder', keywords: 'open folder directory workspace', when: () => enabled('btn-folder'), run: () => call('openFolder') },
     { id: 'file.recent', group: 'file', title: 'cmd.recent', icon: 'clock', keywords: 'recent history files', run: () => call('openHistoryModal') },

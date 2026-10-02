@@ -1626,6 +1626,9 @@
   "ai.action.code_review": "Codebeoordeling",
   "skill.readmd-code-review.name": "Codebeoordeling",
   "ai.action.fix_format": "Opmaak Corrigeren",
+  "ai.connectAction": "Connect",
+  "ai.connectDesc": "Add a key once to summarise, polish and translate any document.",
+  "ai.connectTitle": "Connect an AI service",
   "skill.readmd-format-fix.name": "Opmaak Corrigeren",
   "pet.updateTitle": "Desktop Huisdier Pakket & Updates",
   "pet.checkUpdate": "Controleren op Updates",
@@ -1874,5 +1877,13 @@
   "ai.endpointMode": "Eindpuntmodus",
   "ai.endpointModeTip": "Kies of de URL een voorvoegsel of volledig eindpunt is",
   "ai.endpointPrefix": "Basis-URL (voegt automatisch pad toe)",
-  "ai.endpointFull": "Volledige eindpunt-URL (geen pad toegevoegd)"
+  "ai.endpointFull": "Volledige eindpunt-URL (geen pad toegevoegd)",
+  "ai.starter.explainAsk": "List the technical terms in this document and explain each in plain language.",
+  "ai.starter.explainHint": "Plain-language glossary",
+  "ai.starter.outlineAsk": "Create a clear, nested outline of this document as a Markdown list.",
+  "ai.starter.outlineHint": "A clear, nested outline",
+  "ai.starter.polishAsk": "Find the passages in this document that read awkwardly and suggest polished versions, before and after.",
+  "ai.starter.polishHint": "Smoother, clearer wording",
+  "ai.starter.translateAsk": "Translate this document (Chinese into English, any other language into Chinese), keeping its Markdown structure.",
+  "ai.starter.translateHint": "Keeps the Markdown structure"
 }

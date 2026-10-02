@@ -1021,6 +1021,7 @@ function bindEvents() {
       e.preventDefault();
       toggleSearch();
     }
+    else if (mod && !e.shiftKey && e.key.toLowerCase() === 'n') { e.preventDefault(); newDocument(); } // Ctrl+N: 新建文档
     else if (mod && e.key.toLowerCase() === 'u') { e.preventDefault(); openWebDialog(); } // Ctrl+U: 网页抓取
     else if (mod && e.key.toLowerCase() === 'e') { e.preventDefault(); if (!$('btn-edit').disabled) toggleEdit(); } // Ctrl+E: 编辑模式
     else if (mod && e.key.toLowerCase() === 's') { // Ctrl+S: 保存文档

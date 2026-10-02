@@ -65,3 +65,33 @@ test('AI provider browser renders a bounded card list', async ({ page }) => {
   expect(n).toBeGreaterThan(0);
   expect(n).toBeLessThanOrEqual(80);
 });
+
+test('welcome offers New document, and Ctrl+N opens a blank editor', async ({ page }) => {
+  await expect(page.locator('#w-new')).toBeVisible();
+  await page.locator('#w-new').click();
+  await page.waitForFunction(() => state.editing === true && state.mode === 'virtual');
+  await page.evaluate(() => { state.editing = false; exitEdit(); });
+  await page.keyboard.press('Control+n');
+  await page.waitForFunction(() => state.editing === true);
+});
+
+test('AI empty state shows six starters and a connect card when no key is set', async ({ page }) => {
+  await page.evaluate(() => renderVirtual('clipboard', 'doc.md', '', '# Doc\n\nText.\n', []));
+  await page.evaluate(() => toggleAiPanel());
+  await expect(page.locator('#ai-output .ai-starter-grid button')).toHaveCount(6);
+  await expect(page.locator('#ai-output [data-ai-connect]')).toBeVisible();
+  await page.locator('#ai-output [data-starter-id="outline"]').click();
+  expect(await page.locator('#ai-prompt').inputValue()).not.toBe('');
+});
+
+test('clicking the dim backdrop closes a modal, but not a static one', async ({ page }) => {
+  await page.evaluate(() => renderVirtual('clipboard', 'doc.md', '', '# Doc\n', []));
+  await page.evaluate(() => openExportModal());
+  await expect(page.locator('#export-modal')).toBeVisible();
+  await page.mouse.click(5, 5);
+  await expect(page.locator('#export-modal')).toBeHidden();
+  await page.evaluate(() => $('btn-style-custom').click());
+  await expect(page.locator('#style-custom-modal')).toBeVisible();
+  await page.mouse.click(5, 5);
+  await expect(page.locator('#style-custom-modal')).toBeVisible();
+});

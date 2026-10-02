@@ -431,6 +431,52 @@ pub fn ocr_image_to_md(path: &str) -> String {
 /// 扩展名（源码里的 “skip all leading dots” 循环）。所以 `notes.TXT → .txt`、
 /// `x.. → .`、`.env`/`..file`/`..` → 空。大小写折叠用 `to_lowercase()`，与
 /// Python `str.lower()` 一样是全 Unicode 映射，而不是只折 ASCII。
+/// A text layer no reader would accept: mostly stray ASCII symbols, or CJK
+/// glyphs scattered one by one (a broken ToUnicode map).  Markdown syntax
+/// (`#`, `|`, `*`, `-`, image links) does not count as noise.
+pub fn text_looks_garbled(text: &str) -> bool {
+    let chars: Vec<char> = text.chars().collect();
+    let visible = chars.iter().filter(|c| !c.is_whitespace()).count();
+    if visible < 24 {
+        return false;
+    }
+    let symbols = chars
+        .iter()
+        .enumerate()
+        .filter(|(i, c)| match **c {
+            '!' => chars.get(i + 1) != Some(&'['),
+            '"' | '$' | '%' | '&' | '\'' | '+' | '<' | '=' | '>' | '@' | '\\' | '^' | '{' | '}' | '~' => true,
+            _ => false,
+        })
+        .count();
+    if symbols * 100 > visible * 18 {
+        return true;
+    }
+    // Real CJK prose runs many characters together; a broken font map leaves
+    // isolated glyphs (average run under two characters).
+    // Word lists (2-3 character entries) stay below the single-glyph share.
+    let mut runs = 0usize;
+    let mut singles = 0usize;
+    let mut cjk = 0usize;
+    let mut run_len = 0usize;
+    for c in chars.iter().chain(std::iter::once(&' ')) {
+        if is_cjk_char(*c) {
+            cjk += 1;
+            run_len += 1;
+        } else if run_len > 0 {
+            runs += 1;
+            if run_len == 1 {
+                singles += 1;
+            }
+            run_len = 0;
+        }
+    }
+    if cjk >= 20 && cjk * 10 < runs * 18 && singles * 10 > runs * 6 {
+        return true;
+    }
+    false
+}
+
 pub fn splitext_lower(path: &str) -> String {
     let name_start = path
         .rfind(['/', '\\'])
@@ -469,7 +515,8 @@ pub fn ocr_pdf_to_md(path: &str, max_pages: usize) -> Result<String, OcrError> {
     // Pages without a text layer (scans) are rendered and recognised natively.
     if pick_engine().is_some() {
         // A page whose text layer is only a page number / running header is a scan too.
-        let thin = |t: &str| t.chars().filter(|c| !c.is_whitespace()).count() < 16;
+        // Thin pages and garbled text layers both get the OCR pass.
+        let thin = |t: &str| t.chars().filter(|c| !c.is_whitespace()).count() < 16 || text_looks_garbled(t);
         let blank: Vec<usize> = pages.iter().enumerate().filter(|(_, t)| thin(t)).map(|(i, _)| i).collect();
         let want = if pages.is_empty() { None } else { Some(blank.clone()) };
         if pages.is_empty() || !blank.is_empty() {
@@ -481,7 +528,8 @@ pub fn ocr_pdf_to_md(path: &str, max_pages: usize) -> Result<String, OcrError> {
                             pages.resize(idx + 1, String::new());
                         }
                         let text = lines.join("\n");
-                        if text.trim().chars().count() > pages[idx].trim().chars().count() {
+                        let weak_page = blank.contains(&idx) && !text.trim().is_empty();
+                        if weak_page || text.trim().chars().count() > pages[idx].trim().chars().count() {
                             pages[idx] = text;
                         }
                     }
@@ -1200,6 +1248,15 @@ mod tests {
                 assert!(!e.to_lowercase().contains("python") && !e.contains("PyObjC"));
             }
         }
+    }
+
+    #[test]
+    fn garbled_text_layers_are_detected() {
+        assert!(text_looks_garbled("榧 鄣 鄣 刨 濯 思 肖 的 这 皿 髡 折 冈 沐 諫 誑 陪 寻 舯 蜘 洋 爝 洋 嫲 它 鏢 兰 蒋 潷 易 酴 芒 斷 兼 三 酴 淞 訴 西 西"));
+        assert!(text_looks_garbled("Da y 1 !\" ! #$ %& $ ' (#)\\* % % !\"# % +\" ! ,- .$'/% % $\" % $% % 0\" ! 1. 2 3 / 4% % $ \"% &'( % 5\" ! 3"));
+        assert!(!text_looks_garbled("Day 1 1. in English 用英语 2. orange n. 橙子 3. jacket n. 短上衣 4. key n. 钥匙 5. quilt n. 被子；被罩 6. bed n. 床 7. desk n. 书桌 8. lamp n. 台灯 9. pen n. 钢笔 10. ruler n. 尺子"));
+        assert!(!text_looks_garbled("软件学院 毕业实习文档 姓名 校内导师 刘夏天 邸晓飞 企业导师 杨正江 实习单位新智认知数字科技股份有限公司 廊坊分公司 年 月 日 毕业实习鉴定"));
+        assert!(!text_looks_garbled("| a | b |\n|---|---|\n| 1 | 2 |\n\n# Title\n\n**bold** text with ![img](x.png) and enough words to pass the threshold easily."));
     }
 
     #[test]

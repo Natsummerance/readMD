@@ -404,6 +404,7 @@ function goHome() {
 function bindWelcomeEvents() {
   if ($('w-open')) $('w-open').onclick = () => { loadFileDialog(); };
   if ($('w-folder')) $('w-folder').onclick = openFolder;
+  if ($('w-new')) $('w-new').onclick = () => { newDocument(); };
   if ($('w-ai')) $('w-ai').onclick = toggleAiPanel;
   if ($('w-convert')) $('w-convert').onclick = openConvertModal;
   if ($('w-web')) $('w-web').onclick = openWebDialog;
