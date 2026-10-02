@@ -226,6 +226,13 @@ pub fn main(root: &Path, argv: &[String]) -> Result<(), String> {
     std::fs::create_dir_all(&stage).map_err(|e| e.to_string())?;
     std::fs::copy(&executable, stage.join(exe_name)).map_err(|e| e.to_string())?;
     copy_tree(&renderer, &stage.join("renderer"))?;
+    // The bongo-cat overlay script is maintained in this repo (the adapter's
+    // dist is a build output and not tracked), so it overrides the bundle copy.
+    let bongocat = crate_dir.join("renderer").join("bongocat.js");
+    if bongocat.is_file() {
+        std::fs::copy(&bongocat, stage.join("renderer").join("assets").join("bongocat.js"))
+            .map_err(|e| format!("{}: {e}", bongocat.display()))?;
+    }
     // Without sprites/models/Cubism vendor files the window starts but never
     // becomes renderer-ready, so these are mandatory.
     for name in ["assets", "models", "vendor"] {

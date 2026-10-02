@@ -2013,6 +2013,8 @@ function updateAiUsage() {
   const u = state.ai.usage;
   const s = state.ai.sessUsage;
   const fmt = n => (n == null ? 0 : n);
+  // Nothing to report until a request has returned usage.
+  el.hidden = !(s && s.total_tokens) && !(u && u.total_tokens);
   const thisRound = _t('ai.thisRound') || '';
   const sessTotal = _t('ai.sessionTotal') || '';
   el.textContent = thisRound + ' ' + fmt(u && u.prompt_tokens) + '/' + fmt(u && u.completion_tokens) + '/' + fmt(u && u.total_tokens)

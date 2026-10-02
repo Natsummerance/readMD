@@ -7873,7 +7873,7 @@ async function toggleEdit() {
     return;
   }
   // 没有打开文档时不能编辑（新建文档请用 Ctrl+N / 欢迎页“新建”）；空文件可以编辑。
-  if ((state.mode !== 'file' && state.mode !== 'virtual') || state.original == null) { showToast(_t('toast.noEditableContent') || '没有可编辑的内容'); return; }
+  if (state.original == null || (state.mode === 'welcome' && !state.file)) { showToast(_t('toast.noEditableContent') || '没有可编辑的内容'); return; }
   $('edit-bar').classList.remove('hidden');
   $('content').classList.add('hidden');
   state.editing = true;
@@ -13649,6 +13649,8 @@ function updateAiUsage() {
   const u = state.ai.usage;
   const s = state.ai.sessUsage;
   const fmt = n => (n == null ? 0 : n);
+  // Nothing to report until a request has returned usage.
+  el.hidden = !(s && s.total_tokens) && !(u && u.total_tokens);
   const thisRound = _t('ai.thisRound') || '';
   const sessTotal = _t('ai.sessionTotal') || '';
   el.textContent = thisRound + ' ' + fmt(u && u.prompt_tokens) + '/' + fmt(u && u.completion_tokens) + '/' + fmt(u && u.total_tokens)
