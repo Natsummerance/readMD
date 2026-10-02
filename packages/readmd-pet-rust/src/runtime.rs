@@ -91,8 +91,9 @@ enum UserEvent {
     InputActivity(bool),
     CursorHover(bool),
     Bongo(crate::input::BongoInputState),
-    DragMove { x: f64, y: f64 },
-    DragEnd,
+    InputFault(&'static str),
+    DragStart,
+    PetClick,
 }
 
 pub struct PetHost;
@@ -182,16 +183,33 @@ impl PetHost {
             InputEvent::Bongo(bongo_state) => {
                 let _ = input_proxy.send_event(UserEvent::Bongo(bongo_state));
             }
-            InputEvent::DragMove { x, y } => {
-                let _ = input_proxy.send_event(UserEvent::DragMove { x, y });
+            InputEvent::Fault(code) => {
+                let _ = input_proxy.send_event(UserEvent::InputFault(code));
             }
-            InputEvent::DragEnd => {
-                let _ = input_proxy.send_event(UserEvent::DragEnd);
+            InputEvent::DragStart => {
+                let _ = input_proxy.send_event(UserEvent::DragStart);
+            }
+            InputEvent::PetClick => {
+                let _ = input_proxy.send_event(UserEvent::PetClick);
             }
         });
 
         event_loop.run(move |event, _target, control_flow| {
             *control_flow = ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(100));
+            if crate::platform::take_completed_drag() {
+                if let Ok(pos) = window.outer_position() {
+                    let scale = window.scale_factor().max(0.1);
+                    state.bounds.x = pos.x as f64 / scale;
+                    state.bounds.y = pos.y as f64 / scale;
+                    state.pending_drag = Some((state.bounds, Instant::now()));
+                    if let Err(error) =
+                        commit_bounds(&window, backend.as_mut(), &mut state, &publisher)
+                    {
+                        write_health(&health, &state, "degraded", &format_error(&error));
+                    }
+                    sync_input_watcher(&input_watcher, backend.as_ref(), &window, &state);
+                }
+            }
             match event {
                 Event::NewEvents(StartCause::Init) => {
                     write_health(&health, &state, "loading", "window_ready");
@@ -220,20 +238,17 @@ impl PetHost {
                 Event::UserEvent(UserEvent::Bongo(bongo_state)) => {
                     let _ = webview.send_bongo_input(&bongo_state);
                 }
-                Event::UserEvent(UserEvent::DragMove { x, y }) => {
-                    state.bounds.x = x;
-                    state.bounds.y = y;
-                    if let Ok(()) = backend.set_bounds(&window, state.bounds) {
-                        state.bounds = backend.applied_bounds().unwrap_or(state.bounds);
-                    }
+                Event::UserEvent(UserEvent::InputFault(code)) => {
+                    state.input_fault = Some(code);
+                    write_health(&health, &state, "degraded", code);
                 }
-                Event::UserEvent(UserEvent::DragEnd) => {
-                    if let Err(error) = publish(
-                        &publisher,
-                        serde_json::json!({"type":"bounds","bounds":state.bounds}),
-                    ) {
+                Event::UserEvent(UserEvent::DragStart) => {
+                    if let Err(error) = backend.drag_window(&window) {
                         write_health(&health, &state, "degraded", &format_error(&error));
                     }
+                }
+                Event::UserEvent(UserEvent::PetClick) => {
+                    let _ = webview.send_control(&serde_json::json!({"type":"pet"}));
                 }
                 Event::UserEvent(UserEvent::Snapshot(update)) => {
                     if let Err(error) = maybe_recover_renderer(&mut webview, &mut state) {
@@ -354,6 +369,9 @@ struct HostState {
     renderer_retry_at: Option<Instant>,
     renderer_circuit_open: bool,
     interaction_rects: Vec<InputRect>,
+    interaction_head: Option<InputRect>,
+    input_fault: Option<&'static str>,
+    pending_drag: Option<(SnapshotBounds, Instant)>,
 }
 
 impl HostState {
@@ -372,6 +390,9 @@ impl HostState {
             renderer_retry_at: None,
             renderer_circuit_open: false,
             interaction_rects: Vec::new(),
+            interaction_head: None,
+            input_fault: None,
+            pending_drag: None,
         }
     }
 }
@@ -391,6 +412,7 @@ fn sync_input_watcher(
         height: state.bounds.height,
         scale_factor: window.scale_factor().max(0.1),
         rects: state.interaction_rects.clone(),
+        head: state.interaction_head,
         visible: state.visible,
     });
 }
@@ -481,9 +503,11 @@ fn apply_snapshot(
         state.renderer_retry_at = None;
         state.renderer_circuit_open = false;
     }
-    let bounds = snapshot.bounds.unwrap_or(state.bounds).clamp_host();
-    backend.set_bounds(window, bounds)?;
-    state.bounds = backend.applied_bounds().unwrap_or(bounds);
+    let bounds = protect_drag_bounds(state, snapshot.bounds.unwrap_or(state.bounds).clamp_host());
+    if !crate::platform::native_drag_active() {
+        backend.set_bounds(window, bounds)?;
+        state.bounds = backend.applied_bounds().unwrap_or(bounds);
+    }
     backend.set_opacity(window, snapshot.opacity())?;
     state.visible = snapshot.visible && !snapshot.fullscreen;
     backend.set_visible(window, state.visible)?;
@@ -544,13 +568,7 @@ fn handle_renderer_message(
             ));
         }
         "drag-start" => {
-            backend.drag_window(window)?;
-            if let Ok(pos) = window.outer_position() {
-                let scale = window.scale_factor().max(0.1);
-                state.bounds.x = pos.x as f64 / scale;
-                state.bounds.y = pos.y as f64 / scale;
-                commit_bounds(window, backend, state, publisher)?;
-            }
+            start_native_drag(window, backend, state, publisher)?;
         }
         "bounds" => {
             let bounds = value_bounds(payload.get("bounds").unwrap_or(&payload))
@@ -614,13 +632,7 @@ fn handle_renderer_message(
                     return Ok(());
                 }
                 if kind == "drag-start" {
-                    backend.drag_window(window)?;
-                    if let Ok(pos) = window.outer_position() {
-                        let scale = window.scale_factor().max(0.1);
-                        state.bounds.x = pos.x as f64 / scale;
-                        state.bounds.y = pos.y as f64 / scale;
-                        commit_bounds(window, backend, state, publisher)?;
-                    }
+                    start_native_drag(window, backend, state, publisher)?;
                     return Ok(());
                 }
                 if kind == "renderer-ready" {
@@ -656,6 +668,8 @@ fn handle_renderer_message(
                         .map(|items| items.iter().take(128).filter_map(value_rect).collect())
                         .unwrap_or_default();
                     state.interaction_generation = generation;
+                    state.interaction_head =
+                        control.get("head").and_then(value_rect).map(input_rect);
                     state.interaction_rects = rects
                         .iter()
                         .map(|r| InputRect {
@@ -696,6 +710,7 @@ fn handle_renderer_message(
                 .map(|items| items.iter().take(128).filter_map(value_rect).collect())
                 .unwrap_or_default();
             state.interaction_generation = generation;
+            state.interaction_head = payload.get("head").and_then(value_rect).map(input_rect);
             state.interaction_rects = rects
                 .iter()
                 .map(|r| InputRect {
@@ -785,6 +800,14 @@ const HEALTH_FAILURE_WRITE_LIMIT: u32 = 5;
 /// acted on by the event loop through `consecutive_failures()`; swallowing them
 /// here is what previously let an unobservable host keep painting.
 fn write_health(writer: &HealthWriter, state: &HostState, lifecycle: &str, code: &str) {
+    let (lifecycle, code) = if lifecycle == "ready" {
+        state
+            .input_fault
+            .map(|fault| ("degraded", fault))
+            .unwrap_or((lifecycle, code))
+    } else {
+        (lifecycle, code)
+    };
     let _ = writer.write(HealthWriter::new_state(
         lifecycle,
         state.renderer.query_value(),
@@ -795,6 +818,15 @@ fn write_health(writer: &HealthWriter, state: &HostState, lifecycle: &str, code:
 
 fn format_error(error: &HostError) -> String {
     error.to_string().chars().take(128).collect()
+}
+
+fn input_rect(rect: InteractionRect) -> InputRect {
+    InputRect {
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+    }
 }
 
 #[cfg(test)]
@@ -826,5 +858,84 @@ mod tests {
         schedule_renderer_recovery(&mut state);
         assert!(state.renderer_circuit_open);
         assert!(state.renderer_retry_at.is_none());
+    }
+}
+
+fn start_native_drag(
+    window: &tao::window::Window,
+    backend: &mut dyn PlatformBackend,
+    _state: &mut HostState,
+    _publisher: &DurableCommandPublisher,
+) -> HostResult<()> {
+    backend.drag_window(window)?;
+    // Other platforms retain their existing Tao drag/persistence path. Windows
+    // publishes the final measured position after WM_EXITSIZEMOVE instead.
+    #[cfg(not(windows))]
+    {
+        if let Ok(pos) = window.outer_position() {
+            let scale = window.scale_factor().max(0.1);
+            _state.bounds.x = pos.x as f64 / scale;
+            _state.bounds.y = pos.y as f64 / scale;
+        }
+        commit_bounds(window, backend, _state, _publisher)?;
+    }
+    Ok(())
+}
+
+fn protect_drag_bounds(state: &mut HostState, mut bounds: SnapshotBounds) -> SnapshotBounds {
+    if let Some((dragged, at)) = state.pending_drag {
+        let acknowledged = (bounds.x - dragged.x).abs() < 0.5 && (bounds.y - dragged.y).abs() < 0.5;
+        if acknowledged || at.elapsed() > Duration::from_secs(4) {
+            state.pending_drag = None;
+        } else {
+            bounds.x = dragged.x;
+            bounds.y = dragged.y;
+        }
+    }
+    bounds
+}
+
+#[cfg(test)]
+mod drag_tests {
+    use super::*;
+
+    #[test]
+    fn queued_snapshot_cannot_undo_drag_and_acknowledgement_releases_guard() {
+        let mut state = HostState::new(RendererKind::Sprite, "session".into());
+        let dragged = SnapshotBounds {
+            x: 400.0,
+            y: 200.0,
+            ..SnapshotBounds::default()
+        };
+        state.pending_drag = Some((dragged, Instant::now()));
+        let old = SnapshotBounds {
+            x: 100.0,
+            y: 100.0,
+            width: 480.0,
+            height: 560.0,
+        };
+        let guarded = protect_drag_bounds(&mut state, old);
+        assert_eq!((guarded.x, guarded.y), (400.0, 200.0));
+        assert_eq!((guarded.width, guarded.height), (480.0, 560.0));
+        assert!(state.pending_drag.is_some());
+        assert_eq!(protect_drag_bounds(&mut state, dragged), dragged);
+        assert!(state.pending_drag.is_none());
+        assert_eq!(protect_drag_bounds(&mut state, old), old);
+    }
+
+    #[test]
+    fn missing_acknowledgement_does_not_permanently_lock_position() {
+        let mut state = HostState::new(RendererKind::Sprite, "session".into());
+        state.pending_drag = Some((
+            SnapshotBounds::default(),
+            Instant::now() - Duration::from_secs(5),
+        ));
+        let requested = SnapshotBounds {
+            x: 300.0,
+            y: 200.0,
+            ..SnapshotBounds::default()
+        };
+        assert_eq!(protect_drag_bounds(&mut state, requested), requested);
+        assert!(state.pending_drag.is_none());
     }
 }

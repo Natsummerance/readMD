@@ -56,6 +56,17 @@ mod windows;
 #[cfg(windows)]
 pub use windows::WindowsBackend;
 
+#[cfg(windows)]
+pub use windows::{native_drag_active, take_completed_drag};
+#[cfg(not(windows))]
+pub fn native_drag_active() -> bool {
+    false
+}
+#[cfg(not(windows))]
+pub fn take_completed_drag() -> bool {
+    false
+}
+
 #[cfg(target_os = "macos")]
 mod macos;
 #[cfg(target_os = "macos")]

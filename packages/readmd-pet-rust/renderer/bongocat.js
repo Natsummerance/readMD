@@ -1,6 +1,7 @@
 /**
  * Bongo Cat Desktop Pet Engine - Multi-Character Sprite & Live2D Edition
- * Pure Rust ReadMD Desktop Pet Renderer
+ * Canvas presentation for the Rust desktop host. Native Raw Input owns input.
+ * Input semantics follow ayangweb/BongoCat e5922f3; see third_party/bongocat.
  *
  * Supported Characters:
  * - Mochi (小猫): White pixel cat with green scarf & pink toe beans
@@ -103,6 +104,7 @@
       frameH: 208,
       scale: 1.25,
       offsetY: 25,
+      deskOffsetY: 50,
       headCenterY: 165,
       pawStyle: {
         type: 'capy',
@@ -121,6 +123,7 @@
       frameH: 208,
       scale: 1.22,
       offsetY: 22,
+      deskOffsetY: 70,
       headCenterY: 160,
       pawStyle: {
         type: 'cow',
@@ -247,12 +250,16 @@
     mouseY: 200,
 
     // Paw Kinematics & Spring Physics
-    pawLeftY: 245,
-    pawLeftTargetY: 245,
+    pawLeftY: 276,
+    pawLeftTargetY: 276,
+    pawLeftX: 95,
+    leftTapAt: -Infinity,
     pawLeftSquish: 1.0,
 
-    pawRightY: 245,
-    pawRightTargetY: 245,
+    pawRightY: 300,
+    pawRightTargetY: 300,
+    pawRightX: 260,
+    rightTapAt: -Infinity,
     pawRightSquish: 1.0,
 
     // Petting & Expression
@@ -264,8 +271,19 @@
     hearts: [],
     sparks: [],
     drumRings: [],
-    keyGlows: new Array(31).fill(0)
+    keyGlows: [],
+    pressedKeys: new Set(),
+    lastKey: null,
+    pointerX: 0,
+    pointerY: 0,
+    mouseOffsetX: 0,
+    mouseOffsetY: 0,
+    mouseButtons: 0,
+    tapCounts: { left: 0, right: 0 },
+    dragging: false
   };
+  const deskPoseOffset = profile => state.showDesk !== false && state.mode === 'keyboard' ? profile.deskOffsetY || 0 : 0;
+  const profileHeadY = profile => (profile.headCenterY || 180) + deskPoseOffset(profile);
 
   // --- Companion behaviours: typing combo, dozing off when idle, stroke to pet ---
   const SLEEP_AFTER_MS = 45000;
@@ -287,7 +305,7 @@
   // Moving the cursor back and forth over the head strokes the pet.
   function noteStroke(x, y) {
     const profile = CHARACTER_PROFILES[state.character] || CHARACTER_PROFILES.mochi;
-    const hy = profile.headCenterY || 180;
+    const hy = profileHeadY(profile);
     const now = performance.now();
     if (Math.hypot(x - CAT_CENTER_X, y - hy) > 64) { life.lastX = null; return; }
     if (now - life.strokeAt > 600) life.stroke = 0;
@@ -331,13 +349,27 @@
   // --- Live2D Lazy Mounting ---
   let live2dMounted = false;
   let live2dController = null;
+  let classicController = null;
+  let classicPromise = null;
+  const classicRoot = document.getElementById('bongo-classic-stage');
+  const wantsClassic = () => state.character === 'mochi' && state.mode === 'keyboard' && state.showDesk !== false;
+  function ensureClassic() {
+    if (!classicPromise && classicRoot && window.readmdMountBongoClassic) {
+      classicPromise = window.readmdMountBongoClassic(classicRoot, () => state).then(controller => {
+        classicController = controller;
+        syncInteractionRegions();
+        return controller;
+      });
+    }
+    return classicPromise;
+  }
 
   async function ensureLive2d() {
     if (live2dMounted) return;
     live2dMounted = true;
     try {
-      const { mountLive2dStage } = await import('./stage-BjWFpm-D.js');
-      live2dController = await mountLive2dStage();
+      if (typeof window.readmdMountLive2d !== 'function') throw new Error('Live2D stage unavailable');
+      live2dController = await window.readmdMountLive2d(live2dStage);
       console.log('[BongoPet] Live2D Arch-Chan stage loaded successfully');
     } catch (err) {
       console.error('[BongoPet] Live2D load error:', err);
@@ -478,40 +510,48 @@
     menu.style.display = 'none';
   });
 
+  let gesture = null;
   canvas.addEventListener('pointerdown', (e) => {
-    if (e.button === 2) return;
+    if (e.button !== 0) return;
     initAudio();
-
-    const rect = canvas.getBoundingClientRect();
-    const screenX = e.clientX - rect.left;
-    const screenY = e.clientY - rect.top;
-
-    // Normalize screen click into 320x380 canonical canvas coordinate space
-    const clickX = (screenX - currentOffsetX) / (currentScale || 1.0);
-    const clickY = (screenY - currentOffsetY) / (currentScale || 1.0);
-
-    const profile = CHARACTER_PROFILES[state.character] || CHARACTER_PROFILES.mochi;
-    const hy = profile.headCenterY || 180;
-    const dist = Math.hypot(clickX - CAT_CENTER_X, clickY - hy);
-
-    if (dist < 60) {
-      petPet();
-    } else {
-      window.hermesDesktop?.petOverlay?.startDrag?.();
-    }
-
-    canvas.style.cursor = 'grabbing';
+    gesture = { x: e.screenX, y: e.screenY, pointer: e.pointerId, started: false };
+    canvas.setPointerCapture?.(e.pointerId);
   });
 
   canvas.addEventListener('pointermove', (e) => {
+    if (gesture) {
+      if (!gesture.started && (e.buttons & 1) && Math.hypot(e.screenX - gesture.x, e.screenY - gesture.y) > 4) {
+        gesture.started = true;
+        state.dragging = true;
+        canvas.style.cursor = 'grabbing';
+        // user32 keeps the grab offset, cursor capture and per-monitor DPI.
+        window.hermesDesktop?.petOverlay?.startDrag?.();
+      }
+      return;
+    }
     if (e.buttons) return;
     const rect = canvas.getBoundingClientRect();
     noteStroke((e.clientX - rect.left - currentOffsetX) / (currentScale || 1.0), (e.clientY - rect.top - currentOffsetY) / (currentScale || 1.0));
   });
 
-  window.addEventListener('pointerup', () => {
+  const finishGesture = (e, cancelled) => {
+    const ended = gesture;
+    gesture = null;
+    state.dragging = false;
     canvas.style.cursor = 'grab';
-  });
+    if (!ended) return;
+    try { canvas.releasePointerCapture?.(ended.pointer); } catch (_) {}
+    if (!cancelled && !ended.started && !window.__readmdRustDispatch) {
+      const x = (e.clientX - currentOffsetX) / currentScale;
+      const y = (e.clientY - currentOffsetY) / currentScale;
+      const hy = (CHARACTER_PROFILES[state.character] || CHARACTER_PROFILES.mochi).headCenterY || 180;
+      if (Math.hypot(x - CAT_CENTER_X, y - hy) < 64) petPet();
+    }
+  };
+  window.addEventListener('pointerup', e => finishGesture(e, false));
+  window.addEventListener('pointercancel', e => finishGesture(e, true));
+  canvas.addEventListener('lostpointercapture', e => finishGesture(e, true));
+  window.addEventListener('blur', e => finishGesture(e, true));
 
   function petPet() {
     initAudio();
@@ -522,11 +562,14 @@
       live2dController?.celebrate?.();
     }
 
+    const head = wantsClassic() && classicController ? classicController.interactionRegions().head : null;
+    const headY = head ? (head.y + head.height / 2 - currentOffsetY) / currentScale
+      : profileHeadY(CHARACTER_PROFILES[state.character] || CHARACTER_PROFILES.mochi);
     // Spawn floating heart particles
     for (let i = 0; i < 4; i++) {
       state.hearts.push({
         x: CAT_CENTER_X + (Math.random() * 50 - 25),
-        y: (CHARACTER_PROFILES[state.character]?.headCenterY || 180) - 35 + (Math.random() * 20 - 10),
+        y: headY - 35 + (Math.random() * 20 - 10),
         vx: (Math.random() - 0.5) * 1.6,
         vy: -1.8 - Math.random() * 1.5,
         alpha: 1.0,
@@ -548,77 +591,79 @@
     }
   }
 
-  function triggerLeftTap(isDown) {
-    if (state.leftDown === isDown) return;
+  function triggerLeftTap(isDown, retrigger = false) {
+    if (state.leftDown === isDown && !retrigger) return;
     state.leftDown = isDown;
     if (isDown) {
+      state.leftTapAt = performance.now();
+      state.tapCounts.left++;
       initAudio();
       playTapSound(true, state.mode);
       recordTap();
       noteInput();
-      state.pawLeftSquish = 0.65;
+      state.pawLeftSquish = 0.93;
 
       if (state.mode === 'bongos') {
         state.drumRings.push({ x: 95, y: 275, r: 15, alpha: 0.9, color: 'rgba(230, 126, 34, 0.8)' });
       } else {
-        lightKey('left');
-        // Spawn sparks
-        for (let i = 0; i < 3; i++) {
-          state.sparks.push({
-            x: 80 + Math.random() * 40,
-            y: 285 + Math.random() * 20,
-            vx: (Math.random() - 0.5) * 2.5,
-            vy: -1.2 - Math.random() * 2.0,
-            alpha: 1.0,
-            color: '#9cc0ff'
-          });
-        }
+        lightKey(state.lastKey);
       }
     }
   }
 
-  function triggerRightTap(isDown) {
-    if (state.rightDown === isDown) return;
+  function triggerRightTap(isDown, retrigger = false) {
+    if (state.rightDown === isDown && !retrigger) return;
     state.rightDown = isDown;
     if (isDown) {
+      state.rightTapAt = performance.now();
+      state.tapCounts.right++;
       initAudio();
       playTapSound(false, state.mode);
       recordTap();
       noteInput();
-      state.pawRightSquish = 0.65;
+      state.pawRightSquish = 0.96;
 
       if (state.mode === 'bongos') {
         state.drumRings.push({ x: 225, y: 275, r: 16, alpha: 0.9, color: 'rgba(243, 156, 18, 0.8)' });
       } else {
-        lightKey('right');
-        for (let i = 0; i < 3; i++) {
-          state.sparks.push({
-            x: 235 + Math.random() * 20,
-            y: 290 + Math.random() * 15,
-            vx: (Math.random() - 0.5) * 2.5,
-            vy: -1.2 - Math.random() * 2.0,
-            alpha: 1.0,
-            color: '#9cc0ff'
-          });
-        }
+        // Mouse clicks affect the mouse hand, never a random keyboard key.
       }
     }
   }
 
+  // Reliable press counters survive several edges between two rendered frames.
+  // Held sets are independent: releasing a mouse button cannot release a key.
+  let lastNativeInput = null;
+  function consumeInput(payload) {
+    if (!payload) return;
+    const previous = lastNativeInput;
+    if (previous && Number.isInteger(payload.sequence) && Number.isInteger(previous.sequence)
+        && ((payload.sequence - previous.sequence) >>> 0) > 0x7fffffff) return;
+    lastNativeInput = payload;
+    state.lastKey = payload.last_key ?? state.lastKey;
+    state.pressedKeys = new Set(Array.isArray(payload.pressed_keys) ? payload.pressed_keys.slice(0, 256) : []);
+    state.mouseButtons = payload.mouse_buttons || 0;
+    state.mouseDown = !!payload.mouse_down;
+    if (Number.isFinite(payload.mouse_x)) state.mouseX = (payload.mouse_x - currentOffsetX) / currentScale;
+    if (Number.isFinite(payload.mouse_y)) state.mouseY = (payload.mouse_y - currentOffsetY) / currentScale;
+    if (Number.isFinite(payload.pointer_x)) state.pointerX = payload.pointer_x;
+    if (Number.isFinite(payload.pointer_y)) state.pointerY = payload.pointer_y;
+    const leftCounter = state.mode === 'keyboard' ? 'keyboard_taps' : 'left_taps';
+    const rightCounter = state.mode === 'keyboard' ? 'mouse_taps' : 'right_taps';
+    const countChanged = key => Number.isInteger(payload[key]) && payload[key] !== (previous?.[key] ?? 0);
+    const leftHeld = state.mode === 'keyboard' ? (payload.keyboard_down ?? (payload.left_down || payload.right_down)) : payload.left_down;
+    const rightHeld = state.mode === 'keyboard' ? payload.mouse_down : (payload.right_down || payload.mouse_down);
+    triggerLeftTap(!!leftHeld || countChanged(leftCounter), countChanged(leftCounter));
+    triggerRightTap(!!rightHeld || countChanged(rightCounter) || (state.mode === 'bongos' && countChanged('mouse_taps')),
+      countChanged(rightCounter) || (state.mode === 'bongos' && countChanged('mouse_taps')));
+    // Counters trigger an attack; the held state remains authoritative afterwards.
+    state.leftDown = !!leftHeld;
+    state.rightDown = !!rightHeld;
+  }
+
   // --- Global IPC Listener from Rust ---
   if (window.hermesDesktop?.petOverlay?.onBongoInput) {
-    window.hermesDesktop.petOverlay.onBongoInput((payload) => {
-      if (!payload) return;
-      if (typeof payload.left_down === 'boolean') triggerLeftTap(payload.left_down);
-      if (typeof payload.right_down === 'boolean') triggerRightTap(payload.right_down);
-      if (typeof payload.mouse_down === 'boolean') {
-        state.mouseDown = payload.mouse_down;
-        if (payload.mouse_down) triggerRightTap(true);
-        else triggerRightTap(false);
-      }
-      if (typeof payload.mouse_x === 'number') state.mouseX = payload.mouse_x;
-      if (typeof payload.mouse_y === 'number') state.mouseY = payload.mouse_y;
-    });
+    window.hermesDesktop.petOverlay.onBongoInput(consumeInput);
   }
 
   // Support state updates from host snapshot
@@ -706,12 +751,15 @@
     applyCharacter,
     petPet,
     triggerLeftTap,
-    triggerRightTap
+    triggerRightTap,
+    consumeInput,
+    get keyCells() { return keyCells; },
+    updatePhysics
   };
 
   // Local window keyboard fallback
   window.addEventListener('keydown', (e) => {
-    if (e.repeat) return;
+    if (window.__readmdRustDispatch || e.repeat) return;
     initAudio();
     const code = e.code;
     if (['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyZ', 'KeyX', 'KeyC', 'KeyV', 'Space', 'Tab', 'ShiftLeft'].includes(code)) {
@@ -722,6 +770,7 @@
   });
 
   window.addEventListener('keyup', (e) => {
+    if (window.__readmdRustDispatch) return;
     const code = e.code;
     if (['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyZ', 'KeyX', 'KeyC', 'KeyV', 'Space', 'Tab', 'ShiftLeft'].includes(code)) {
       triggerLeftTap(false);
@@ -771,10 +820,10 @@
     }
 
     const scale = profile.scale || (fw === 192 ? 1.25 : 0.78);
-    const offsetY = profile.offsetY !== undefined ? profile.offsetY : (fw === 192 ? 25 : -55);
+    const offsetY = (profile.offsetY !== undefined ? profile.offsetY : (fw === 192 ? 25 : -55)) + deskPoseOffset(profile);
 
     // Decision: Row 0 is idle; Row 1 is wave / typing frenzy / petting celebration
-    const isHappy = state.typingBpm > 25 || state.pettingLevel > 0;
+    const isHappy = state.showDesk === false && (state.typingBpm > 25 || state.pettingLevel > 0);
     const row = isHappy ? 1 : 0;
 
     const cols = Math.floor(img.naturalWidth / fw) || 4;
@@ -804,7 +853,7 @@
       const blushAlpha = Math.min(0.65, state.pettingLevel / 40);
       ctx.fillStyle = `rgba(255, 110, 150, ${blushAlpha})`;
       const hx = CAT_CENTER_X;
-      const hy = profile.headCenterY || 180;
+      const hy = profileHeadY(profile);
       ctx.beginPath();
       ctx.ellipse(hx - 28, hy, 10, 6, 0, 0, Math.PI * 2);
       ctx.ellipse(hx + 28, hy, 10, 6, 0, 0, Math.PI * 2);
@@ -817,6 +866,11 @@
   // 2. Desk: only a soft contact shadow, so the character stays the subject.
   function drawDeskSurface(ctx) {
     ctx.save();
+    ctx.fillStyle='#f6f3f9';ctx.strokeStyle='#bbb5c7';ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.moveTo(12,260);ctx.lineTo(305,260);
+    ctx.quadraticCurveTo(313,260,313,268);ctx.lineTo(313,351);
+    ctx.lineTo(7,351);ctx.lineTo(7,268);ctx.quadraticCurveTo(7,260,12,260);
+    ctx.closePath();ctx.fill();ctx.stroke();
     const g = ctx.createRadialGradient(CANVAS_WIDTH / 2, 342, 8, CANVAS_WIDTH / 2, 342, 150);
     g.addColorStop(0, 'rgba(0, 0, 0, 0.30)');
     g.addColorStop(1, 'rgba(0, 0, 0, 0)');
@@ -827,123 +881,77 @@
     ctx.restore();
   }
 
-  // 3. Low-profile keyboard: a real key grid without legends (paws rest on it,
-  //    so printed labels only ever showed up half-covered).
-  const KB = { x: 32, y: 274, w: 166, h: 60, cols: 10, rows: 3, pad: 7, gap: 3, keyH: 9.5 };
-  const KEY_COUNT = KB.cols * KB.rows + 1; // + space bar
-  const KEY_IDLE = '#4a4e58';
-  const KEY_LIT = '#9cc0ff';
-
-  function mixHex(a, b, t) {
-    const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
-    const ch = (s) => Math.round(((pa >> s) & 255) + ((((pb >> s) & 255) - ((pa >> s) & 255)) * t));
-    return `rgb(${ch(16)}, ${ch(8)}, ${ch(0)})`;
-  }
-
-  function keyRect(i) {
-    const kw = (KB.w - KB.pad * 2 - KB.gap * (KB.cols - 1)) / KB.cols;
-    if (i === KEY_COUNT - 1) {
-      const w = kw * 5 + KB.gap * 4;
-      return { x: KB.x + (KB.w - w) / 2, y: KB.y + KB.pad + 3 * (KB.keyH + KB.gap), w, h: KB.keyH };
+  // A real compact keyboard. HID identities come from the Rust pressed set;
+  // lighting and the contact point follow the actual key, without randomness.
+  const KB = { x: 18, y: 274, w: 190, h: 76, pad: 6, gap: 1.8, keyH: 10.8 };
+  const KEY_IDLE = '#fbfafc', KEY_LIT = '#cfbef7';
+  const KEY_ROWS = [
+    [[0x29,'Esc'],[0x1e,'1'],[0x1f,'2'],[0x20,'3'],[0x21,'4'],[0x22,'5'],[0x23,'6'],[0x24,'7'],[0x25,'8'],[0x26,'9'],[0x27,'0'],[0x2d,'−'],[0x2e,'='],[0x2a,'←',1.5]],
+    [[0x2b,'Tab',1.3],[0x14,'Q'],[0x1a,'W'],[0x08,'E'],[0x15,'R'],[0x17,'T'],[0x1c,'Y'],[0x18,'U'],[0x0c,'I'],[0x12,'O'],[0x13,'P'],[0x2f,'['],[0x30,']'],[0x31,'/',1.2]],
+    [[0x39,'Caps',1.6],[0x04,'A'],[0x16,'S'],[0x07,'D'],[0x09,'F'],[0x0a,'G'],[0x0b,'H'],[0x0d,'J'],[0x0e,'K'],[0x0f,'L'],[0x33,';'],[0x34,"'"],[0x28,'↵',1.9]],
+    [[0xe1,'Shift',2],[0x1d,'Z'],[0x1b,'X'],[0x06,'C'],[0x19,'V'],[0x05,'B'],[0x11,'N'],[0x10,'M'],[0x36,','],[0x37,'.'],[0x38,'/'],[0xe5,'Shift',2.5]],
+    [[0xe0,'Ctrl',1.3],[0xe3,'◆',1.1],[0xe2,'Alt',1.2],[0x2c,'',6.4],[0xe6,'Alt',1.1],[0x50,'←'],[0x51,'↓'],[0x52,'↑'],[0x4f,'→']]
+  ];
+  const keyCells = [];
+  for (let row=0; row<KEY_ROWS.length; row++) {
+    const keys=KEY_ROWS[row], units=keys.reduce((sum,key)=>sum+(key[2]||1),0);
+    const unit=(KB.w-KB.pad*2-KB.gap*(keys.length-1))/units;
+    let x=KB.x+KB.pad;
+    for (const [hid,label,width=1] of keys) {
+      keyCells.push({ hid,label,x,y:KB.y+KB.pad+row*(KB.keyH+KB.gap),w:unit*width,h:KB.keyH });
+      x+=unit*width+KB.gap;
     }
-    const r = Math.floor(i / KB.cols), c = i % KB.cols;
-    return { x: KB.x + KB.pad + c * (kw + KB.gap), y: KB.y + KB.pad + r * (KB.keyH + KB.gap), w: kw, h: KB.keyH };
   }
-
-  // Left-hand keys light under the left paw, right-hand keys under the right one.
-  function lightKey(side) {
-    if (side === 'left' && Math.random() < 0.18) { state.keyGlows[KEY_COUNT - 1] = 12; return; }
-    const r = Math.floor(Math.random() * KB.rows);
-    const c = side === 'left' ? Math.floor(Math.random() * 5) : 5 + Math.floor(Math.random() * 5);
-    state.keyGlows[r * KB.cols + c] = 12;
+  const KEY_COUNT = keyCells.length;
+  state.keyGlows=new Array(KEY_COUNT).fill(0);
+  function keyRect(i) { return keyCells[i]; }
+  function lightKey(hid) {
+    const index=keyCells.findIndex(key=>key.hid===hid);
+    if(index>=0)state.keyGlows[index]=1;
   }
-
+  function mixHex(a,b,t) {
+    const pa=parseInt(a.slice(1),16),pb=parseInt(b.slice(1),16);
+    const ch=shift=>Math.round(((pa>>shift)&255)+(((pb>>shift)&255)-((pa>>shift)&255))*t);
+    return 'rgb('+ch(16)+','+ch(8)+','+ch(0)+')';
+  }
   function drawKeyboard(ctx) {
     ctx.save();
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
-    ctx.shadowBlur = 10;
-    ctx.shadowOffsetY = 4;
-    const body = ctx.createLinearGradient(0, KB.y, 0, KB.y + KB.h);
-    body.addColorStop(0, '#34373f');
-    body.addColorStop(1, '#25272d');
-    ctx.fillStyle = body;
-    ctx.beginPath();
-    ctx.roundRect(KB.x, KB.y, KB.w, KB.h, 9);
-    ctx.fill();
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.09)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(KB.x + 0.5, KB.y + 0.5, KB.w - 1, KB.h - 1, 8.5);
-    ctx.stroke();
-
-    for (let i = 0; i < KEY_COUNT; i++) {
-      const k = keyRect(i);
-      const glow = Math.min(1, (state.keyGlows[i] || 0) / 10);
-      const y = k.y + glow * 1.2;
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
-      ctx.beginPath();
-      ctx.roundRect(k.x, k.y + 1.5, k.w, k.h, 2.5);
-      ctx.fill();
-      if (glow > 0) {
-        ctx.shadowColor = 'rgba(138, 180, 255, 0.9)';
-        ctx.shadowBlur = 8 * glow;
-      }
-      ctx.fillStyle = glow > 0 ? mixHex(KEY_IDLE, KEY_LIT, glow) : KEY_IDLE;
-      ctx.beginPath();
-      ctx.roundRect(k.x, y, k.w, k.h, 2.5);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
-      ctx.fillRect(k.x + 1.5, y + 1, k.w - 3, 1);
+    ctx.shadowColor='rgba(25,20,35,.20)';ctx.shadowBlur=8;ctx.shadowOffsetY=4;
+    ctx.fillStyle='#9691a3';ctx.beginPath();ctx.roundRect(KB.x,KB.y+3,KB.w,KB.h,7);ctx.fill();
+    ctx.shadowColor='transparent';
+    ctx.fillStyle='#e3e0e9';ctx.strokeStyle='#514c61';ctx.lineWidth=1.7;
+    ctx.beginPath();ctx.roundRect(KB.x,KB.y,KB.w,KB.h-2,7);ctx.fill();ctx.stroke();
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='6px "Segoe UI", sans-serif';
+    for(let i=0;i<KEY_COUNT;i++) {
+      const k=keyRect(i), held=state.pressedKeys.has(k.hid), glow=held?1:state.keyGlows[i];
+      const y=k.y+(held?1.3:0);
+      ctx.fillStyle='#a9a3b6';ctx.beginPath();ctx.roundRect(k.x,k.y+1.5,k.w,k.h,2);ctx.fill();
+      ctx.fillStyle=mixHex(KEY_IDLE,KEY_LIT,Math.min(1,glow));ctx.strokeStyle='#c6c1ce';ctx.lineWidth=.6;
+      ctx.beginPath();ctx.roundRect(k.x,y,k.w,k.h,2);ctx.fill();ctx.stroke();
+      ctx.fillStyle=held?'#514379':'#666070';
+      ctx.fillText(k.label,k.x+k.w/2,y+k.h/2+.2,k.w-1);
     }
     ctx.restore();
   }
-
-  // 4. Mouse: one smooth pebble with a quiet status light.
   function drawMouse(ctx) {
     ctx.save();
-    const mx = 246, my = 304;
-    const down = state.rightDown || state.mouseDown;
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
-    ctx.shadowBlur = 10;
-    ctx.shadowOffsetY = 4;
-    const body = ctx.createLinearGradient(mx - 18, my - 26, mx + 18, my + 26);
-    body.addColorStop(0, '#3a3d45');
-    body.addColorStop(1, '#24262c');
-    ctx.fillStyle = body;
-    ctx.beginPath();
-    ctx.ellipse(mx, my, 18, 26, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.09)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
-    ctx.beginPath();
-    ctx.moveTo(mx, my - 26);
-    ctx.lineTo(mx, my - 6);
-    ctx.stroke();
-    ctx.fillStyle = down ? KEY_LIT : '#5a5e68';
-    ctx.beginPath();
-    ctx.roundRect(mx - 2, my - 19, 4, 9, 2);
-    ctx.fill();
-
-    const pulse = down ? 1 : 0.35 + 0.15 * Math.sin(performance.now() / 900);
-    ctx.strokeStyle = `rgba(138, 180, 255, ${pulse})`;
-    ctx.lineWidth = 1.6;
-    if (down) {
-      ctx.shadowColor = 'rgba(138, 180, 255, 0.9)';
-      ctx.shadowBlur = 8;
+    const mx=260+state.mouseOffsetX,my=314+state.mouseOffsetY;
+    ctx.translate(mx,my);
+    ctx.shadowColor='rgba(25,20,35,.18)';ctx.shadowBlur=8;ctx.shadowOffsetY=3;
+    ctx.fillStyle='#dfdbe7';ctx.strokeStyle='#514c61';ctx.lineWidth=1.8;
+    ctx.beginPath();ctx.moveTo(-20,2);ctx.bezierCurveTo(-23,-34,22,-34,20,2);
+    ctx.bezierCurveTo(21,36,-22,36,-20,2);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.shadowColor='transparent';
+    // Separate left/right buttons; right-clicking never presses the left half.
+    for(const [bit,side] of [[1,-1],[2,1]]) {
+      if(!(state.mouseButtons&bit))continue;
+      ctx.fillStyle='#cfbef7';ctx.beginPath();
+      ctx.ellipse(side*9,-10,8,13,side*.12,0,Math.PI*2);ctx.fill();
     }
-    ctx.beginPath();
-    ctx.arc(mx, my + 2, 13, 0.25 * Math.PI, 0.75 * Math.PI);
-    ctx.stroke();
+    ctx.strokeStyle='#a29aad';ctx.lineWidth=1;ctx.beginPath();
+    ctx.moveTo(0,-25);ctx.lineTo(0,-2);ctx.stroke();
+    ctx.fillStyle=state.mouseButtons&4?'#9680be':'#8c829c';
+    ctx.beginPath();ctx.roundRect(-2,-19,4,10,2);ctx.fill();
     ctx.restore();
   }
 
@@ -1065,57 +1073,35 @@
     ctx.restore();
   }
 
-  // 6. Character-Adaptive Paws
+  // Filled, tapered forearms stay connected to the body. Each palm shares
+  // its contact point with the instrument; compressing it cannot stretch an arm.
   function drawPaws(ctx) {
-    ctx.save();
-    const profile = CHARACTER_PROFILES[state.character] || CHARACTER_PROFILES.mochi;
-    const style = profile.pawStyle;
-
-    ctx.fillStyle = style.fill;
-    ctx.strokeStyle = style.sleeveFill || style.stroke;
-    ctx.lineWidth = style.armWidth || 7;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    // --- Left Paw ---
-    ctx.save();
-    const lpx = 95;
-    const lpy = state.pawLeftY;
-    const lsquish = state.pawLeftSquish;
-
-    ctx.translate(lpx, lpy);
-    ctx.scale(2.0 - lsquish, lsquish);
-
-    // Left Arm stroke originating from character's side (115, 220)
-    ctx.beginPath();
-    ctx.moveTo(25, -lpy + 215);
-    ctx.quadraticCurveTo(8, -20, 0, 0);
-    ctx.stroke();
-
-    // Left Paw Head / Gauntlet
-    drawPawHead(ctx, style, -0.15);
-    ctx.restore();
-
-    // --- Right Paw ---
-    ctx.save();
-    const rpx = state.mode === 'keyboard' ? 230 : 225;
-    const rpy = state.pawRightY;
-    const rsquish = state.pawRightSquish;
-
-    ctx.translate(rpx, rpy);
-    ctx.scale(2.0 - rsquish, rsquish);
-
-    // Right Arm stroke originating from character's side (205, 220)
-    ctx.beginPath();
-    ctx.moveTo(-25, -rpy + 215);
-    ctx.quadraticCurveTo(-8, -20, 0, 0);
-    ctx.stroke();
-
-    // Right Paw Head / Gauntlet
-    drawPawHead(ctx, style, 0.15);
-    ctx.restore();
-
-    ctx.restore();
+    const profile=CHARACTER_PROFILES[state.character]||CHARACTER_PROFILES.mochi;
+    const style=profile.pawStyle;
+    const anchors = {
+      mochi: [114,208,244], amber: [118,205,245], hermes: [114,205,229],
+      moss: [118,205,246], 'cache-capy': [146,239,195], 'niu-lai': [115,205,175]
+    }[state.character] || [114,207,218];
+    const drawArm=(shoulderX,shoulderY,pawX,pawY,squish,side)=> {
+      ctx.save();ctx.fillStyle=style.sleeveFill||style.fill;ctx.strokeStyle=style.stroke;
+      ctx.lineWidth=2.3;ctx.lineJoin='round';ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(shoulderX-9,shoulderY);
+      ctx.quadraticCurveTo(shoulderX-12,shoulderY+28,pawX-13,pawY-3);
+      ctx.quadraticCurveTo(pawX-17,pawY+9,pawX-4,pawY+11);
+      ctx.quadraticCurveTo(pawX+11,pawY+11,pawX+13,pawY-4);
+      ctx.quadraticCurveTo(shoulderX+13,shoulderY+25,shoulderX+9,shoulderY);
+      ctx.fill();ctx.stroke();
+      ctx.translate(pawX,pawY);ctx.scale(1+(1-squish)*.25,squish);
+      if(style.type==='cat'||style.type==='cow'||style.type==='capy') {
+        // Pads face the desk. Draw the top of the palm and three fingertips.
+        ctx.fillStyle=style.fill;ctx.beginPath();ctx.ellipse(0,0,14,10,side*.09,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(-6,3,3.5,.3,1.5);ctx.moveTo(0,6);ctx.lineTo(0,8);
+        ctx.moveTo(6,4);ctx.lineTo(7,7);ctx.stroke();
+      } else { drawPawHead(ctx,style,side*.09); }
+      ctx.restore();
+    };
+    drawArm(anchors[0],anchors[2]+deskPoseOffset(profile),state.pawLeftX,state.pawLeftY,state.pawLeftSquish,-1);
+    drawArm(anchors[1],anchors[2]+deskPoseOffset(profile),state.pawRightX,state.pawRightY,state.pawRightSquish,1);
   }
 
   function drawPawHead(ctx, style, rotation) {
@@ -1342,37 +1328,42 @@
   }
 
   // --- Main Animation & Physics Loop ---
+  let lastFrameTime=performance.now();
   function updatePhysics() {
-    // Spring physics on Left Paw
-    state.pawLeftTargetY = state.leftDown ? 282 : 245;
-    state.pawLeftY += (state.pawLeftTargetY - state.pawLeftY) * 0.45;
-    state.pawLeftSquish += (1.0 - state.pawLeftSquish) * 0.35;
-
-    // Spring physics on Right Paw
-    state.pawRightTargetY = (state.rightDown || state.mouseDown) ? 282 : 245;
-    state.pawRightY += (state.pawRightTargetY - state.pawRightY) * 0.45;
-    state.pawRightSquish += (1.0 - state.pawRightSquish) * 0.35;
-
-    // Petting level decay
-    if (state.pettingLevel > 0) state.pettingLevel--;
-
-    const nowMs = performance.now();
-    if (isSleeping(nowMs) && nowMs - life.zzAt > 1400) {
-      life.zzAt = nowMs;
-      const hy = (CHARACTER_PROFILES[state.character] || CHARACTER_PROFILES.mochi).headCenterY || 180;
-      life.zz.push({ x: CAT_CENTER_X + 34, y: hy - 40, alpha: 0.9, size: 11 });
+    const nowMs=performance.now(), dt=Math.min(.05,Math.max(0,(nowMs-lastFrameTime)/1000));
+    lastFrameTime=nowMs;
+    // The same elapsed-time smoothing as BongoCat, rather than FPS-dependent lerp.
+    const follow=1-Math.pow(.75,dt*60), strike=1-Math.pow(.15,dt*60);
+    const leftPressed=state.leftDown||nowMs-state.leftTapAt<55;
+    const rightPressed=state.rightDown||nowMs-state.rightTapAt<55;
+    if(state.mode==='keyboard') {
+      const key=keyCells.find(k=>k.hid===state.lastKey);
+      const targetX=key?Math.min(137,Math.max(78,key.x+key.w/2)):95;
+      const targetY=key?key.y+key.h/2:284;
+      state.pawLeftX+=(targetX-state.pawLeftX)*strike;
+      state.pawLeftTargetY=targetY+(leftPressed?1:-7);
+      state.mouseOffsetX+=(-state.pointerX*7-state.mouseOffsetX)*follow;
+      state.mouseOffsetY+=(-state.pointerY*4-state.mouseOffsetY)*follow;
+      state.pawRightX=260+state.mouseOffsetX;
+      state.pawRightTargetY=300+state.mouseOffsetY+(rightPressed?3:0);
+    } else {
+      state.pawLeftX=95;state.pawRightX=225;
+      state.pawLeftTargetY=leftPressed?274:255;
+      state.pawRightTargetY=rightPressed?274:255;
     }
-    life.comboPop = Math.max(0, life.comboPop - 0.08);
-
-    // Key glow decay
-    for (let i = 0; i < state.keyGlows.length; i++) {
-      if (state.keyGlows[i] > 0) state.keyGlows[i]--;
+    state.pawLeftY+=(state.pawLeftTargetY-state.pawLeftY)*strike;
+    state.pawRightY+=(state.pawRightTargetY-state.pawRightY)*strike;
+    state.pawLeftSquish+=(1-state.pawLeftSquish)*follow;
+    state.pawRightSquish+=(1-state.pawRightSquish)*follow;
+    if(state.pettingLevel>0)state.pettingLevel=Math.max(0,state.pettingLevel-dt*60);
+    if(isSleeping(nowMs)&&nowMs-life.zzAt>1400) {
+      life.zzAt=nowMs;
+      const hy=(CHARACTER_PROFILES[state.character]||CHARACTER_PROFILES.mochi).headCenterY||180;
+      life.zz.push({x:CAT_CENTER_X+34,y:hy-40,alpha:.9,size:11});
     }
-
-    // BPM decay
-    if (performance.now() - state.lastTapTime > 600) {
-      state.typingBpm = Math.max(0, state.typingBpm - 2);
-    }
+    life.comboPop=Math.max(0,life.comboPop-dt*4.8);
+    for(let i=0;i<state.keyGlows.length;i++)state.keyGlows[i]=Math.max(0,state.keyGlows[i]-dt*6);
+    if(nowMs-state.lastTapTime>600)state.typingBpm=Math.max(0,state.typingBpm-dt*120);
   }
 
   let renderErrors = 0;
@@ -1394,10 +1385,13 @@
       );
 
       // 1. Draw Character (Sprite sheet frame or Live2D)
-      drawCharacter(ctx);
+      if (wantsClassic()) ensureClassic();
+      const classicActive = wantsClassic() && !!classicController;
+      classicController?.setActive(classicActive);
+      if (!classicActive) drawCharacter(ctx);
 
       // 2. Draw Desk & Instruments (if desk is enabled)
-      if (state.showDesk !== false) {
+      if (state.showDesk !== false && !classicActive) {
         if (state.mode === 'bongos') {
           drawBongos(ctx);
         } else {
@@ -1425,19 +1419,19 @@
 
   // --- Interaction Regions for Rust Click-Through ---
   function syncInteractionRegions() {
-    const rects = [
-      {
-        x: Math.round(currentOffsetX + 20 * currentScale),
-        y: Math.round(currentOffsetY + 40 * currentScale),
-        width: Math.round(280 * currentScale),
-        height: Math.round(340 * currentScale)
-      }
-    ];
+    const profile = CHARACTER_PROFILES[state.character] || CHARACTER_PROFILES.mochi;
+    const rect = (x,y,width,height) => ({ x: currentOffsetX+x*currentScale, y: currentOffsetY+y*currentScale,
+      width: width*currentScale, height: height*currentScale });
+    const head = rect(96,profileHeadY(profile)-64,128,128);
+    const generic = { head, rects: [head, rect(65,190,190,95)] };
+    if (state.showDesk !== false) generic.rects.push(rect(8,255,305,105));
+    const regions = wantsClassic() && classicController ? classicController.interactionRegions() : generic;
     window.hermesDesktop?.petOverlay?.control?.({
       type: 'interaction-regions',
-      rects
+      ...regions
     });
   }
+  window.addEventListener('readmd-bongo-layout', syncInteractionRegions);
 
   // Start Animation Loop
   requestAnimationFrame(render);
@@ -1445,13 +1439,7 @@
   syncInteractionRegions();
 
   // Signal Host that Renderer is Ready
-  try {
-    window.hermesDesktop?.petOverlay?.control?.({
-      type: 'renderer-ready',
-      renderer: 'hermes-sprite'
-    });
-    window.hermesDesktop?.petOverlay?.control?.({ type: 'ready' });
-  } catch (_) {}
+  window.readmdClassicReady = wantsClassic() ? ensureClassic() : Promise.resolve();
 
   console.log('[BongoPet] Multi-Character Bongo Pet Engine active');
 })();

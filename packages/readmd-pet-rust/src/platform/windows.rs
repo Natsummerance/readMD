@@ -22,10 +22,7 @@ struct MARGINS {
 
 #[link(name = "dwmapi")]
 extern "system" {
-    fn DwmExtendFrameIntoClientArea(
-        hwnd: HWND,
-        pMarInset: *const MARGINS,
-    ) -> i32;
+    fn DwmExtendFrameIntoClientArea(hwnd: HWND, pMarInset: *const MARGINS) -> i32;
     fn DwmSetWindowAttribute(
         hwnd: HWND,
         dwAttribute: u32,
@@ -33,28 +30,38 @@ extern "system" {
         cbAttribute: u32,
     ) -> i32;
 }
+use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
 use windows_sys::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
 use windows_sys::Win32::Graphics::Gdi::{
-    FillRect, GetMonitorInfoW, GetStockObject, MonitorFromWindow, RedrawWindow, BLACK_BRUSH, HBRUSH,
-    HDC, MONITOR_DEFAULTTONEAREST, MONITORINFO, NULL_BRUSH, RDW_ERASE, RDW_FRAME, RDW_INVALIDATE,
+    FillRect, GetMonitorInfoW, GetStockObject, MonitorFromWindow, RedrawWindow, BLACK_BRUSH,
+    HBRUSH, HDC, MONITORINFO, MONITOR_DEFAULTTONEAREST, NULL_BRUSH, RDW_ERASE, RDW_FRAME,
+    RDW_INVALIDATE,
 };
 use windows_sys::Win32::Security::SECURITY_ATTRIBUTES;
 use windows_sys::Win32::System::Threading::CreateMutexW;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CallWindowProcW, GetClientRect, GetWindowLongPtrW, SetClassLongPtrW, SetWindowLongPtrW,
     SetWindowPos, SystemParametersInfoW, GCLP_HBRBACKGROUND, GWLP_WNDPROC, GWL_EXSTYLE, GWL_STYLE,
-    HWND_TOPMOST, SPI_GETWORKAREA, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE,
-    SWP_NOSIZE, SWP_SHOWWINDOW, WM_ERASEBKGND, WM_NCACTIVATE, WM_NCPAINT, WNDPROC, WS_BORDER,
-    WS_CAPTION, WS_DLGFRAME, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
+    HWND_TOPMOST, SPI_GETWORKAREA, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+    SWP_SHOWWINDOW, WM_ERASEBKGND, WM_NCACTIVATE, WM_NCPAINT, WNDPROC, WS_BORDER, WS_CAPTION,
+    WS_DLGFRAME, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
     WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU, WS_THICKFRAME,
 };
-use std::sync::atomic::{AtomicIsize, Ordering};
 
 /// Undocumented uxtheme messages that draw the "basic" caption/frame.
 const WM_NCUAHDRAWCAPTION: u32 = 0x00AE;
 const WM_NCUAHDRAWFRAME: u32 = 0x00AF;
 /// The pet host owns exactly one overlay window per process.
 static ORIGINAL_WNDPROC: AtomicIsize = AtomicIsize::new(0);
+static NATIVE_DRAG_ACTIVE: AtomicBool = AtomicBool::new(false);
+static COMPLETED_DRAG: AtomicBool = AtomicBool::new(false);
+
+pub fn native_drag_active() -> bool {
+    NATIVE_DRAG_ACTIVE.load(Ordering::Acquire)
+}
+pub fn take_completed_drag() -> bool {
+    COMPLETED_DRAG.swap(false, Ordering::AcqRel)
+}
 
 /// The overlay is a frameless DWM "sheet of glass".  DWM does not render
 /// non-client chrome for it, so DefWindowProc falls back to painting a
@@ -62,9 +69,22 @@ static ORIGINAL_WNDPROC: AtomicIsize = AtomicIsize::new(0);
 /// WM_NCACTIVATE / WM_NCPAINT.  With a NULL background brush those pixels are
 /// never erased, leaving a title bar framing the pet.  Swallow every
 /// non-client paint and erase the client to black (= transparent on glass).
-unsafe extern "system" fn overlay_wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
-    let original: WNDPROC = mem::transmute::<isize, WNDPROC>(ORIGINAL_WNDPROC.load(Ordering::Relaxed));
+unsafe extern "system" fn overlay_wndproc(
+    hwnd: HWND,
+    msg: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> LRESULT {
+    let original: WNDPROC =
+        mem::transmute::<isize, WNDPROC>(ORIGINAL_WNDPROC.load(Ordering::Relaxed));
     match msg {
+        windows_sys::Win32::UI::WindowsAndMessaging::WM_ENTERSIZEMOVE => {
+            NATIVE_DRAG_ACTIVE.store(true, Ordering::Release);
+        }
+        windows_sys::Win32::UI::WindowsAndMessaging::WM_EXITSIZEMOVE => {
+            NATIVE_DRAG_ACTIVE.store(false, Ordering::Release);
+            COMPLETED_DRAG.store(true, Ordering::Release);
+        }
         WM_NCPAINT | WM_NCUAHDRAWCAPTION | WM_NCUAHDRAWFRAME => return 0,
         // lParam = -1 keeps the activation bookkeeping but skips the NC repaint.
         WM_NCACTIVATE => return CallWindowProcW(original, hwnd, msg, wparam, -1),
@@ -182,7 +202,13 @@ impl WindowsBackend {
         unsafe {
             // 1. Strip ALL frame styles from GWL_STYLE: caption, sizing frame, system menu, min/max boxes
             let mut win_style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32;
-            win_style &= !(WS_CAPTION | WS_THICKFRAME | WS_BORDER | WS_DLGFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+            win_style &= !(WS_CAPTION
+                | WS_THICKFRAME
+                | WS_BORDER
+                | WS_DLGFRAME
+                | WS_SYSMENU
+                | WS_MINIMIZEBOX
+                | WS_MAXIMIZEBOX);
             win_style |= WS_POPUP;
             SetWindowLongPtrW(hwnd, GWL_STYLE, win_style as isize);
 
@@ -266,7 +292,9 @@ impl WindowsBackend {
                 height: (primary.bottom - primary.top) as f64 / scale,
             });
         }
-        let monitor = window.current_monitor().or_else(|| window.primary_monitor())?;
+        let monitor = window
+            .current_monitor()
+            .or_else(|| window.primary_monitor())?;
         let size = monitor.size();
         Some(WorkArea {
             x: monitor.position().x as f64 / scale,
@@ -324,10 +352,16 @@ impl PlatformBackend for WindowsBackend {
 
             // 3. Never paint caption chrome onto the glass (see overlay_wndproc).
             if ORIGINAL_WNDPROC.load(Ordering::Relaxed) == 0 {
-                let previous = SetWindowLongPtrW(hwnd, GWLP_WNDPROC, overlay_wndproc as *const () as isize);
+                let previous =
+                    SetWindowLongPtrW(hwnd, GWLP_WNDPROC, overlay_wndproc as *const () as isize);
                 ORIGINAL_WNDPROC.store(previous, Ordering::Relaxed);
             }
-            RedrawWindow(hwnd, std::ptr::null(), std::ptr::null_mut(), RDW_INVALIDATE | RDW_ERASE | RDW_FRAME);
+            RedrawWindow(
+                hwnd,
+                std::ptr::null(),
+                std::ptr::null_mut(),
+                RDW_INVALIDATE | RDW_ERASE | RDW_FRAME,
+            );
         }
 
         let mut security: SECURITY_ATTRIBUTES = unsafe { mem::zeroed() };
@@ -391,7 +425,40 @@ impl PlatformBackend for WindowsBackend {
     }
 
     fn drag_window(&self, window: &Window) -> HostResult<()> {
-        let _ = window.drag_window();
+        if native_drag_active() {
+            return Ok(());
+        }
+        let _ = window;
+        let hwnd = self.hwnd()?;
+        use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, ReleaseCapture};
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            GetCursorPos, PostMessageW, HTCAPTION, WM_NCLBUTTONDOWN,
+        };
+        // BongoCat delegates placement to user32's caption drag. Do not also
+        // drive SetWindowPos from an input-polling thread. The asynchronous
+        // request lets the renderer IPC callback return before the move loop.
+        // SAFETY: the HWND belongs to this event-loop thread; capture is released
+        // only for an active left-button gesture, and no pointer escapes.
+        unsafe {
+            if GetAsyncKeyState(1) as u16 & 0x8000 == 0 {
+                return Ok(());
+            }
+            let mut cursor = windows_sys::Win32::Foundation::POINT { x: 0, y: 0 };
+            if GetCursorPos(&mut cursor) == 0 {
+                return Err(HostError::Backend("native_drag_cursor_unavailable".into()));
+            }
+            let position = ((cursor.y as u16 as u32) << 16) | cursor.x as u16 as u32;
+            ReleaseCapture();
+            if PostMessageW(
+                hwnd,
+                WM_NCLBUTTONDOWN,
+                HTCAPTION as usize,
+                position as isize,
+            ) == 0
+            {
+                return Err(HostError::Backend("native_drag_start_failed".into()));
+            }
+        }
         Ok(())
     }
 
@@ -428,11 +495,21 @@ mod tests {
     use super::*;
 
     fn work(x: f64, y: f64, width: f64, height: f64) -> Option<WorkArea> {
-        Some(WorkArea { x, y, width, height })
+        Some(WorkArea {
+            x,
+            y,
+            width,
+            height,
+        })
     }
 
     fn bounds(x: f64, y: f64, width: f64, height: f64) -> SnapshotBounds {
-        SnapshotBounds { x, y, width, height }
+        SnapshotBounds {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 
     #[test]
@@ -462,7 +539,10 @@ mod tests {
         assert_eq!(placed.x, 1920.0 - 320.0);
         assert_eq!(placed.y, 1040.0 - 420.0);
         // An in-range position must survive byte for byte.
-        let kept = place_in_work_area(bounds(640.0, 300.0, 320.0, 420.0), work(0.0, 0.0, 1920.0, 1040.0));
+        let kept = place_in_work_area(
+            bounds(640.0, 300.0, 320.0, 420.0),
+            work(0.0, 0.0, 1920.0, 1040.0),
+        );
         assert_eq!(kept, bounds(640.0, 300.0, 320.0, 420.0));
     }
 
@@ -513,6 +593,9 @@ mod tests {
         let mut backend = WindowsBackend::default();
         assert_eq!(backend.applied_bounds(), None);
         backend.applied = Some(bounds(7.0, 11.0, 320.0, 420.0));
-        assert_eq!(backend.applied_bounds(), Some(bounds(7.0, 11.0, 320.0, 420.0)));
+        assert_eq!(
+            backend.applied_bounds(),
+            Some(bounds(7.0, 11.0, 320.0, 420.0))
+        );
     }
 }

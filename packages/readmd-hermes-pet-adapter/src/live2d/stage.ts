@@ -13,6 +13,7 @@ const CLICK_WINDOW_MS = 320
 const DRAG_THRESHOLD_PX = 4
 
 type PetOverlayApi = {
+  startDrag?: () => void
   setBounds: (bounds: { x: number; y: number; width: number; height: number }) => void
   setIgnoreMouse: (ignore: boolean) => void
   control: (command: Record<string, unknown>) => void
@@ -84,7 +85,7 @@ function readManifest(): Promise<{ entry?: string }> {
   })
 }
 
-function loadCubismCore(): Promise<void> {
+export function loadCubismCore(): Promise<void> {
   const host = window as unknown as { Live2DCubismCore?: unknown }
   if (host.Live2DCubismCore) return Promise.resolve()
   return new Promise((resolve, reject) => {
@@ -96,7 +97,7 @@ function loadCubismCore(): Promise<void> {
   })
 }
 
-async function mountLive2dStage(): Promise<Live2dLifeController> {
+async function mountLive2dStage(container?: HTMLElement): Promise<Live2dLifeController> {
   const api = petOverlayApi()
   // Announce the mounted onState listener first: the host replies with the
   // current state instead of relying on a load-time race.
@@ -110,7 +111,7 @@ async function mountLive2dStage(): Promise<Live2dLifeController> {
   const app = new PIXI.Application({ backgroundAlpha: 0, autoDensity: true, resolution: dpr, resizeTo: window })
   // The shared overlay shell reserves a full-height #root. Appending after
   // it places the canvas below the viewport, where overflow:hidden clips it.
-  const stageRoot = document.getElementById('root') || document.body
+  const stageRoot = container || document.getElementById('root') || document.body
   stageRoot.replaceChildren(app.view)
   document.body.style.margin = '0'
   document.body.style.overflow = 'hidden'
@@ -140,7 +141,7 @@ async function mountLive2dStage(): Promise<Live2dLifeController> {
 
   let state: OverlayState = {}
   let bounds = { x: 0, y: 0, width: 300, height: 420 }
-  let dragging: { startX: number; startY: number; pointerId: number; target?: Element; bounds: typeof bounds } | undefined
+  let dragging: { startX: number; startY: number; pointerId: number; target?: Element; bounds: typeof bounds; nativeStarted?: boolean } | undefined
   let clickTimer: number | undefined
   let ignoringMouse: boolean | undefined = undefined
   let lastInteractionRegion = ''
@@ -417,7 +418,15 @@ async function mountLive2dStage(): Promise<Live2dLifeController> {
   window.addEventListener('resize', layout)
   document.addEventListener('visibilitychange', updateAnimationState)
   window.addEventListener('pointermove', event => {
+    if (container) return // The shared sprite canvas owns this gesture surface.
     if (dragging) {
+      if ((window as unknown as { __readmdRustDispatch?: unknown }).__readmdRustDispatch) {
+        if (!dragging.nativeStarted && Math.hypot(event.screenX - dragging.startX, event.screenY - dragging.startY) > DRAG_THRESHOLD_PX) {
+          dragging.nativeStarted = true
+          api?.startDrag?.()
+        }
+        return
+      }
       const nextX = Math.round(dragging.bounds.x + event.screenX - dragging.startX)
       const nextY = Math.round(dragging.bounds.y + event.screenY - dragging.startY)
       bounds.x = nextX
@@ -442,6 +451,7 @@ async function mountLive2dStage(): Promise<Live2dLifeController> {
     }
   })
   window.addEventListener('pointerdown', event => {
+    if (container) return
     if (event.button !== 0 || !hitModel(event.clientX, event.clientY)) return
     setIgnoringMouse(false)
     lastDragX = event.screenX
@@ -464,6 +474,7 @@ async function mountLive2dStage(): Promise<Live2dLifeController> {
     const drag = dragging
     dragging = undefined
     try { drag.target?.releasePointerCapture?.(drag.pointerId) } catch { /* ignore */ }
+    if (drag.nativeStarted) return
     const moved = Math.hypot(event.screenX - drag.startX, event.screenY - drag.startY)
     bounds.x = Math.round(drag.bounds.x + event.screenX - drag.startX)
     bounds.y = Math.round(drag.bounds.y + event.screenY - drag.startY)
@@ -490,6 +501,7 @@ async function mountLive2dStage(): Promise<Live2dLifeController> {
       setIgnoringMouse(true)
     }
   })
+  window.addEventListener('lostpointercapture', () => { dragging = undefined })
 
   layout()
   setIgnoringMouse(true)

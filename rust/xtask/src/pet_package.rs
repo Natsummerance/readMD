@@ -194,7 +194,7 @@ pub fn main(root: &Path, argv: &[String]) -> Result<(), String> {
         // would silently ship the wrong architecture.
         let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
         let status = Command::new(cargo)
-            .args(["build", "--release", "--manifest-path"])
+            .args(["build", "--offline", "--release", "--manifest-path"])
             .arg(crate_dir.join("Cargo.toml"))
             .args(["--target", target])
             .current_dir(root)
@@ -206,10 +206,12 @@ pub fn main(root: &Path, argv: &[String]) -> Result<(), String> {
     }
 
     let exe_name = if platform == "windows" { "readmd-pet-rust.exe" } else { "readmd-pet-rust" };
-    let mut executable = crate_dir.join("target").join(target).join("release").join(exe_name);
+    let target_dir = std::env::var_os("CARGO_TARGET_DIR")
+        .map(PathBuf::from).unwrap_or_else(|| crate_dir.join("target"));
+    let mut executable = target_dir.join(target).join("release").join(exe_name);
     // Cargo's host release dir is only acceptable for a package matching the host.
     if !executable.is_file() && platform == host_platform() && arch == host_arch() {
-        executable = crate_dir.join("target").join("release").join(exe_name);
+        executable = target_dir.join("release").join(exe_name);
     }
     if !executable.is_file() {
         return Err(format!("built Rust executable is missing: {}", executable.display()));
@@ -225,18 +227,26 @@ pub fn main(root: &Path, argv: &[String]) -> Result<(), String> {
     }
     std::fs::create_dir_all(&stage).map_err(|e| e.to_string())?;
     std::fs::copy(&executable, stage.join(exe_name)).map_err(|e| e.to_string())?;
-    copy_tree(&renderer, &stage.join("renderer"))?;
-    // The bongo-cat overlay script is maintained in this repo (the adapter's
-    // dist is a build output and not tracked), so it overrides the bundle copy.
-    let bongocat = crate_dir.join("renderer").join("bongocat.js");
-    if bongocat.is_file() {
-        std::fs::copy(&bongocat, stage.join("renderer").join("assets").join("bongocat.js"))
-            .map_err(|e| format!("{}: {e}", bongocat.display()))?;
-    }
+    // Compile ReadMD's tracked presentation, rather than shipping a stale dist
+    // entry. Existing PIXI/Cubism chunks are reused without installing packages.
+    let node = std::env::var("NODE").unwrap_or_else(|_| "node".into());
+    let status = Command::new(node)
+        .arg(crate_dir.join("scripts").join("build-renderer.mjs"))
+        .arg("--renderer-cache").arg(&renderer)
+        .arg("--output").arg(stage.join("renderer"))
+        .current_dir(root).status().map_err(|e| format!("offline renderer build: {e}"))?;
+    if !status.success() { return Err(format!("offline renderer build failed ({status})")); }
     // Without sprites/models/Cubism vendor files the window starts but never
     // becomes renderer-ready, so these are mandatory.
     for name in ["assets", "models", "vendor"] {
         copy_tree(&adapter_dist.join(name), &stage.join(name))?;
+    }
+    copy_tree(&crate_dir.join("models"), &stage.join("models"))?;
+    let notice_dir = stage.join("licenses").join("bongocat");
+    std::fs::create_dir_all(&notice_dir).map_err(|e| e.to_string())?;
+    for name in ["LICENSE", "UPSTREAM.md"] {
+        std::fs::copy(root.join("third_party").join("bongocat").join(name), notice_dir.join(name))
+            .map_err(|e| format!("BongoCat attribution: {e}"))?;
     }
     if platform == "linux" && crate_dir.join("gnome-companion").is_dir() {
         copy_tree(&crate_dir.join("gnome-companion"), &stage.join("gnome-companion"))?;
