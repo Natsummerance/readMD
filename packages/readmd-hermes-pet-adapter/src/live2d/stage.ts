@@ -5,6 +5,8 @@
 // Hermes snapshot.  Interactive life includes mouse gaze tracking, breathing,
 // natural blinking, physics drag inertia, and expressive tap responses.
 
+import { mountArchDeskRig } from './arch-desk-rig'
+
 const CORE_SRC = '../vendor/live2dcubismcore.min.js'
 const MANIFEST_URL = '../models/arch-chan/readmd.live2d.json'
 const MIN_SCALE = 0.18
@@ -18,7 +20,15 @@ type PetOverlayApi = {
   setIgnoreMouse: (ignore: boolean) => void
   control: (command: Record<string, unknown>) => void
   onState: (listener: (state: unknown) => void) => void
+  onBongoInput?: (listener: (state: NativeInput) => void) => (() => void)
+  onControl?: (listener: (state: { type?: string }) => void) => (() => void)
 }
+
+type NativeInput = { sequence?: number; pointer_x?: number; pointer_y?: number;
+  keyboard_down?: boolean; mouse_down?: boolean; mouse_buttons?: number;
+  keyboard_taps?: number; mouse_taps?: number }
+type Presentation = { active: boolean; desk: boolean; scale: number; offsetX: number; offsetY: number;
+  mouse?: { x: number; y: number }; keyboard?: { x: number; y: number } }
 
 type OverlayState = {
   bounds?: { x: number; y: number; width: number; height: number }
@@ -57,6 +67,11 @@ type CoreModelLike = {
   setParameterValueById?: (id: string, value: number, weight?: number) => void
   addParameterValueById?: (id: string, value: number, weight?: number) => void
   getParameterValueById?: (id: string) => number
+  getParameterIndex?: (id: string) => number
+  getParameterCount?: () => number
+  getParameterMinimumValue?: (index: number) => number
+  getParameterMaximumValue?: (index: number) => number
+  getParameterDefaultValue?: (index: number) => number
 }
 
 // Control surface for the companion layer (speech bubbles, moods, talking).
@@ -65,6 +80,8 @@ export type Live2dLifeController = {
   setTalking: (talking: boolean) => void
   celebrate: () => void
   getCharacterTop?: () => number
+  setPresentation?: (next: Presentation) => void
+  interactionRegions?: () => { head: { x: number; y: number; width: number; height: number }; rects: { x: number; y: number; width: number; height: number }[] }
 }
 
 function petOverlayApi(): PetOverlayApi | undefined {
@@ -119,9 +136,14 @@ async function mountLive2dStage(container?: HTMLElement): Promise<Live2dLifeCont
   const manifest = await readManifest()
   if (!manifest.entry) throw new Error('live2d manifest has no entry')
   const modelUrl = new URL(manifest.entry, new URL(MANIFEST_URL, window.location.href)).toString()
-  const model = await Live2DModel.from(modelUrl, { autoInteract: true, autoUpdate: false }) as unknown as Live2dModel
+  const model = await Live2DModel.from(modelUrl, { autoInteract: false, autoUpdate: false }) as unknown as Live2dModel
   const naturalWidth = model.width / (model.scale.x || 1)
+  const naturalHeight = model.height / (model.scale.x || 1)
   app.stage.addChild(model)
+  const composite = document.createElement('canvas')
+  composite.style.cssText='width:100%;height:100%;display:block'
+  const compositeContext=composite.getContext('2d')!
+  if(container)stageRoot.replaceChildren(composite)
   // One ticker owns both model updates and drawing; the shared PIXI ticker
   // otherwise continues animating even after the application ticker stops.
   // PIXI 6 exposes UPDATE_PRIORITY, but keep the stage compatible with the
@@ -145,6 +167,44 @@ async function mountLive2dStage(container?: HTMLElement): Promise<Live2dLifeCont
   let clickTimer: number | undefined
   let ignoringMouse: boolean | undefined = undefined
   let lastInteractionRegion = ''
+  let presentation: Presentation = { active: true, desk: false, scale: 1, offsetX: 0, offsetY: 0 }
+  let input: NativeInput = {}
+  let keyStrikeAt = -Infinity, mouseStrikeAt = -Infinity
+  const inputPose = { x: 0, y: 0, key: 0, mouse: 0 }
+  const parameters: Record<string, number> = {}
+  const deskRig=mountArchDeskRig(model,()=>({
+    active: Boolean(container && presentation.active && presentation.desk),
+    mouse: presentation.mouse || {x:80,y:300}, keyboard:presentation.keyboard || {x:200,y:280}
+  }))
+  // The torso sits behind the desk, and only the retargeted original arms
+  // continue in front of it. Composite immediately after PIXI draws the frame.
+  function compositeFrame() {
+    if(!container)return
+    const width=app.view.width,height=app.view.height
+    if(composite.width!==width||composite.height!==height){composite.width=width;composite.height=height}
+    const ratio=width/app.screen.width,c=compositeContext
+    c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,width,height)
+    c.save();c.scale(ratio,ratio)
+    if(!presentation.desk || !deskRig?.active)c.drawImage(app.view,0,0,app.screen.width,app.screen.height)
+    else {
+      const deskY=presentation.offsetY+260*presentation.scale
+      c.save();c.beginPath();c.rect(0,0,app.screen.width,deskY);c.clip()
+      c.drawImage(app.view,0,0,app.screen.width,app.screen.height);c.restore()
+      for(const chain of [deskRig.left,deskRig.right]){
+        c.save();c.beginPath();c.lineWidth=34*presentation.scale;c.lineCap='round';c.lineJoin='round'
+        // An arm-shaped clipping polygon exposes sleeves and hands, while
+        // keeping the model's unmodified lower body behind the table.
+        const radius=22*presentation.scale
+        c.moveTo(chain[0].x-radius,chain[0].y)
+        c.lineTo(chain[1].x-radius,chain[1].y);c.lineTo(chain[2].x-radius,chain[2].y+radius)
+        c.lineTo(chain[2].x+radius,chain[2].y+radius);c.lineTo(chain[1].x+radius,chain[1].y)
+        c.lineTo(chain[0].x+radius,chain[0].y);c.closePath();c.clip()
+        c.drawImage(app.view,0,0,app.screen.width,app.screen.height);c.restore()
+      }
+    }
+    c.restore()
+  }
+  addTicker?.(compositeFrame, -30)
 
   const getTime = (): number => (typeof performance !== 'undefined' ? performance.now() : Date.now())
 
@@ -167,7 +227,13 @@ async function mountLive2dStage(container?: HTMLElement): Promise<Live2dLifeCont
     setMood: next => { mood.state = next },
     setTalking: talking => { mood.talking = talking },
     celebrate: () => { tapReactionWeight = 1.0 },
-    getCharacterTop: () => model.y
+    getCharacterTop: () => model.y,
+    setPresentation: next => {
+      const changed = (['active','desk','scale','offsetX','offsetY'] as const).some(key=>next[key]!==presentation[key])
+      presentation = next
+      if (changed) { layout(); updateAnimationState() }
+    },
+    interactionRegions
   }
 
   const probeQuery = typeof URLSearchParams === 'function'
@@ -178,15 +244,36 @@ async function mountLive2dStage(container?: HTMLElement): Promise<Live2dLifeCont
   if (probeActive) probeHost.__live2dProbe = { frame: 0, params: {}, fps: 0 }
 
   function layout(): void {
+    app.renderer.resize(window.innerWidth, window.innerHeight)
     const raw = Number(state.info && state.info.scale) || 0.33
     const scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, raw))
-    model.scale.set((app.screen.width * scale) / naturalWidth)
+    // Fit the authored portrait above the instruments. The old width-only
+    // calculation shrank the default character to one third of the window.
+    const bottom = container && presentation.desk
+      ? presentation.offsetY + 255 * presentation.scale : app.screen.height - 8
+    const top = Math.max(8, container ? presentation.offsetY : 0)
+    const fit = Math.min((app.screen.width - 24) / naturalWidth, Math.max(32, bottom - top) / naturalHeight)
+    const bust=Boolean(container && presentation.desk)
+    model.scale.set(fit * Math.min(1, scale / 0.33) * (bust ? 2 : 1))
     model.x = (app.screen.width - model.width) / 2
-    model.y = app.screen.height - model.height
+    model.y = bottom - model.height * (bust ? 0.5 : 1)
     publishInteractionRegion()
   }
 
+  function interactionRegions() {
+    // The authored head occupies the top quarter of this model's portrait.
+    // Keep its head ellipse and hit rectangle in the exact layout coordinates.
+    const head = { x: model.x + model.width * 0.28, y: model.y + model.height * 0.03,
+      width: model.width * 0.45, height: model.height * 0.23 }
+    return { head, rects: [{ x: Math.max(0,model.x + model.width * 0.2), y: Math.max(0,model.y),
+      width: Math.min(app.screen.width,model.width * 0.62), height: presentation.desk ? model.height * 0.5 : model.height }] }
+  }
+
   function publishInteractionRegion(): void {
+    if (container) {
+      window.dispatchEvent(new Event('readmd-bongo-layout'))
+      return // The shared canvas combines this silhouette with its instruments.
+    }
     const x = Math.max(0, Math.min(app.screen.width, Number(model.x) || 0))
     const y = Math.max(0, Math.min(app.screen.height, Number(model.y) || 0))
     const right = Math.min(app.screen.width, x + Math.max(0, Number(model.width) || 0))
@@ -197,20 +284,20 @@ async function mountLive2dStage(container?: HTMLElement): Promise<Live2dLifeCont
     const key = rect ? [rect.x, rect.y, rect.width, rect.height].map(value => Math.round(value * 100) / 100).join(',') : ''
     if (key === lastInteractionRegion) return
     lastInteractionRegion = key
-    api?.control({ type: 'interaction-regions', rects: rect ? [rect] : [] })
+    api?.control({ type: 'interaction-regions', rects: rect ? [rect] : [], head: interactionRegions().head })
   }
 
   function updateAnimationState(): void {
     const animation = state.info && state.info.animation
     const disabled = Boolean(animation && (animation.enabled === false || animation.fpsCap === 0))
-    const hidden = document.visibilityState === 'hidden' || Boolean((state as OverlayState & { fullscreen?: boolean }).fullscreen)
+    const hidden = !presentation.active || document.visibilityState === 'hidden' || Boolean((state as OverlayState & { fullscreen?: boolean }).fullscreen)
     if (disabled || hidden) {
       if (app.ticker.started) app.ticker.stop()
-      if (!hidden) app.renderer.render(app.stage)
+      if (!hidden) { model.update(0); app.renderer.render(app.stage); compositeFrame() }
       return
     }
     const cap = Number(animation && animation.fpsCap)
-    app.ticker.maxFPS = Number.isFinite(cap) && cap > 0 ? Math.max(24, Math.min(cap, 60)) : 30
+    app.ticker.maxFPS = Number.isFinite(cap) && cap > 0 ? Math.max(24, Math.min(cap, 60)) : 60
     if (!app.ticker.started) app.ticker.start()
   }
 
@@ -291,6 +378,7 @@ async function mountLive2dStage(container?: HTMLElement): Promise<Live2dLifeCont
 
   function applyLife(): void {
     const now = getTime()
+    const dt = Math.max(0, Math.min(0.05, (now - lastLifeTime) / 1000))
     lastLifeTime = now
     const core = model.internalModel?.coreModel
     if (!core || typeof core.setParameterValueById !== 'function') return
@@ -309,15 +397,49 @@ async function mountLive2dStage(container?: HTMLElement): Promise<Live2dLifeCont
     }
     const sleeping = mood.state === 'sleeping'
     const drowsy = mood.state === 'drowsy'
+    const animateIdle = state.info?.animation?.enabled !== false && state.info?.animation?.fpsCap !== 0
+    const follow = 1 - Math.pow(0.75, dt * 60)
+    const strike = 1 - Math.pow(0.15, dt * 60)
+    inputPose.x += (Math.max(-1, Math.min(1, input.pointer_x || 0)) - inputPose.x) * follow
+    inputPose.y += (Math.max(-1, Math.min(1, input.pointer_y || 0)) - inputPose.y) * follow
+    inputPose.key += (Number(Boolean(input.keyboard_down) || now - keyStrikeAt < 65) - inputPose.key) * strike
+    inputPose.mouse += (Number(Boolean(input.mouse_down) || now - mouseStrikeAt < 65) - inputPose.mouse) * strike
+    const normalized = (id: string, value: number) => {
+      const index = core.getParameterIndex?.(id) ?? -1
+      if (index < 0 || index >= (core.getParameterCount?.() || 0)) return
+      const neutral = core.getParameterDefaultValue?.(index) || 0
+      const low = core.getParameterMinimumValue?.(index) ?? neutral
+      const high = core.getParameterMaximumValue?.(index) ?? neutral
+      const bounded = Math.max(-1, Math.min(1, value))
+      const result = neutral + bounded * (bounded < 0 ? neutral - low : high - neutral)
+      setParam(id, result); parameters[id] = result
+    }
+    // These are the original model's authored arm and mouse rig. No painted
+    // hands are layered over its sleeves. Input is global, including when the
+    // cursor is outside the transparent overlay or another app has focus.
+    const hasNativeInput = Boolean(api?.onBongoInput)
+    if (hasNativeInput && !sleeping) {
+      normalized('ParamEyeBallX', inputPose.x * 0.8)
+      normalized('ParamEyeBallY', inputPose.y * 0.65)
+      normalized('MouseToggle', presentation.desk || input.mouse_down ? 1 : 0)
+      normalized('MouseX', -inputPose.x)
+      normalized('MouseY', -inputPose.y * 0.65 - inputPose.mouse * 0.28 + inputPose.key * 0.12)
+      addParam('ParamAngleX', inputPose.x * 9)
+      addParam('ParamAngleY', inputPose.y * 6 - inputPose.key * 2.5 - inputPose.mouse * 1.5)
+      addParam('ParamBodyAngleY', inputPose.key * 2)
+      addParam('ParamBrowLY', inputPose.key * -0.15)
+      addParam('ParamBrowRY', inputPose.key * -0.15)
+    }
+    parameters.keyboard = inputPose.key; parameters.mouse = inputPose.mouse
 
     // 1. Natural periodic blinking (heavy-lidded when drowsy, shut when asleep)
-    if (!isBlinking && now - lastBlinkTime > (drowsy ? 1800 : nextBlinkInterval)) {
+    if (animateIdle && !isBlinking && now - lastBlinkTime > (drowsy ? 1800 : nextBlinkInterval)) {
       isBlinking = true
       blinkProgress = 0
     }
     let eyeOpen = 1
-    if (isBlinking) {
-      blinkProgress += drowsy ? 0.09 : 0.12
+    if (isBlinking && animateIdle) {
+      blinkProgress += dt / (drowsy ? 0.28 : 0.18)
       if (blinkProgress <= 0.5) {
         eyeOpen = Math.max(0, 1 - blinkProgress * 2)
       } else if (blinkProgress <= 1.0) {
@@ -333,7 +455,7 @@ async function mountLive2dStage(container?: HTMLElement): Promise<Live2dLifeCont
     setParam('ParamEyeROpen', eyeOpen * lid)
 
     // 2. Idle subtle micro-movements plus occasional scripted gestures
-    if (!dragging && tapReactionWeight <= 0.05 && !sleeping) {
+    if (animateIdle && !dragging && tapReactionWeight <= 0.05 && !sleeping) {
       const sway = drowsy ? 0.5 : 1
       const perform = gestureOffsets(now)
       addParam('ParamAngleZ', (Math.sin(now * 0.0011) * 2.2 + perform.z) * sway)
@@ -360,7 +482,7 @@ async function mountLive2dStage(container?: HTMLElement): Promise<Live2dLifeCont
 
     // 4. Expressive tap / click reaction (blush, smile, nod, spring decay)
     if (tapReactionWeight > 0.005) {
-      tapReactionWeight *= 0.94
+      tapReactionWeight *= Math.pow(0.94, dt * 60)
       setParam('ParamEyeLSmile', tapReactionWeight)
       setParam('ParamEyeRSmile', tapReactionWeight)
       setParam('ParamCheek', tapReactionWeight * 0.85)
@@ -408,8 +530,24 @@ async function mountLive2dStage(container?: HTMLElement): Promise<Live2dLifeCont
   }
 
   const unsubscribe = api?.onState(applyState) as unknown as (() => void) | undefined
+  const unsubscribeInput = api?.onBongoInput?.(next => {
+    if (input.sequence != null && next.sequence != null && ((next.sequence - input.sequence) >>> 0) > 0x7fffffff) return
+    if (next.keyboard_taps != null && next.keyboard_taps !== (input.keyboard_taps || 0)) keyStrikeAt = getTime()
+    if (next.mouse_taps != null && next.mouse_taps !== (input.mouse_taps || 0)) mouseStrikeAt = getTime()
+    input = next
+    if (next.keyboard_down || next.mouse_down) mood.state = 'normal'
+    // Quiet mode pauses the idle ticker, while deliberate input still paints
+    // one current pose. Resizing or pressing a key cannot leave a blank canvas.
+    if(!app.ticker.started && presentation.active && document.visibilityState!=='hidden') {
+      model.update(16);app.renderer.render(app.stage);compositeFrame()
+    }
+  })
+  const unsubscribeControl = api?.onControl?.(next => {
+    if (next.type === 'pet') lifeController.celebrate()
+  })
   window.addEventListener('pagehide', () => {
     unsubscribe?.()
+    unsubscribeInput?.(); unsubscribeControl?.()
     if (clickTimer !== undefined) window.clearTimeout(clickTimer)
     app.destroy(true, { children: true, texture: true, baseTexture: true })
   }, { once: true })
@@ -506,6 +644,7 @@ async function mountLive2dStage(container?: HTMLElement): Promise<Live2dLifeCont
   layout()
   setIgnoringMouse(true)
   document.body.dataset.live2dReady = 'true'
+  ;(window as unknown as { __readmdLive2d: unknown }).__readmdLive2d = { app, model, parameters, inputPose, interactionRegions, deskRig }
   return lifeController
 }
 

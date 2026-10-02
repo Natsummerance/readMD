@@ -36,10 +36,12 @@ entry = entry.replaceAll("import('./live2d/stage')", "import('./assets/stage.js'
   .replaceAll("import('./pet-life')", "import('./assets/pet-life.js')")
   .replaceAll("import('../../readmd-pet-rust/renderer/bongocat.js')", "import('./assets/bongocat.js')");
 let stage = compile('live2d/stage.ts');
-stage = stage.replace("import('pixi.js')", `import('./${pixi}')`)
+stage = stage.replace("from './arch-desk-rig'", "from './arch-desk-rig.js'")
+  .replace("import('pixi.js')", `import('./${pixi}')`)
   .replace("import('pixi-live2d-display/cubism4')", `import('./${cubism}')`);
 fs.writeFileSync(path.join(output, 'entry.js'), entry);
 fs.writeFileSync(path.join(output, 'assets/stage.js'), stage);
+fs.writeFileSync(path.join(output, 'assets/arch-desk-rig.js'), compile('live2d/arch-desk-rig.ts'));
 let classic = compile('live2d/bongo-classic.ts');
 classic = classic.replace("from './stage'", "from './stage.js'")
   .replace("import('pixi.js')", `import('./${pixi}')`)

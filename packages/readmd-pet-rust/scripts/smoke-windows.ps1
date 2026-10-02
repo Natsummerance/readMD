@@ -1,6 +1,8 @@
 param(
     [Parameter(Mandatory=$true)][string]$Executable,
-    [Parameter(Mandatory=$true)][string]$RendererRoot
+    [Parameter(Mandatory=$true)][string]$RendererRoot,
+    [string]$Character = 'mochi',
+    [ValidateSet('hermes-sprite','live2d')][string]$Renderer = 'hermes-sprite'
 )
 $ErrorActionPreference = 'Stop'
 if (-not $IsWindows) { throw 'This smoke test requires Windows.' }
@@ -39,7 +41,7 @@ $cursor = [PetSmokeWin32+Point]::new()
 $fixture = Join-Path ([IO.Path]::GetTempPath()) ('readmd-pet-native-' + [guid]::NewGuid().ToString('N'))
 [void](New-Item -ItemType Directory -Path $fixture)
 $bridge = Join-Path $fixture 'state.json'
-$snapshot = @{ format_version=1; generation=1; renderer='hermes-sprite'; visible=$true; bounds=@{x=200;y=100;width=320;height=420}; info=@{character='mochi'} }
+$snapshot = @{ format_version=1; generation=1; renderer=$Renderer; visible=$true; bounds=@{x=200;y=100;width=320;height=420}; info=@{character=$Character} }
 function Publish-Snapshot { $snapshot | ConvertTo-Json -Depth 8 -Compress | Set-Content -LiteralPath $bridge -Encoding utf8NoBOM }
 function Require($condition, $message) { if (-not $condition) { throw $message } }
 Publish-Snapshot
@@ -72,7 +74,15 @@ try {
     $width = $before.Right - $before.Left
     $height = $before.Bottom - $before.Top
     $x = $before.Left + [int]($width * 0.5)
-    $y = $before.Top + [int]($height * (305.0 / 420.0))
+    $headY = switch ($Character) {
+        'arch-chan' { 120 }
+        'cache-capy' { 245 }
+        'niu-lai' { 210 }
+        'hermes' { 205 }
+        'moss' { 230 }
+        default { 220 }
+    }
+    $y = $before.Top + [int]($height * ($headY / 420.0))
     [void][PetSmokeWin32]::SetCursorPos($x, $y)
     Start-Sleep -Milliseconds 180
     Require (([PetSmokeWin32]::GetWindowLongPtrW($window, -20).ToInt64() -band 0x20) -eq 0) 'Visible pet remained click-through under the pointer'
@@ -110,7 +120,7 @@ try {
     [void][PetSmokeWin32]::SetCursorPos($after.Left + 2, $after.Top + 2)
     Start-Sleep -Milliseconds 180
     Require (([PetSmokeWin32]::GetWindowLongPtrW($window, -20).ToInt64() -band 0x20) -ne 0) 'Transparent margin did not restore click-through'
-    Write-Output "Native drag PASS: physical delta $($after.Left-$before.Left),$($after.Top-$before.Top); durable bounds, stale snapshot guard, acknowledgement and transparent-margin click-through. Fixture: $fixture"
+    Write-Output "Native drag PASS ($Character/$Renderer): physical delta $($after.Left-$before.Left),$($after.Top-$before.Top); durable bounds, stale snapshot guard, acknowledgement and transparent-margin click-through. Fixture: $fixture"
 } finally {
     [PetSmokeWin32]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
     [void][PetSmokeWin32]::SetCursorPos($cursor.X, $cursor.Y)

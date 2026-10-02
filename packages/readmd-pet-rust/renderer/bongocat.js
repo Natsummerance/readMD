@@ -39,6 +39,8 @@
       scale: 0.78,
       offsetY: -55,
       headCenterY: 180,
+      armCrop: [112, 368, 40, 88],
+      palmCrop: [104,416,60,40],
       pawStyle: {
         type: 'cat',
         fill: '#fdfbf7',
@@ -55,6 +57,8 @@
       scale: 0.75,
       offsetY: -45,
       headCenterY: 165,
+      armCrop: [94, 330, 42, 85],
+      palmCrop: [94,382,37,35],
       pawStyle: {
         type: 'knight',
         fill: '#2980b9',
@@ -71,6 +75,8 @@
       scale: 0.78,
       offsetY: -55,
       headCenterY: 180,
+      armCrop: [112, 368, 40, 88],
+      palmCrop: [104,416,60,40],
       pawStyle: {
         type: 'cat',
         fill: '#e67e22',
@@ -87,6 +93,8 @@
       scale: 0.82,
       offsetY: -68,
       headCenterY: 190,
+      armCrop: [272, 835, 64, 64],
+      palmCrop: [280,835,48,40],
       pawStyle: {
         type: 'sprout',
         fill: '#a8e6cf',
@@ -104,8 +112,10 @@
       frameH: 208,
       scale: 1.25,
       offsetY: 25,
-      deskOffsetY: 50,
-      headCenterY: 165,
+      deskOffsetY: 85,
+      headCenterY: 120,
+      armCrop: [150, 110, 24, 45],
+      palmCrop: [150,130,24,24],
       pawStyle: {
         type: 'capy',
         fill: '#ba8c59',
@@ -124,7 +134,9 @@
       scale: 1.22,
       offsetY: 22,
       deskOffsetY: 70,
-      headCenterY: 160,
+      headCenterY: 100,
+      armCrop: [44, 82, 23, 62],
+      palmCrop: [43,128,22,22],
       pawStyle: {
         type: 'cow',
         fill: '#f39c12',
@@ -227,6 +239,16 @@
       loadedImages[key] = img;
     }
   }
+  const originalImages = { ...loadedImages };
+  function sameOriginalFrame(image, original, profile) {
+    if(!original?.complete || image.naturalWidth!==original.naturalWidth || image.naturalHeight!==original.naturalHeight)return false;
+    const sample=document.createElement('canvas');sample.width=profile.frameW||384;sample.height=profile.frameH||512;
+    const painter=sample.getContext('2d',{willReadFrequently:true});
+    painter.drawImage(original,0,0);const reference=painter.getImageData(0,0,sample.width,sample.height).data;
+    painter.clearRect(0,0,sample.width,sample.height);painter.drawImage(image,0,0);
+    const candidate=painter.getImageData(0,0,sample.width,sample.height).data;
+    return candidate.every((byte,index)=>byte===reference[index]);
+  }
 
   // --- Pet State ---
   const urlParams = new URLSearchParams(window.location.search);
@@ -237,7 +259,10 @@
   const savedMode = localStorage.getItem('readmd-pet-mode');
   const initialMode = savedMode === 'bongos' ? 'bongos' : 'keyboard';
   const savedShowDesk = localStorage.getItem('readmd-pet-showdesk');
-  const initialShowDesk = isUrlLive2D ? false : (savedShowDesk !== 'false');
+  const initialShowDesk = savedShowDesk !== 'false';
+  // The upstream character is an explicit presentation, never an implicit
+  // replacement for Mochi or a user's own imported sprite.
+  let classicEnabled = !isUrlLive2D && localStorage.getItem('readmd-pet-bongo-classic') === 'true';
 
   const state = {
     character: initialChar,
@@ -323,6 +348,8 @@
   const canvas = document.getElementById('bongocat-canvas');
   const ctx = canvas.getContext('2d');
   const live2dStage = document.getElementById('live2d-stage');
+  const instrumentsCanvas = document.getElementById('pet-instruments-canvas');
+  const instrumentsContext = instrumentsCanvas.getContext('2d');
 
   let currentScale = 1.0;
   let currentOffsetX = 0;
@@ -334,6 +361,7 @@
     const viewH = window.innerHeight || CANVAS_HEIGHT;
     canvas.width = Math.round(viewW * dpr);
     canvas.height = Math.round(viewH * dpr);
+    instrumentsCanvas.width=canvas.width;instrumentsCanvas.height=canvas.height;
     canvas.style.width = '100%';
     canvas.style.height = '100%';
 
@@ -351,8 +379,9 @@
   let live2dController = null;
   let classicController = null;
   let classicPromise = null;
+  let live2dPromise = null;
   const classicRoot = document.getElementById('bongo-classic-stage');
-  const wantsClassic = () => state.character === 'mochi' && state.mode === 'keyboard' && state.showDesk !== false;
+  const wantsClassic = () => classicEnabled && state.mode === 'keyboard' && state.showDesk !== false;
   function ensureClassic() {
     if (!classicPromise && classicRoot && window.readmdMountBongoClassic) {
       classicPromise = window.readmdMountBongoClassic(classicRoot, () => state).then(controller => {
@@ -364,20 +393,30 @@
     return classicPromise;
   }
 
-  async function ensureLive2d() {
-    if (live2dMounted) return;
+  function ensureLive2d() {
+    if (live2dPromise) return live2dPromise;
     live2dMounted = true;
-    try {
+    live2dPromise = (async () => {
       if (typeof window.readmdMountLive2d !== 'function') throw new Error('Live2D stage unavailable');
       live2dController = await window.readmdMountLive2d(live2dStage);
-      console.log('[BongoPet] Live2D Arch-Chan stage loaded successfully');
-    } catch (err) {
-      console.error('[BongoPet] Live2D load error:', err);
-    }
+      syncInteractionRegions();
+      return live2dController;
+    })();
+    return live2dPromise;
   }
+  window.readmdLive2dLife = {
+    setMood: value => live2dController?.setMood(value),
+    setTalking: value => live2dController?.setTalking(value),
+    celebrate: () => live2dController?.celebrate(),
+    getCharacterTop: () => state.character === 'arch-chan' ? live2dController?.getCharacterTop() : undefined
+  };
 
-  async function applyCharacter(charId) {
+  async function applyCharacter(charId, preserveClassic = false) {
     if (!charId) return;
+    if (!preserveClassic) {
+      classicEnabled = false;
+      localStorage.setItem('readmd-pet-bongo-classic', 'false');
+    }
     state.character = charId;
     localStorage.setItem('readmd-pet-character', charId);
 
@@ -394,6 +433,7 @@
       if (live2dStage) live2dStage.style.display = 'none';
     }
     updateContextMenu();
+    syncInteractionRegions();
   }
 
   // --- Context menu: compact and text-only, matching the app's quiet style ---
@@ -456,15 +496,23 @@
     state.showDesk = showDesk;
     localStorage.setItem('readmd-pet-mode', mode);
     localStorage.setItem('readmd-pet-showdesk', String(showDesk));
+    if (lastNativeInput) consumeInput(lastNativeInput, true);
     updateContextMenu();
+    syncInteractionRegions();
   }
 
   function updateContextMenu() {
     menu.innerHTML = '';
     menu.appendChild(createLabel('角色'));
     for (const [id, prof] of Object.entries(CHARACTER_PROFILES)) {
-      menu.appendChild(createMenuItem(prof.name, () => applyCharacter(id), state.character === id));
+      menu.appendChild(createMenuItem(prof.name, () => applyCharacter(id), !classicEnabled && state.character === id));
     }
+    menu.appendChild(createMenuItem('BongoCat', () => {
+      classicEnabled = true;
+      localStorage.setItem('readmd-pet-bongo-classic', 'true');
+      setInstrument('keyboard', true);
+      ensureClassic();
+    }, wantsClassic()));
     menu.appendChild(createSeparator());
     menu.appendChild(createLabel('乐器'));
     const desk = state.showDesk !== false;
@@ -488,9 +536,7 @@
   updateContextMenu();
 
   // If initially arch-chan, mount Live2D
-  if (initialChar === 'arch-chan') {
-    applyCharacter('arch-chan');
-  }
+  if (initialChar === 'arch-chan') window.readmdLive2dReady = applyCharacter('arch-chan');
 
   // --- Interaction & Petting ---
   canvas.addEventListener('contextmenu', (e) => {
@@ -562,7 +608,8 @@
       live2dController?.celebrate?.();
     }
 
-    const head = wantsClassic() && classicController ? classicController.interactionRegions().head : null;
+    const head = wantsClassic() && classicController ? classicController.interactionRegions().head
+      : state.character === 'arch-chan' ? live2dController?.interactionRegions().head : null;
     const headY = head ? (head.y + head.height / 2 - currentOffsetY) / currentScale
       : profileHeadY(CHARACTER_PROFILES[state.character] || CHARACTER_PROFILES.mochi);
     // Spawn floating heart particles
@@ -634,7 +681,7 @@
   // Reliable press counters survive several edges between two rendered frames.
   // Held sets are independent: releasing a mouse button cannot release a key.
   let lastNativeInput = null;
-  function consumeInput(payload) {
+  function consumeInput(payload, poseOnly = false) {
     if (!payload) return;
     const previous = lastNativeInput;
     if (previous && Number.isInteger(payload.sequence) && Number.isInteger(previous.sequence)
@@ -653,9 +700,11 @@
     const countChanged = key => Number.isInteger(payload[key]) && payload[key] !== (previous?.[key] ?? 0);
     const leftHeld = state.mode === 'keyboard' ? (payload.keyboard_down ?? (payload.left_down || payload.right_down)) : payload.left_down;
     const rightHeld = state.mode === 'keyboard' ? payload.mouse_down : (payload.right_down || payload.mouse_down);
-    triggerLeftTap(!!leftHeld || countChanged(leftCounter), countChanged(leftCounter));
-    triggerRightTap(!!rightHeld || countChanged(rightCounter) || (state.mode === 'bongos' && countChanged('mouse_taps')),
-      countChanged(rightCounter) || (state.mode === 'bongos' && countChanged('mouse_taps')));
+    if(!poseOnly){
+      triggerLeftTap(!!leftHeld || countChanged(leftCounter), countChanged(leftCounter));
+      triggerRightTap(!!rightHeld || countChanged(rightCounter) || (state.mode === 'bongos' && countChanged('mouse_taps')),
+        countChanged(rightCounter) || (state.mode === 'bongos' && countChanged('mouse_taps')));
+    }
     // Counters trigger an attack; the held state remains authoritative afterwards.
     state.leftDown = !!leftHeld;
     state.rightDown = !!rightHeld;
@@ -668,6 +717,8 @@
 
   // Support state updates from host snapshot
   let lastSeenSnapshotChar = null;
+  let lastSpritesheet = null;
+  let lastSpritesheetCharacter = null;
   if (window.hermesDesktop?.petOverlay?.onState) {
     window.hermesDesktop.petOverlay.onState((snap) => {
       if (!snap) return;
@@ -694,28 +745,39 @@
         state.petInfo = snap.info;
       }
 
+      if (isUrlLive2D) char = 'arch-chan';
       if (char && char !== lastSeenSnapshotChar) {
+        const preserveClassic=lastSeenSnapshotChar===null && char===state.character;
         lastSeenSnapshotChar = char;
-        applyCharacter(char);
+        applyCharacter(char,preserveClassic);
       }
 
       // Dynamic custom spritesheet loading from base64
       const spritesheetB64 = (snap.info && snap.info.spritesheetBase64) || snap.spritesheetBase64;
-      if (spritesheetB64) {
+      const sheetCharacter=char || state.character;
+      if (spritesheetB64 && (spritesheetB64 !== lastSpritesheet || sheetCharacter !== lastSpritesheetCharacter)) {
+        lastSpritesheet = spritesheetB64;lastSpritesheetCharacter=sheetCharacter;
         const mime = (snap.info && snap.info.mime) || snap.mime || 'image/png';
         const targetKey = char || state.character;
         const img = new Image();
-        img.onload = () => {
+        img.onload = async () => {
+          const original=originalImages[targetKey],profile=CHARACTER_PROFILES[targetKey];
+          if(original)try{await original.decode();}catch(_){/* Imported art remains usable without a built-in reference. */}
+          img.readmdOriginalAsset=!!profile && sameOriginalFrame(img,original,profile);
           loadedImages[targetKey] = img;
+          syncInteractionRegions();
         };
+        img.readmdImported = true;
         img.src = `data:${mime};base64,${spritesheetB64}`;
       }
 
       const m = snap.mode || (snap.info && snap.info.mode);
       if (m && (m === 'keyboard' || m === 'bongos')) {
-        state.mode = m;
-        updateContextMenu();
+        setInstrument(m, state.showDesk);
       }
+      state.activity = snap.activity || {};
+      state.animation = snap.info?.animation;
+      syncInteractionRegions();
     });
   }
 
@@ -727,9 +789,7 @@
         applyCharacter(payload.character);
       }
       if (payload.type === 'mode' && payload.mode) {
-        state.mode = payload.mode;
-        localStorage.setItem('readmd-pet-mode', payload.mode);
-        updateContextMenu();
+        setInstrument(payload.mode, state.showDesk);
       }
       if (payload.type === 'pet') {
         petPet();
@@ -753,6 +813,10 @@
     triggerLeftTap,
     triggerRightTap,
     consumeInput,
+    setInstrument,
+    useClassic: () => { classicEnabled = true; setInstrument('keyboard', true); return ensureClassic(); },
+    get spritePose() { return spritePose; },
+    get armPose() { return armPose; },
     get keyCells() { return keyCells; },
     updatePhysics
   };
@@ -781,6 +845,10 @@
 
   // --- Rendering Functions ---
 
+  let spritePose = null;
+  let spriteGeometryKey = '';
+  const armPose = [];
+  const DEFAULT_STATE_ROWS = ['idle','running-right','running-left','waving','jumping','failed','waiting','running','review'];
   // 1. Draw Character (Sprite or Live2D)
   function drawCharacter(ctx) {
     if (state.character === 'arch-chan') {
@@ -801,8 +869,8 @@
     const img = loadedImages[charKey];
     if (!img || !img.complete) return;
 
-    let fw = profile.frameW;
-    let fh = profile.frameH;
+    let fw = img.readmdImported ? Number(state.petInfo?.frameW) : profile.frameW;
+    let fh = img.readmdImported ? Number(state.petInfo?.frameH) : profile.frameH;
     if (!fw || !fh) {
       if (img.naturalWidth === 1536 && img.naturalHeight === 2288) {
         fw = 192;
@@ -819,19 +887,38 @@
       }
     }
 
-    const scale = profile.scale || (fw === 192 ? 1.25 : 0.78);
+    fw = Math.max(1, Math.min(img.naturalWidth, fw));
+    fh = Math.max(1, Math.min(img.naturalHeight, fh));
+    const scale = Math.min(profile.scale || (fw === 192 ? 1.25 : 0.78), 290 / fw, 350 / fh);
     const offsetY = (profile.offsetY !== undefined ? profile.offsetY : (fw === 192 ? 25 : -55)) + deskPoseOffset(profile);
 
-    // Decision: Row 0 is idle; Row 1 is wave / typing frenzy / petting celebration
-    const isHappy = state.showDesk === false && (state.typingBpm > 25 || state.pettingLevel > 0);
-    const row = isHappy ? 1 : 0;
-
+    const now = performance.now();
+    const asleep = isSleeping(now) || state.petInfo?.companion?.resting;
+    const rows = Math.max(1, Math.floor(img.naturalHeight / fh));
+    const isHappy = state.pettingLevel > 0;
+    const imported = img.readmdImported || rows > 2;
+    const names = state.petInfo?.stateRows || DEFAULT_STATE_ROWS;
+    let action = asleep ? 'waiting' : state.activity?.error ? 'failed'
+      : isHappy ? 'waving' : state.activity?.justCompleted ? 'jumping'
+      : state.activity?.busy || state.leftDown || state.rightDown || now - state.lastTapTime < 160 ? 'review' : 'idle';
+    // Named rows, per-row frame counts and loop duration survive an import.
+    // Two-row Hermes sheets have an idle and a celebration row instead.
+    const aliases=action==='waving'?['waving','wave']:action==='jumping'?['jumping','jump']:[action];
+    let row = imported ? names.findIndex(name=>aliases.includes(name)) : isHappy && state.showDesk === false ? 1 : 0;
+    if (row < 0 || row >= rows) { row = 0; action = 'idle'; }
+    const ownRig=!!profile.armCrop && (!img.readmdImported || img.readmdOriginalAsset);
+    if (state.showDesk !== false && ownRig) row = 0;
     const cols = Math.floor(img.naturalWidth / fw) || 4;
-    const maxCols = Math.min(cols, 4);
-
-    const frameInterval = isHappy ? 130 : 160;
-    const asleep = isSleeping(performance.now());
-    const frameIndex = asleep ? 0 : Math.floor((performance.now() / frameInterval) % maxCols);
+    const requestedFrames = Number(state.petInfo?.framesByRow?.[names[row]] || state.petInfo?.framesByState?.[action]
+      || state.petInfo?.framesPerState || (cols === 8 ? (row === 3 ? 4 : 7) : cols));
+    const maxCols = Math.max(1, Math.min(cols, requestedFrames));
+    const loopMs = Math.max(100, Number(state.petInfo?.loopMs) || maxCols * 160);
+    let frameIndex = asleep ? 0 : Math.floor(now % loopMs / loopMs * maxCols);
+    // Keep the shoulders facing the desk; the idle knight sheet also contains
+    // side and back views that cannot share a front-facing arm rig.
+    if (state.showDesk !== false && ownRig && cols === 4) {
+      frameIndex = state.character === 'hermes' ? 0 : (now % 4300 < 160 ? 2 : 0);
+    }
 
     const sx = frameIndex * fw;
     const sy = row * fh;
@@ -842,10 +929,26 @@
     const dy = offsetY;
 
     // Subtle breathing vertical oscillation
-    const breathe = isHappy ? Math.sin(performance.now() * 0.008) * 2 : Math.sin(performance.now() * (asleep ? 0.0016 : 0.003)) * (asleep ? 2.2 : 1.5);
+    const attack = Math.max(0, 1 - (now - Math.max(state.leftTapAt, state.rightTapAt)) / 95);
+    const breathe = Math.sin(now * (asleep ? 0.0016 : 0.003)) * (asleep ? 2.2 : 1.2) + attack * 1.5;
+    spritePose = { img, fw, fh, sx, sy, dx, dy: dy + breathe, dw, dh, row, frameIndex, action,
+      originalArms: ownRig };
+    const geometryKey=[state.character,fw,fh,ownRig,img.readmdImported].join('/');
+    if(geometryKey!==spriteGeometryKey){spriteGeometryKey=geometryKey;queueMicrotask(syncInteractionRegions);}
 
     ctx.save();
     ctx.imageSmoothingEnabled = false; // Pixel-perfect sharp rendering
+    if(state.showDesk!==false && state.mode==='keyboard'){
+      ctx.beginPath();ctx.rect(0,0,CANVAS_WIDTH,260);ctx.clip();
+    }
+    if (spritePose.originalArms && state.showDesk !== false && ['mochi','amber','niu-lai'].includes(state.character)) {
+      // Cut only the baked idle arms out of the body pass. Their original
+      // pixels are drawn once below, in the current typing/mouse pose.
+      const [ax, ay, aw, ah] = profile.armCrop;
+      ctx.beginPath(); ctx.rect(dx,dy+breathe,dw,dh);
+      for (const x of [ax, fw-ax-aw]) ctx.rect(dx+x*scale,dy+breathe+ay*scale,aw*scale,ah*scale);
+      ctx.clip('evenodd');
+    }
     ctx.drawImage(img, sx, sy, fw, fh, dx, dy + breathe, dw, dh);
 
     // Blushing cheek effect during petting
@@ -1073,35 +1176,48 @@
     ctx.restore();
   }
 
-  // Filled, tapered forearms stay connected to the body. Each palm shares
-  // its contact point with the instrument; compressing it cannot stretch an arm.
+  // Retarget cutouts of the character's own arm art. The source sheets stay
+  // unchanged; nearest-neighbour sampling preserves pixel art and the cow's
+  // original fur/hand texture instead of replacing them with flat vector paws.
   function drawPaws(ctx) {
-    const profile=CHARACTER_PROFILES[state.character]||CHARACTER_PROFILES.mochi;
-    const style=profile.pawStyle;
+    armPose.length = 0;
+    const profile=CHARACTER_PROFILES[state.character];
+    if (!profile?.armCrop || !spritePose?.originalArms || state.character === 'arch-chan') return;
     const anchors = {
       mochi: [114,208,244], amber: [118,205,245], hermes: [114,205,229],
-      moss: [118,205,246], 'cache-capy': [146,239,195], 'niu-lai': [115,205,175]
-    }[state.character] || [114,207,218];
-    const drawArm=(shoulderX,shoulderY,pawX,pawY,squish,side)=> {
-      ctx.save();ctx.fillStyle=style.sleeveFill||style.fill;ctx.strokeStyle=style.stroke;
-      ctx.lineWidth=2.3;ctx.lineJoin='round';ctx.lineCap='round';
-      ctx.beginPath();ctx.moveTo(shoulderX-9,shoulderY);
-      ctx.quadraticCurveTo(shoulderX-12,shoulderY+28,pawX-13,pawY-3);
-      ctx.quadraticCurveTo(pawX-17,pawY+9,pawX-4,pawY+11);
-      ctx.quadraticCurveTo(pawX+11,pawY+11,pawX+13,pawY-4);
-      ctx.quadraticCurveTo(shoulderX+13,shoulderY+25,shoulderX+9,shoulderY);
-      ctx.fill();ctx.stroke();
-      ctx.translate(pawX,pawY);ctx.scale(1+(1-squish)*.25,squish);
-      if(style.type==='cat'||style.type==='cow'||style.type==='capy') {
-        // Pads face the desk. Draw the top of the palm and three fingertips.
-        ctx.fillStyle=style.fill;ctx.beginPath();ctx.ellipse(0,0,14,10,side*.09,0,Math.PI*2);ctx.fill();
-        ctx.beginPath();ctx.arc(-6,3,3.5,.3,1.5);ctx.moveTo(0,6);ctx.lineTo(0,8);
-        ctx.moveTo(6,4);ctx.lineTo(7,7);ctx.stroke();
-      } else { drawPawHead(ctx,style,side*.09); }
-      ctx.restore();
+      moss: [118,205,246], 'cache-capy': [146,220,160], 'niu-lai': [115,205,175]
+    }[state.character];
+    const drawArm=(shoulderX,shoulderY,pawX,pawY,side)=> {
+      const [sx,sy,sw,sh]=profile.armCrop;
+      const sourceScale=spritePose.dw/spritePose.fw;
+      const length=Math.hypot(pawX-shoulderX,pawY-shoulderY);
+      const width=sw*sourceScale;
+      const dx=pawX-shoulderX,dy=pawY-shoulderY,d=Math.max(.01,length),reach=d*1.14;
+      const a=reach*.48,b=reach*.52,along=(a*a-b*b+d*d)/(2*d),across=Math.sqrt(Math.max(0,a*a-along*along))*-side;
+      const elbow={x:shoulderX+dx/d*along-dy/d*across,y:shoulderY+dy/d*along+dx/d*across};
+      const points=[{x:shoulderX,y:shoulderY},elbow,{x:pawX,y:pawY}];
+      for(let part=0;part<2;part++) {
+        const start=points[part],end=points[part+1],span=Math.hypot(end.x-start.x,end.y-start.y);
+        const cut=part===0?0:Math.floor(sh*.48),cropH=part===0?Math.ceil(sh*.48)+4:sh-cut;
+        ctx.save();ctx.imageSmoothingEnabled=false;
+        ctx.translate(start.x,start.y);ctx.rotate(Math.atan2(end.y-start.y,end.x-start.x)-Math.PI/2);
+        if(side>0)ctx.scale(-1,1);
+        ctx.drawImage(spritePose.img,sx,sy+cut,sw,cropH,-width/2,-4,width,span+8);
+        ctx.restore();
+      }
+      if(profile.palmCrop){
+        const [px,py,pw,ph]=profile.palmCrop;
+        ctx.save();ctx.imageSmoothingEnabled=false;ctx.translate(pawX,pawY);
+        ctx.rotate(side*.12);if(side>0)ctx.scale(-1,1);
+        const handWidth=state.character==='hermes'?24:state.character==='moss'?26:state.character==='niu-lai'?21:28;
+        ctx.drawImage(spritePose.img,px,py,pw,ph,-handWidth/2,-8,handWidth,18);
+        ctx.restore();
+      }
+      armPose.push({ shoulderX,shoulderY,elbow,x:pawX,y:pawY,source:[sx,sy,sw,sh],kind:'source-cutout' });
     };
-    drawArm(anchors[0],anchors[2]+deskPoseOffset(profile),state.pawLeftX,state.pawLeftY,state.pawLeftSquish,-1);
-    drawArm(anchors[1],anchors[2]+deskPoseOffset(profile),state.pawRightX,state.pawRightY,state.pawRightSquish,1);
+    const breathe = spritePose.dy - (profile.offsetY + deskPoseOffset(profile));
+    drawArm(anchors[0],anchors[2]+deskPoseOffset(profile)+breathe,state.pawLeftX,state.pawLeftY,-1);
+    drawArm(anchors[1],anchors[2]+deskPoseOffset(profile)+breathe,state.pawRightX,state.pawRightY,1);
   }
 
   function drawPawHead(ctx, style, rotation) {
@@ -1388,6 +1504,12 @@
       if (wantsClassic()) ensureClassic();
       const classicActive = wantsClassic() && !!classicController;
       classicController?.setActive(classicActive);
+      live2dController?.setPresentation?.({ active: state.character === 'arch-chan' && !classicActive,
+        desk: state.showDesk !== false, scale: currentScale, offsetX: currentOffsetX, offsetY: currentOffsetY,
+        mouse:{x:currentOffsetX+(state.mode==='bongos'?state.pawLeftX:74+state.mouseOffsetX)*currentScale,
+          y:currentOffsetY+(state.mode==='bongos'?state.pawLeftY:state.pawRightY)*currentScale},
+        keyboard:{x:currentOffsetX+(state.mode==='bongos'?state.pawRightX:210)*currentScale,
+          y:currentOffsetY+(state.mode==='bongos'?state.pawRightY:state.pawLeftY)*currentScale} });
       if (!classicActive) drawCharacter(ctx);
 
       // 2. Draw Desk & Instruments (if desk is enabled)
@@ -1396,12 +1518,21 @@
           drawBongos(ctx);
         } else {
           drawDeskSurface(ctx);
-          drawKeyboard(ctx);
-          drawMouse(ctx);
+          ctx.save();if(state.character==='arch-chan')ctx.translate(95,0);
+          drawKeyboard(ctx);ctx.restore();
+          ctx.save();if(state.character==='arch-chan')ctx.translate(-186,0);
+          drawMouse(ctx);ctx.restore();
         }
 
         // 3. Draw Character-Specific Animated Paws
         drawPaws(ctx);
+      }
+      instrumentsContext.clearRect(0,0,instrumentsCanvas.width,instrumentsCanvas.height);
+      if(state.character==='arch-chan' && !classicActive){
+        // Devices sit behind the original model hands; particles and the
+        // shared drag surface remain in the front canvas.
+        instrumentsContext.drawImage(canvas,0,0);
+        ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,canvas.width,canvas.height);ctx.restore();
       }
 
       // 4. Draw Interactive Particles & Glows
@@ -1422,10 +1553,33 @@
     const profile = CHARACTER_PROFILES[state.character] || CHARACTER_PROFILES.mochi;
     const rect = (x,y,width,height) => ({ x: currentOffsetX+x*currentScale, y: currentOffsetY+y*currentScale,
       width: width*currentScale, height: height*currentScale });
-    const head = rect(96,profileHeadY(profile)-64,128,128);
+    let head = rect(96,profileHeadY(profile)-64,128,128);
     const generic = { head, rects: [head, rect(65,190,190,95)] };
+    if(spritePose?.img.readmdImported && !spritePose.img.readmdOriginalAsset && state.character!=='arch-chan') {
+      const p=spritePose,img=p.img;
+      if(!img.readmdAlphaBounds || img.readmdAlphaBounds.fw!==p.fw || img.readmdAlphaBounds.fh!==p.fh){
+        const sample=document.createElement('canvas');sample.width=p.fw;sample.height=p.fh;
+        const c=sample.getContext('2d',{willReadFrequently:true});c.drawImage(img,0,0);
+        const pixels=c.getImageData(0,0,p.fw,p.fh).data;
+        let left=p.fw,top=p.fh,right=0,bottom=0;
+        for(let y=0;y<p.fh;y++)for(let x=0;x<p.fw;x++)if(pixels[(y*p.fw+x)*4+3]>32){
+          left=Math.min(left,x);top=Math.min(top,y);right=Math.max(right,x+1);bottom=Math.max(bottom,y+1);
+        }
+        img.readmdAlphaBounds={fw:p.fw,fh:p.fh,left,top,right,bottom};
+      }
+      const b=img.readmdAlphaBounds,s=p.dw/p.fw;
+      const x=p.dx+b.left*s,y=p.dy+b.top*s,w=(b.right-b.left)*s,h=(b.bottom-b.top)*s;
+      if(w>0 && h>0){
+        head=rect(x+w*.18,y,w*.64,h*.4);generic.head=head;
+        generic.rects=[rect(x,y,w,state.showDesk!==false?Math.min(h,Math.max(0,260-y)):h)];
+      }
+    }
     if (state.showDesk !== false) generic.rects.push(rect(8,255,305,105));
-    const regions = wantsClassic() && classicController ? classicController.interactionRegions() : generic;
+    let regions = wantsClassic() && classicController ? classicController.interactionRegions()
+      : state.character === 'arch-chan' && live2dController ? live2dController.interactionRegions() : generic;
+    if (state.character === 'arch-chan' && state.showDesk !== false && !wantsClassic()) {
+      regions = { head: regions.head, rects: [...regions.rects, rect(8,255,305,105)] };
+    }
     window.hermesDesktop?.petOverlay?.control?.({
       type: 'interaction-regions',
       ...regions

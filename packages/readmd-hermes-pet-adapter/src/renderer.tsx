@@ -5,16 +5,11 @@
 const requested = new URLSearchParams(window.location.search).get('renderer')
 
 async function mountOverlay(): Promise<void> {
-  if (requested === 'live2d') {
-    const stage = await import('./live2d/stage')
-    const live2d = await stage.mountLive2dStage()
-    const { mountPetLife } = await import('./pet-life')
-    mountPetLife({ live2d })
-    window.hermesDesktop?.petOverlay?.control({ type: 'renderer-ready', renderer: 'live2d' })
-    return
-  }
   const root = document.getElementById('root')!
   root.style.cssText = 'position:relative;width:100%;height:100%;overflow:hidden;touch-action:none;user-select:none'
+  const instruments = document.createElement('canvas')
+  instruments.id = 'pet-instruments-canvas'
+  instruments.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none'
   const bongoRoot = document.createElement('div')
   bongoRoot.id = 'bongo-classic-stage'
   bongoRoot.style.cssText = 'position:absolute;inset:0;display:none;pointer-events:none'
@@ -24,7 +19,7 @@ async function mountOverlay(): Promise<void> {
   const canvas = document.createElement('canvas')
   canvas.id = 'bongocat-canvas'
   canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;cursor:grab;touch-action:none'
-  root.replaceChildren(bongoRoot, live2dRoot, canvas)
+  root.replaceChildren(instruments, bongoRoot, live2dRoot, canvas)
   ;(window as unknown as { readmdMountBongoClassic: unknown }).readmdMountBongoClassic = async (container: HTMLElement, readState: unknown) => {
     const stage = await import('./live2d/bongo-classic')
     return stage.mountBongoClassic(container, readState as Parameters<typeof stage.mountBongoClassic>[1])
@@ -35,11 +30,14 @@ async function mountOverlay(): Promise<void> {
   }
   await import('../../readmd-pet-rust/renderer/bongocat.js')
   await (window as unknown as { readmdClassicReady?: Promise<unknown> }).readmdClassicReady
+  if (requested === 'live2d') await (window as unknown as { readmdLive2dReady?: Promise<unknown> }).readmdLive2dReady
   const { mountPetLife } = await import('./pet-life')
-  mountPetLife()
+  // A late character switch still uses the same companion controller.
+  const live2d = (window as unknown as { readmdLive2dLife?: import('./live2d/stage').Live2dLifeController }).readmdLive2dLife
+  mountPetLife({ live2d })
   // The presentation reports its own visible silhouette, rather than treating
   // the entire transparent canvas as an interactive surface.
-  window.hermesDesktop?.petOverlay?.control({ type: 'renderer-ready', renderer: 'hermes-sprite' })
+  window.hermesDesktop?.petOverlay?.control({ type: 'renderer-ready', renderer: requested === 'live2d' ? 'live2d' : 'hermes-sprite' })
 }
 
 const mount = mountOverlay()
