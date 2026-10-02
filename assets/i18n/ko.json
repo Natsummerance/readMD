@@ -1626,9 +1626,12 @@
   "ai.action.code_review": "코드 리뷰",
   "skill.readmd-code-review.name": "코드 리뷰",
   "ai.action.fix_format": "서식 수정",
+  "ai.assistant": "Assistant",
+  "ai.codeCopied": "Copied",
   "ai.connectAction": "Connect",
   "ai.connectDesc": "Add a key once to summarise, polish and translate any document.",
   "ai.connectTitle": "Connect an AI service",
+  "ai.copyCode": "Copy",
   "skill.readmd-format-fix.name": "서식 수정",
   "pet.updateTitle": "데스크톱 펫 패키지 및 업데이트",
   "pet.checkUpdate": "업데이트 확인",
@@ -1878,6 +1881,7 @@
   "ai.endpointModeTip": "URL이 접두사인지 전체 엔드포인트인지 선택",
   "ai.endpointPrefix": "기본 URL (엔드포인트 경로 자동 추가)",
   "ai.endpointFull": "전체 엔드포인트 URL (경로 추가 안 함)",
+  "ai.regenerate": "Regenerate",
   "ai.starter.explainAsk": "List the technical terms in this document and explain each in plain language.",
   "ai.starter.explainHint": "Plain-language glossary",
   "ai.starter.outlineAsk": "Create a clear, nested outline of this document as a Markdown list.",
@@ -1885,5 +1889,6 @@
   "ai.starter.polishAsk": "Find the passages in this document that read awkwardly and suggest polished versions, before and after.",
   "ai.starter.polishHint": "Smoother, clearer wording",
   "ai.starter.translateAsk": "Translate this document (Chinese into English, any other language into Chinese), keeping its Markdown structure.",
-  "ai.starter.translateHint": "Keeps the Markdown structure"
+  "ai.starter.translateHint": "Keeps the Markdown structure",
+  "ai.thinking": "Thinking…"
 }

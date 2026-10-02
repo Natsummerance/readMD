@@ -254,7 +254,7 @@ test('AI keeps configured keys usable, autosaves, and supports incognito history
   await page.locator('#ai-prompt').press('Enter');
   await expect(page.locator('#ai-output')).toContainText('已完成');
   expect(saves.length).toBe(1);
-  await expect(page.locator('.ai-msg-copy')).toBeVisible();
+  await expect(page.locator('#ai-output .ai-bubble-act-btn').first()).toBeVisible();
   await page.locator('#ai-incognito').check();
   await page.locator('#ai-prompt').fill('再说一次');
   await page.locator('#ai-prompt').press('Enter');

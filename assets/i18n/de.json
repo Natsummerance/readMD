@@ -1626,9 +1626,12 @@
   "ai.action.code_review": "Code-Überprüfung",
   "skill.readmd-code-review.name": "Code-Überprüfung",
   "ai.action.fix_format": "Formatierung korrigieren",
+  "ai.assistant": "Assistant",
+  "ai.codeCopied": "Copied",
   "ai.connectAction": "Connect",
   "ai.connectDesc": "Add a key once to summarise, polish and translate any document.",
   "ai.connectTitle": "Connect an AI service",
+  "ai.copyCode": "Copy",
   "skill.readmd-format-fix.name": "Formatierung korrigieren",
   "pet.updateTitle": "Desktop-Haustierpaket & Updates",
   "pet.checkUpdate": "Nach Updates suchen",
@@ -1878,6 +1881,7 @@
   "ai.endpointModeTip": "Wählen Sie, ob die URL ein Präfix oder ein vollständiger Endpunkt ist",
   "ai.endpointPrefix": "Basis-URL (Endpunktpfad automatisch anhängen)",
   "ai.endpointFull": "Vollständige Endpunkt-URL (kein Pfad angehängt)",
+  "ai.regenerate": "Regenerate",
   "ai.starter.explainAsk": "List the technical terms in this document and explain each in plain language.",
   "ai.starter.explainHint": "Plain-language glossary",
   "ai.starter.outlineAsk": "Create a clear, nested outline of this document as a Markdown list.",
@@ -1885,5 +1889,6 @@
   "ai.starter.polishAsk": "Find the passages in this document that read awkwardly and suggest polished versions, before and after.",
   "ai.starter.polishHint": "Smoother, clearer wording",
   "ai.starter.translateAsk": "Translate this document (Chinese into English, any other language into Chinese), keeping its Markdown structure.",
-  "ai.starter.translateHint": "Keeps the Markdown structure"
+  "ai.starter.translateHint": "Keeps the Markdown structure",
+  "ai.thinking": "Thinking…"
 }

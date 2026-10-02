@@ -95,3 +95,35 @@ test('clicking the dim backdrop closes a modal, but not a static one', async ({ 
   await page.mouse.click(5, 5);
   await expect(page.locator('#style-custom-modal')).toBeVisible();
 });
+
+test('AI conversation renders a typing state, rich answer, code copy and regenerate', async ({ page }) => {
+  let calls = 0;
+  await page.route('**/api/ai/config', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+    ok: true, schema_version: 3, presets: [], upstream_catalog: [],
+    custom: [{ id: 'custom:demo', name: 'Demo', custom: true, base_url: 'https://api.example.test/v1', mode: 'chat', endpoint_mode: 'prefix', models: ['demo-model'], has_key: true, key_source: 'configured', credential_id: 'cred:demo1234567' }],
+    current: { provider_id: 'custom:demo', model: 'demo-model' } }) }));
+  await page.route('**/api/ai/history**', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, session: { id: 's1' }, sessions: [] }) }));
+  await page.route('**/api/ai/chat', async r => {
+    calls++;
+    await new Promise(res => setTimeout(res, 400));
+    await r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, content: '## Answer ' + calls + '\n\n```js\nlet a = 1;\n```\n' }) });
+  });
+  await page.reload();
+  await page.waitForFunction(() => typeof toggleAiPanel === 'function');
+  await page.evaluate(() => renderVirtual('clipboard', 'doc.md', '', '# Doc\n\nText.\n', []));
+  await page.evaluate(() => toggleAiPanel());
+  await page.evaluate(() => { $('ai-stream').checked = false; });
+  await page.fill('#ai-prompt', 'hello');
+  await page.click('#ai-run');
+  await expect(page.locator('#ai-output .ai-typing')).toBeVisible();
+  await page.waitForFunction(() => !state.ai.busy);
+  const answer = page.locator('#ai-output .ai-msg.ai').last();
+  await expect(answer.locator('h2')).toHaveText('Answer 1');
+  await expect(answer.locator('pre .ai-code-copy')).toHaveCount(1);
+  await expect(answer.locator('.ai-tag-name')).not.toHaveText('');
+  await answer.locator('.ai-regen-btn').click();
+  await page.waitForFunction(() => !state.ai.busy && document.querySelector('#ai-output .ai-msg.ai:last-child h2')?.textContent === 'Answer 2');
+  await expect(page.locator('#ai-output .ai-msg.ai')).toHaveCount(1);
+  await expect(page.locator('#ai-output .ai-msg.user')).toHaveCount(1);
+  expect(await page.evaluate(() => state.ai.messages.length)).toBe(2);
+});

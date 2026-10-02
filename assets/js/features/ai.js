@@ -1246,41 +1246,87 @@ function splitUserDocPrompt(content) {
   return { doc, prompt };
 }
 
+const AI_ICONS = {
+  copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  apply: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
+  regen: '<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/>',
+  spark: '<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/>',
+};
+
+function aiActionButton(icon, label, onClick, extraClass) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'ai-bubble-act-btn' + (extraClass ? ' ' + extraClass : '');
+  btn.title = label;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + AI_ICONS[icon] + '</svg>';
+  const text = document.createElement('span');
+  text.textContent = label;
+  btn.appendChild(text);
+  btn.addEventListener('click', onClick);
+  return btn;
+}
+
+/* Header of a message: avatar + name + muted meta (model · tokens · state). */
+function setAiTag(tag, name, meta) {
+  tag.textContent = '';
+  tag.insertAdjacentHTML('beforeend', '<svg class="ai-tag-ic" viewBox="0 0 24 24" aria-hidden="true">' + AI_ICONS.spark + '</svg>');
+  const nameEl = document.createElement('span');
+  nameEl.className = 'ai-tag-name';
+  nameEl.textContent = name || '';
+  const metaEl = document.createElement('span');
+  metaEl.className = 'ai-tag-meta';
+  metaEl.textContent = String(meta || '').replace(/^\s*·\s*/, '').trim();
+  tag.append(nameEl, metaEl);
+}
+
+/* Per-code-block copy buttons inside a rendered answer. */
+function decorateAiAnswer(body) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  body.querySelectorAll('pre').forEach(pre => {
+    if (pre.querySelector(':scope > .ai-code-copy')) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ai-code-copy';
+    btn.textContent = _t('ai.copyCode') || '';
+    btn.addEventListener('click', () => {
+      const code = pre.querySelector('code');
+      const text = code ? code.textContent : [...pre.childNodes].filter(node => node !== btn).map(node => node.textContent).join('');
+      copyText(text.replace(/\n$/, ''), _t('toast.copied') || '');
+      btn.textContent = _t('ai.codeCopied') || '';
+      setTimeout(() => { btn.textContent = _t('ai.copyCode') || ''; }, 1500);
+    });
+    pre.appendChild(btn);
+  });
+}
+
+/* Drop the latest answer (and the question that produced it) and ask again. */
+function regenerateLastAnswer() {
+  if (state.ai.busy) return;
+  const msgs = state.ai.messages || [];
+  if (!msgs.length || msgs[msgs.length - 1].role !== 'assistant') return;
+  msgs.pop();
+  if (msgs.length && msgs[msgs.length - 1].role === 'user') msgs.pop();
+  state.ai.messages = msgs;
+  const bubbles = $('ai-output').querySelectorAll(':scope > .ai-msg');
+  const lastAi = bubbles[bubbles.length - 1];
+  const lastUser = bubbles[bubbles.length - 2];
+  if (lastAi) lastAi.remove();
+  if (lastUser && lastUser.classList.contains('user')) lastUser.remove();
+  $('ai-prompt').value = state.ai.lastPrompt || '';
+  runAi(state.ai.lastRunAction || 'ask');
+}
+
 function renderAiBubbleActions(content, msg) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const row = document.createElement('div');
   row.className = 'ai-bubble-actions';
-
-  const applyBtn = document.createElement('button');
-  applyBtn.type = 'button';
-  applyBtn.className = 'ai-bubble-act-btn';
-  applyBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>' + (_t('ai.apply') || '应用到正文');
-  applyBtn.onclick = () => {
-    state.ai.raw = content;
-    applyAi(content, msg && msg.selectionContext);
-  };
-
-  const copyBtn = document.createElement('button');
-  copyBtn.type = 'button';
-  copyBtn.className = 'ai-bubble-act-btn';
-  copyBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;margin-right:4px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>' + (_t('ai.copy') || '复制回答');
-  copyBtn.onclick = () => {
-    navigator.clipboard.writeText(content);
-    showToast(_t('toast.copied') || '已复制到剪贴板');
-  };
-
-  const saveBtn = document.createElement('button');
-  saveBtn.type = 'button';
-  saveBtn.className = 'ai-bubble-act-btn';
-  saveBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>' + (_t('ai.saveAsMd') || '另存为 MD');
-  saveBtn.onclick = () => {
-    state.ai.raw = content;
-    saveAiAs();
-  };
-
-  row.appendChild(applyBtn);
-  row.appendChild(copyBtn);
-  row.appendChild(saveBtn);
+  row.append(
+    aiActionButton('copy', _t('ai.copy') || '', () => copyText(content, _t('toast.copiedAnswer') || '')),
+    aiActionButton('apply', _t('ai.apply') || '', () => { state.ai.raw = content; applyAi(content, msg && msg.selectionContext); }),
+    aiActionButton('save', _t('ai.saveAsMd') || '', () => { state.ai.raw = content; saveAiAs(); }),
+    aiActionButton('regen', _t('ai.regenerate') || '', regenerateLastAnswer, 'ai-regen-btn'),
+  );
   return row;
 }
 
@@ -1347,20 +1393,19 @@ function renderAiHistory() {
   const out = $('ai-output');
   out.innerHTML = '';
   const msgs = state.ai.messages || [];
-  let uSeq = 0, aSeq = 0;
   msgs.forEach((m) => {
-    if (m.role === 'user') { uSeq++;
-      appendAiUserBubble(out, _t('ai.meTag', { seq: uSeq }) || '', m.content, null);
-    } else if (m.role === 'assistant' && m.content) { aSeq++;
+    if (m.role === 'user') {
+      appendAiUserBubble(out, '', m.content, null);
+    } else if (m.role === 'assistant' && m.content) {
       const ab = document.createElement('div');
       ab.className = 'ai-msg ai';
       const tag = document.createElement('div');
       tag.className = 'ai-msg-tag';
-      tag.textContent = (_t('ai.aiTag', { seq: aSeq }) || '') + (m.model ? ' · ' + m.model : '') + fmtAiUsage(m.usage);
-      tag.appendChild(aiAnswerCopyButton(m.content));
+      setAiTag(tag, _t('ai.assistant') || '', (m.model || '') + fmtAiUsage(m.usage));
       const body = document.createElement('div');
       body.className = 'ai-msg-body';
       body.innerHTML = renderSafeMarkdown(m.content);
+      decorateAiAnswer(body);
       body.appendChild(renderAiBubbleActions(m.content, m));
       ab.appendChild(tag); ab.appendChild(body);
       out.appendChild(ab);
@@ -1641,13 +1686,6 @@ function syncAiKey() {
   updateAiConnectionSummary();
 }
 
-function aiAnswerCopyButton(content) {
-  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const button = document.createElement('button');
-  button.className = 'tb-btn ai-msg-copy'; button.textContent = _t('toast.copiedAnswer') || '';
-  button.addEventListener('click', () => copyText(String(content || ''), _t('toast.copiedAnswer') || ''));
-  return button;
-}
 
 async function copyText(value, success) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
@@ -1999,6 +2037,8 @@ async function runAi(action) {
   const { text, isSelection } = targetInfo;
   if (!text || !text.trim()) { showToast(_t('toast.noDocContentNotice') || ''); return; }
   const prompt = $('ai-prompt').value.trim();
+  state.ai.lastPrompt = prompt;
+  state.ai.lastRunAction = action || '';
   const tpl = currentAiTemplate();
   const act = action || (tpl && tpl.action) || '';
   const tplId = (tpl && tpl.id) || '';
@@ -2054,10 +2094,9 @@ async function runAi(action) {
   const emptyState = out.querySelector('.ai-empty-state');
   if (emptyState) emptyState.remove();
 
-  const userSeq = (state.ai.messages || []).filter(m => m.role === 'user').length + 1;
   const scopeText = isSelection ? (_t('ai.scopeSelection') || '') : (_t('ai.scopeFull') || '');
-  const userTagText = (_t('ai.meTag', { seq: userSeq }) || '') + ' · '
-    + resolveAiActionLabel(action, tpl) + scopeText + ' · ' + model;
+  // "动作：提问（全文）" → "提问（全文）": the label prefix is noise in a chat header.
+  const userTagText = (resolveAiActionLabel(action, tpl) + scopeText).replace(/^[^：:]{1,8}[：:]\s*/, '');
   appendAiUserBubble(out, userTagText, userMsg, {
     scopeLabel: scopeText, prompt: prompt,
     docLines: docs.split('\n').length, docChars: docs.length,
@@ -2067,10 +2106,10 @@ async function runAi(action) {
   aiBubble.className = 'ai-msg ai';
   const aiTag = document.createElement('div');
   aiTag.className = 'ai-msg-tag';
-  aiTag.textContent = _t('ai.generating') || '';
+  setAiTag(aiTag, _t('ai.assistant') || '', _t('ai.thinking') || '');
   const aiBody = document.createElement('div');
   aiBody.className = 'ai-msg-body';
-  aiBody.innerHTML = '<span class="streaming-cursor"></span>';
+  aiBody.innerHTML = '<span class="ai-typing" aria-hidden="true"><i></i><i></i><i></i></span>';
   aiBubble.appendChild(aiTag); aiBubble.appendChild(aiBody);
   out.appendChild(aiBubble);
   out.scrollTop = out.scrollHeight;
@@ -2163,9 +2202,9 @@ async function runAi(action) {
     }
     aiBody.innerHTML = renderSafeMarkdown(state.ai.raw);
     renderMath(aiBody);
-    aiTag.textContent = (_t('ai.aiTag', { seq: userSeq }) || '') + ' · ' + model + fmtAiUsage(state.ai.usage);
+    decorateAiAnswer(aiBody);
+    setAiTag(aiTag, _t('ai.assistant') || '', model + fmtAiUsage(state.ai.usage));
     if (state.ai.raw) {
-      aiTag.appendChild(aiAnswerCopyButton(state.ai.raw));
       const last = {
         role: 'assistant',
         content: state.ai.raw,
@@ -2184,9 +2223,12 @@ async function runAi(action) {
     }
   } catch (e) {
     if (e.name === 'AbortError') {
-      aiTag.textContent = (_t('ai.aiTag', { seq: userSeq }) || '') + ' ' + (_t('ai.stoppedSuffix') || '');
+      setAiTag(aiTag, _t('ai.assistant') || '', model + ' ' + (_t('ai.stoppedSuffix') || ''));
+      const typing = aiBody.querySelector('.ai-typing');
+      if (typing) typing.remove();
       if (state.ai.raw) {
         aiBody.innerHTML = renderSafeMarkdown(state.ai.raw);
+        decorateAiAnswer(aiBody);
         const last = {
           role: 'assistant',
           content: state.ai.raw,
@@ -2200,7 +2242,8 @@ async function runAi(action) {
       }
       showToast(_t('ai.stopped') || '');
     } else {
-      aiTag.textContent = _t('ai.aiError') || '';
+      setAiTag(aiTag, _t('ai.aiError') || '', '');
+      aiBubble.classList.add('is-error');
       const hint = aiErrorHint(e);
       setAiConnectionState(hint.kind, hint.summary);
       showToast(hint.message);

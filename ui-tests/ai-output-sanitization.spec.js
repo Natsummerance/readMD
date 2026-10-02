@@ -24,7 +24,9 @@ test('AI history renders untrusted markdown through the shared sanitizer', async
   await expect(output.locator('strong')).toHaveText('Safe AI response');
   await expect(output.locator('script, iframe')).toHaveCount(0);
   await expect(output.locator('.code-chunk-card, .code-chunk-run-btn, [data-lang], [data-code]')).toHaveCount(0);
-  await expect(output.locator('[onclick], [role], [aria-hidden], [aria-live]')).toHaveCount(0);
+  // App chrome (icons, action buttons) may use aria-hidden; the rendered answer may not.
+  await expect(output.locator('.ai-msg-body :is([onclick], [role], [aria-hidden], [aria-live]):not(.ai-bubble-actions *, .ai-code-copy)')).toHaveCount(0);
+  await expect(output.locator('[onclick]')).toHaveCount(0);
   await expect(output.locator('#content.modal')).toHaveCount(0);
   await expect(output.locator('.modal')).toHaveCount(0);
   expect(await page.evaluate(() => window.__aiXss)).toBeFalsy();
