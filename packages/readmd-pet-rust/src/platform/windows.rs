@@ -33,20 +33,52 @@ extern "system" {
         cbAttribute: u32,
     ) -> i32;
 }
+use windows_sys::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
 use windows_sys::Win32::Graphics::Gdi::{
-    GetMonitorInfoW, GetStockObject, MonitorFromWindow, MONITOR_DEFAULTTONEAREST, MONITORINFO,
-    NULL_BRUSH,
+    FillRect, GetMonitorInfoW, GetStockObject, MonitorFromWindow, RedrawWindow, BLACK_BRUSH, HBRUSH,
+    HDC, MONITOR_DEFAULTTONEAREST, MONITORINFO, NULL_BRUSH, RDW_ERASE, RDW_FRAME, RDW_INVALIDATE,
 };
 use windows_sys::Win32::Security::SECURITY_ATTRIBUTES;
 use windows_sys::Win32::System::Threading::CreateMutexW;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    GetWindowLongPtrW, SetClassLongPtrW, SetWindowLongPtrW, SetWindowPos,
-    SystemParametersInfoW, GCLP_HBRBACKGROUND, GWL_EXSTYLE, GWL_STYLE,
+    CallWindowProcW, GetClientRect, GetWindowLongPtrW, SetClassLongPtrW, SetWindowLongPtrW,
+    SetWindowPos, SystemParametersInfoW, GCLP_HBRBACKGROUND, GWLP_WNDPROC, GWL_EXSTYLE, GWL_STYLE,
     HWND_TOPMOST, SPI_GETWORKAREA, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE,
-    SWP_NOSIZE, SWP_SHOWWINDOW, WS_BORDER, WS_CAPTION, WS_DLGFRAME,
-    WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
+    SWP_NOSIZE, SWP_SHOWWINDOW, WM_ERASEBKGND, WM_NCACTIVATE, WM_NCPAINT, WNDPROC, WS_BORDER,
+    WS_CAPTION, WS_DLGFRAME, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
     WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU, WS_THICKFRAME,
 };
+use std::sync::atomic::{AtomicIsize, Ordering};
+
+/// Undocumented uxtheme messages that draw the "basic" caption/frame.
+const WM_NCUAHDRAWCAPTION: u32 = 0x00AE;
+const WM_NCUAHDRAWFRAME: u32 = 0x00AF;
+/// The pet host owns exactly one overlay window per process.
+static ORIGINAL_WNDPROC: AtomicIsize = AtomicIsize::new(0);
+
+/// The overlay is a frameless DWM "sheet of glass".  DWM does not render
+/// non-client chrome for it, so DefWindowProc falls back to painting a
+/// Windows-basic caption with min/max/close into the surface on
+/// WM_NCACTIVATE / WM_NCPAINT.  With a NULL background brush those pixels are
+/// never erased, leaving a title bar framing the pet.  Swallow every
+/// non-client paint and erase the client to black (= transparent on glass).
+unsafe extern "system" fn overlay_wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    let original: WNDPROC = mem::transmute::<isize, WNDPROC>(ORIGINAL_WNDPROC.load(Ordering::Relaxed));
+    match msg {
+        WM_NCPAINT | WM_NCUAHDRAWCAPTION | WM_NCUAHDRAWFRAME => return 0,
+        // lParam = -1 keeps the activation bookkeeping but skips the NC repaint.
+        WM_NCACTIVATE => return CallWindowProcW(original, hwnd, msg, wparam, -1),
+        WM_ERASEBKGND => {
+            let mut rect: RECT = mem::zeroed();
+            if GetClientRect(hwnd, &mut rect) != 0 {
+                FillRect(wparam as HDC, &rect, GetStockObject(BLACK_BRUSH) as HBRUSH);
+            }
+            return 1;
+        }
+        _ => {}
+    }
+    CallWindowProcW(original, hwnd, msg, wparam, lparam)
+}
 
 pub struct WindowsBackend {
     hwnd: Option<HWND>,
@@ -289,6 +321,13 @@ impl PlatformBackend for WindowsBackend {
                 GCLP_HBRBACKGROUND,
                 GetStockObject(NULL_BRUSH as i32) as isize,
             );
+
+            // 3. Never paint caption chrome onto the glass (see overlay_wndproc).
+            if ORIGINAL_WNDPROC.load(Ordering::Relaxed) == 0 {
+                let previous = SetWindowLongPtrW(hwnd, GWLP_WNDPROC, overlay_wndproc as *const () as isize);
+                ORIGINAL_WNDPROC.store(previous, Ordering::Relaxed);
+            }
+            RedrawWindow(hwnd, std::ptr::null(), std::ptr::null_mut(), RDW_INVALIDATE | RDW_ERASE | RDW_FRAME);
         }
 
         let mut security: SECURITY_ATTRIBUTES = unsafe { mem::zeroed() };
@@ -334,6 +373,14 @@ impl PlatformBackend for WindowsBackend {
 
     fn set_visible(&mut self, window: &Window, visible: bool) -> HostResult<()> {
         window.set_visible(visible);
+        // tao rewrites GWL_STYLE from its own flags on every flag change and
+        // always adds WS_CAPTION | WS_SYSMENU; with the DWM frame extended over
+        // the whole client that paints a full title bar with min/max/close.
+        // Strip it again after each show (set_style uses SWP_SHOWWINDOW, so
+        // only when the pet is meant to be visible).
+        if visible {
+            self.set_style(self.effective_click_through(), self.focusable)?;
+        }
         Ok(())
     }
 

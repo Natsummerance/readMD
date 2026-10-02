@@ -136,6 +136,10 @@ impl PetHost {
                 .with_transparent(true)
                 .with_decorations(false)
                 .with_resizable(false)
+                // No caption buttons even if tao re-applies its own styles.
+                .with_maximizable(false)
+                .with_minimizable(false)
+                .with_closable(false)
                 .with_always_on_top(true)
                 .with_focused(false)
                 .with_inner_size(LogicalSize::new(320.0, 380.0)),
