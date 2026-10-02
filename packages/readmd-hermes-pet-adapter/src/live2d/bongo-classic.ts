@@ -16,6 +16,7 @@ for (let i = 0; i < 26; i++) keyNames[4 + i] = `Key${String.fromCharCode(65 + i)
 for (let i = 0; i < 10; i++) keyNames[0x1e + i] = `Num${(i + 1) % 10}`
 
 type BongoState = {
+  petInfo?: {scale?:number};
   pointerX: number; pointerY: number; leftDown: boolean; rightDown: boolean;
   leftTapAt: number; rightTapAt: number; mouseButtons: number;
   pressedKeys: Set<number>; lastKey: number | null; pettingLevel: number;
@@ -83,7 +84,8 @@ export async function mountBongoClassic(container: HTMLElement, readState: () =>
   })
   const layout = () => {
     app.renderer.resize(window.innerWidth, window.innerHeight)
-    const scale = Math.min((app.screen.width - 12) / naturalWidth, (app.screen.height - 12) / naturalHeight)
+    const desired = 80 + Math.max(.08,Math.min(.48, Number(readState().petInfo?.scale) || .22)) * 350
+    const scale = Math.min((app.screen.width - 12) / naturalWidth, (app.screen.height - 12) / naturalHeight, desired * app.screen.width / 320 / naturalWidth)
     scene.scale.set(scale)
     scene.x = (app.screen.width - naturalWidth * scale) / 2
     scene.y = app.screen.height - naturalHeight * scale - 6
@@ -92,6 +94,7 @@ export async function mountBongoClassic(container: HTMLElement, readState: () =>
     container.style.clipPath = `inset(${scene.y}px ${scene.x}px 6px ${scene.x}px)`
     window.dispatchEvent(new Event('readmd-bongo-layout'))
   }
+  window.addEventListener('readmd-pet-character-changed', layout)
   let active = true
   app.ticker.maxFPS = 60
   app.ticker.add(() => model.update(Math.min(50, app.ticker.deltaMS)), undefined, PIXI.UPDATE_PRIORITY.HIGH)
@@ -99,7 +102,7 @@ export async function mountBongoClassic(container: HTMLElement, readState: () =>
   layout()
   // A compact observable probe verifies real Cubism parameters in UI tests.
   ;(window as unknown as { __bongoClassic: unknown }).__bongoClassic = { app, model, parameters, overlays, naturalWidth, naturalHeight }
-  return { interactionRegions() {
+  return { silhouetteCanvas() { return { canvas:app.renderer.extract.canvas(app.stage), bounds:app.stage.getBounds(), clip:{x:scene.x,y:scene.y,width:naturalWidth*scene.scale.x,height:naturalHeight*scene.scale.x} } }, interactionRegions() {
     const rect = (x: number, y: number, width: number, height: number) => ({
       x: scene.x + x * scene.scale.x, y: scene.y + y * scene.scale.y,
       width: width * scene.scale.x, height: height * scene.scale.y

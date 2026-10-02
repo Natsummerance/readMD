@@ -7,8 +7,8 @@
 
 const CORE_SRC = '../vendor/live2dcubismcore.min.js'
 const MANIFEST_URL = '../models/arch-chan/readmd.live2d.json'
-const MIN_SCALE = 0.18
-const MAX_SCALE = 0.72
+const MIN_SCALE = 0.08
+const MAX_SCALE = 0.48
 const CLICK_WINDOW_MS = 320
 const DRAG_THRESHOLD_PX = 4
 
@@ -78,6 +78,7 @@ export type Live2dLifeController = {
   celebrate: () => void
   getCharacterTop?: () => number
   setPresentation?: (next: Presentation) => void
+  silhouetteCanvas?: () => { canvas: HTMLCanvasElement; bounds: {x:number;y:number;width:number;height:number} }
   interactionRegions?: () => { head: { x: number; y: number; width: number; height: number }; rects: { x: number; y: number; width: number; height: number }[] }
 }
 
@@ -193,7 +194,8 @@ async function mountLive2dStage(container?: HTMLElement): Promise<Live2dLifeCont
       presentation = next
       if (changed) { layout(); updateAnimationState() }
     },
-    interactionRegions
+    interactionRegions,
+    silhouetteCanvas: () => ({ canvas: app.renderer.extract.canvas(app.stage), bounds:app.stage.getBounds() })
   }
 
   const probeQuery = typeof URLSearchParams === 'function'
@@ -205,14 +207,14 @@ async function mountLive2dStage(container?: HTMLElement): Promise<Live2dLifeCont
 
   function layout(): void {
     app.renderer.resize(window.innerWidth, window.innerHeight)
-    const raw = Number(state.info && state.info.scale) || 0.33
+    const raw = Number(state.info && state.info.scale) || 0.22
     const scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, raw))
     // Preserve the entire authored portrait, including the hands and legs.
     // Reserve room above the head for the companion's speech bubble.
     const bottom = app.screen.height - 8
     const top = Math.min(56, app.screen.height * 0.14)
     const fit = Math.min((app.screen.width - 24) / naturalWidth, Math.max(32, bottom - top) / naturalHeight)
-    model.scale.set(fit * Math.min(1, scale / 0.33))
+    model.scale.set(Math.min(fit, (40 + scale * 300) * (app.screen.width / (state.bounds?.width || 320)) / naturalHeight))
     model.x = (app.screen.width - model.width) / 2
     model.y = bottom - model.height
     paintQuiet()

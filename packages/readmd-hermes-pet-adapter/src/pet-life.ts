@@ -9,11 +9,12 @@ import type { Live2dLifeController } from './live2d/stage'
 
 type PetOverlayApi = {
   control: (command: Record<string, unknown>) => void
+  onControl?: (listener: (state: {type?:string;count?:number;active?:boolean}) => void) => void
   onState: (listener: (state: unknown) => void) => void
 }
 
 type LifeState = {
-  info?: { lines?: Record<string, string>; locale?: string; petName?: string; companion?: { character?: string; revision?: number; last_action?: string; resting?: boolean } }
+  info?: { quiet?: boolean; bubbles?: boolean; lines?: Record<string, string>; locale?: string; petName?: string; companion?: { character?: string; revision?: number; last_action?: string; resting?: boolean } }
   activity?: { busy?: boolean; error?: boolean; justCompleted?: boolean }
 }
 
@@ -88,6 +89,12 @@ function injectStyles(): void {
   background: rgba(28, 30, 38, 0.92);
   border-radius: 2px;
 }
+.readmd-pet-life__bubble[data-pet-interactive] { pointer-events:auto; width:min(260px,85%); max-width:85%; padding:12px; box-sizing:border-box; }
+.readmd-pet-life__actions { display:grid;grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; margin-top:8px; }
+.readmd-pet-life__actions:empty { display:none; }
+.readmd-pet-life__actions button { min-height:44px; border:1px solid #ffffff18; border-radius:8px; background:#ffffff0b; color:inherit; font:inherit; cursor:pointer; overflow-wrap:anywhere; }
+.readmd-pet-life__actions button:hover { background:#ffffff20; }
+.readmd-pet-life.is-dropping::after { content:"↓";position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:24px;color:#83b7ff;border:2px dashed #83b7ff;border-radius:50%;padding:14px; }
 .readmd-pet-life__veil {
   position: absolute;
   inset: 0;
@@ -95,7 +102,13 @@ function injectStyles(): void {
   transition: opacity 1200ms ease;
   background: radial-gradient(ellipse 70% 55% at 50% 68%, rgba(10, 12, 24, 0.55), rgba(10, 12, 24, 0) 70%);
 }
-.readmd-pet-life.is-sleeping .readmd-pet-life__veil {
+.readmd-pet-life.is-sleeping .readmd-pet-life__bubble[data-pet-interactive] { pointer-events:auto; width:min(260px,85%); max-width:85%; padding:12px; box-sizing:border-box; }
+.readmd-pet-life__actions { display:grid;grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; margin-top:8px; }
+.readmd-pet-life__actions:empty { display:none; }
+.readmd-pet-life__actions button { min-height:44px; border:1px solid #ffffff18; border-radius:8px; background:#ffffff0b; color:inherit; font:inherit; cursor:pointer; overflow-wrap:anywhere; }
+.readmd-pet-life__actions button:hover { background:#ffffff20; }
+.readmd-pet-life.is-dropping::after { content:"↓";position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:24px;color:#83b7ff;border:2px dashed #83b7ff;border-radius:50%;padding:14px; }
+.readmd-pet-life__veil {
   opacity: 1;
 }
 `
@@ -115,6 +128,12 @@ export function mountPetLife(options: PetLifeOptions = {}): void {
   veil.className = 'readmd-pet-life__veil'
   const bubble = document.createElement('div')
   bubble.className = 'readmd-pet-life__bubble'
+  bubble.setAttribute('role','dialog')
+  const speech = document.createElement('div')
+  speech.setAttribute('role','status')
+  const actions = document.createElement('div')
+  actions.className = 'readmd-pet-life__actions'
+  bubble.append(speech, actions)
   layer.appendChild(veil)
   layer.appendChild(bubble)
   document.body.appendChild(layer)
@@ -151,6 +170,7 @@ export function mountPetLife(options: PetLifeOptions = {}): void {
   window.addEventListener('readmd-pet-character-changed', updateBubblePosition)
 
   let lines: Record<string, string> = {}
+  let quiet = false, bubbles = true, interactive = false
   let shown: { text: string; priority: Priority; until: number } | undefined
   let hideTimer: number | undefined
   let lastInteraction = now()
@@ -175,15 +195,18 @@ export function mountPetLife(options: PetLifeOptions = {}): void {
     }
     shown = undefined
     bubble.classList.remove('is-visible')
+    bubble.removeAttribute('data-pet-interactive')
+    actions.replaceChildren(); interactive = false
+    window.dispatchEvent(new Event('readmd-pet-ui-changed'))
     options.live2d?.setTalking(false)
   }
 
   function show(text: string, priority: Priority): void {
-    if (!text) return
+    if (!text || (!bubbles && priority === CHATTER) || (quiet && priority === CHATTER)) return
     const moment = now()
     if (shown && moment < shown.until && priority <= shown.priority) return
     shown = { text, priority, until: moment + 10_000 }
-    bubble.textContent = text
+    speech.textContent = text
     updateBubblePosition()
     bubble.classList.add('is-visible')
     options.live2d?.setTalking(true)
@@ -206,7 +229,7 @@ export function mountPetLife(options: PetLifeOptions = {}): void {
       if (combo.length) show(pick(combo)!, POKE)
     } else {
       const single = line('pet.pokeQuote1')
-      if (single && pokeTimes.length === 1) show(single, CHATTER)
+      if (single) { shown = undefined; show(single, POKE) }
     }
     if (phase !== 'awake') {
       phase = 'awake'
@@ -217,6 +240,24 @@ export function mountPetLife(options: PetLifeOptions = {}): void {
       if (back) show(back, EVENT)
     }
     lastInteraction = moment
+    interactive = true
+    actions.replaceChildren()
+    bubble.dataset.petInteractive = ''
+    bubble.setAttribute('aria-label',line('pet.characterAria'))
+    for (const kind of ['pet','feed','play',resting ? 'wake' : 'rest','chat','dismiss']) {
+      const button=document.createElement('button'); button.type='button'
+      button.textContent=line(kind === 'chat' ? 'pet.menu.chat' : kind === 'dismiss' ? 'pet.menu.dismiss' : `pet.action.${kind}`)
+      button.onclick=event => {
+        event.stopPropagation()
+        if(kind === 'dismiss') { hideBubble(); return }
+        if(kind === 'chat') api?.control({type:'open-app',target:'ai'})
+        else api?.control({type:'interact',action:kind})
+        hideBubble()
+      }
+      actions.appendChild(button)
+    }
+    updateBubblePosition()
+    window.dispatchEvent(new Event('readmd-pet-ui-changed'))
   }
 
   function handleActivity(activity: LifeState['activity']): void {
@@ -249,7 +290,7 @@ export function mountPetLife(options: PetLifeOptions = {}): void {
   function tick(): void {
     const moment = now()
     if (shown && moment >= shown.until) hideBubble()
-    if (document.hidden || resting || sawActivity.busy) return
+    if (document.hidden || resting || quiet || !bubbles || sawActivity.busy) return
     if (phase === 'sleeping') return
 
     if (moment - lastInteraction >= SLEEPING_AFTER_MS && phase === 'dozing') {
@@ -301,6 +342,8 @@ export function mountPetLife(options: PetLifeOptions = {}): void {
     const state = (next || {}) as LifeState
     if (probeActive) console.log('[pet-life] state push', JSON.stringify({ activity: state.activity, hasLines: Boolean(state.info?.lines) }))
     if (state.info?.lines) lines = state.info.lines
+    quiet = state.info?.quiet === true; bubbles = state.info?.bubbles !== false
+    if ((quiet || !bubbles) && !interactive && shown?.priority === CHATTER) hideBubble()
     const companion = state.info?.companion
     const wasResting = resting
     resting = Boolean(companion?.resting)
@@ -328,6 +371,10 @@ export function mountPetLife(options: PetLifeOptions = {}): void {
     }
   }
 
+  api?.onControl?.(payload => {
+    if(payload.type === 'drop-received') show(line('pet.bubbleDropReceived').replace('{count}',String(payload.count || 1)), EVENT)
+    if(payload.type === 'drop-hover') layer.classList.toggle('is-dropping', Boolean(payload.active))
+  })
   window.addEventListener('readmd-pet-interacted', interacted)
   window.addEventListener('pointermove', event => {
     if (event.buttons === 0) return

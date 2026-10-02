@@ -99,10 +99,29 @@ struct Worker<F> {
     gesture: Option<Gesture>,
 }
 
+fn cursor_exposed(hwnd: HWND, point: POINT) -> bool {
+    if hwnd.is_null() { return false; }
+    // Query native z-order, rather than using WindowFromPoint: that API skips
+    // the pet while WS_EX_TRANSPARENT is set over its transparent pixels.
+    let mut above = unsafe { GetWindow(hwnd, GW_HWNDPREV) };
+    while !above.is_null() {
+        let mut rect: RECT = unsafe { zeroed() };
+        if unsafe { IsWindowVisible(above) } != 0 && unsafe { IsIconic(above) } == 0
+            && unsafe { GetWindowLongPtrW(above, GWL_EXSTYLE) } as u32 & WS_EX_TRANSPARENT == 0
+            && unsafe { GetWindowRect(above, &mut rect) } != 0
+            && point.x >= rect.left && point.x < rect.right && point.y >= rect.top && point.y < rect.bottom {
+            return false;
+        }
+        above = unsafe { GetWindow(above, GW_HWNDPREV) };
+    }
+    true
+}
+
 struct Gesture {
     x: f64,
     y: f64,
     threshold: f64,
+    draggable: bool,
     head: bool,
     started: bool,
 }
@@ -185,11 +204,12 @@ impl<F: Fn(InputEvent)> Worker<F> {
             true,
         );
         // Test the current cursor at the down edge, never the previous hover.
-        if probe.hovering {
+        if probe.head_clicked && cursor_exposed(target.hwnd as HWND, point) {
             self.gesture = Some(Gesture {
                 x: point.x as f64,
                 y: point.y as f64,
                 threshold: 4.0 * target.scale_factor,
+                draggable: !target.lock_position,
                 head: probe.head_clicked,
                 started: false,
             });
@@ -226,8 +246,10 @@ impl<F: Fn(InputEvent)> Worker<F> {
                     > gesture.threshold
             {
                 gesture.started = true;
-                (self.emit)(InputEvent::Hover(true));
-                (self.emit)(InputEvent::DragStart);
+                if gesture.draggable {
+                    (self.emit)(InputEvent::Hover(true));
+                    (self.emit)(InputEvent::DragStart);
+                }
             }
             if unsafe { GetAsyncKeyState(1) as u16 & 0x8000 } == 0 {
                 // A missed up cancels the gesture; it must never create a pet.
@@ -259,8 +281,8 @@ impl<F: Fn(InputEvent)> Worker<F> {
         let probe = probe_cursor(&target, origin, (point.x as f64, point.y as f64), false);
         // Native user32 owns the drag. Hover must not turn the window transparent
         // or move it through a second coordinate path while capture is active.
-        if !crate::platform::native_drag_active() && probe.hovering != self.hovered {
-            self.hovered = probe.hovering;
+        if !crate::platform::native_drag_active() &&  (probe.hovering && cursor_exposed(target.hwnd as HWND, point)) != self.hovered {
+            self.hovered = probe.hovering && cursor_exposed(target.hwnd as HWND, point);
             (self.emit)(InputEvent::Hover(self.hovered));
         }
         let elapsed = now.duration_since(self.last_frame);

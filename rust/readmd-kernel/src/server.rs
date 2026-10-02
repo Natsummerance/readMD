@@ -4349,7 +4349,8 @@ fn h_control_pet_menu(app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
     } else {
         false
     };
-    ok_json(json!({ "pending": pending }))
+    let action = queue.pet_actions.pop_front();
+    ok_json(json!({ "pending": pending || action.is_some(), "action":action }))
 }
 
 // ------------------------------------------------------------ http egress

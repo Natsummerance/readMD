@@ -51,8 +51,8 @@ pub const PRELOAD_ABI: &str = r#"
   };
   window.readmdPet = window.readmdPet || {};
   window.readmdPet.dropFiles = (files) => {
-    const paths = Array.from(files || []).slice(0, 128).map((file) => file && (file.path || file.name)).filter(Boolean);
-    send({type: 'drop', paths});
+    const paths = Array.from(files || []).slice(0, 128).map((file) => file && file.path).filter(Boolean);
+    if (paths.length) send({type: 'drop', paths});
   };
   window.addEventListener('error', (event) => send({type: 'renderer-error', message: String(event.message || 'script_error')}));
   window.addEventListener('unhandledrejection', (event) => send({type: 'renderer-error', message: String(event.reason || 'promise_rejection')}));
@@ -107,6 +107,11 @@ impl WebViewHost {
         };
         let drop_callback = callback;
         let drag_handler = move |event: DragDropEvent| {
+            match &event {
+                DragDropEvent::Enter { .. } => drop_callback(RendererMessage::host("drop-hover",serde_json::json!({"active":true}))),
+                DragDropEvent::Leave => drop_callback(RendererMessage::host("drop-hover",serde_json::json!({"active":false}))),
+                _ => {}
+            }
             if let DragDropEvent::Drop { paths, .. } = event {
                 let payload = serde_json::json!({"paths":paths.iter().map(|path| path.to_string_lossy().to_string()).collect::<Vec<_>>()});
                 drop_callback(RendererMessage::host("drop", payload));

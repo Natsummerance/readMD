@@ -66,7 +66,7 @@ async function fetchPetRuntimeStatus() {
     enabled: false,
     installed: false,
     in_app: true,
-    preferences: { renderer: 'hermes-sprite', scale: 0.33, opacity: 1.0 },
+    preferences: { renderer: 'hermes-sprite', scale: 0.22, opacity: 1.0 },
     running: false
   };
 }
@@ -466,13 +466,13 @@ function applyWidgetAppearance(scaleFraction, opacityFraction) {
   const previewChar = $('pet-preview-character');
   if (!widget) return;
 
-  const scale = Number.isFinite(scaleFraction) ? scaleFraction : 0.33;
+  const scale = Number.isFinite(scaleFraction) ? scaleFraction : 0.22;
   const opacity = Number.isFinite(opacityFraction)
     ? Math.max(0.1, Math.min(1.0, opacityFraction))
     : 1.0;
 
-  // Scale map: 0.18 -> ~0.7, 0.33 -> 1.0, 0.72 -> ~1.4
-  const displayScale = Math.max(0.6, Math.min(1.6, scale * 3.0));
+  // Keep the reader widget compact throughout the desktop size range.
+  const displayScale = Math.max(0.32, Math.min(1.05, 0.18 + scale * 1.8));
 
   if (character) {
     character.style.transform = `scale(${displayScale})`;
@@ -508,6 +508,8 @@ function syncPetWidgetVisibility(status) {
         charEl.classList.add('is-sprite-avatar');
         charEl.style.backgroundImage = `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`;
       }
+      if (!isLive2d) paintPetPreview(charEl,activeSlug);
+      else charEl.classList.remove('pet-authored-preview');
     }
     restoreWidgetPosition();
   } else {
@@ -606,6 +608,7 @@ function initPetDirectManipulation() {
     if (!isDragging) return;
     const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
     if (dist > 4) {
+      if ($('pet-lock-position')?.checked) { hasMoved = true; return; }
       hasMoved = true;
       const rect = widget.getBoundingClientRect();
       const maxX = Math.max(12, window.innerWidth - rect.width - 12);
@@ -701,9 +704,11 @@ function initPetDirectManipulation() {
 }
 
 function handlePetInteractiveClick() {
+  paintPetPreview($('pet-character'), currentActivePetSlug, 1);
+  setTimeout(() => paintPetPreview($('pet-character'), currentActivePetSlug), 1200);
   const char = $('pet-character');
   if (char) {
-    char.classList.add('pet-bounce', 'hermes-waving');
+    char.classList.add('pet-bounce');
     setTimeout(() => {
       char.classList.remove('pet-bounce', 'hermes-waving');
     }, 1200);
@@ -843,9 +848,12 @@ function renderPetSettings(status) {
   if (enabled) enabled.checked = Boolean(status && status.enabled);
   if (renderer) renderer.value = preferences.renderer || 'hermes-sprite';
   if ($('pet-runtime')) $('pet-runtime').value = status?.in_app === false ? 'desktop' : 'in-app';
-  if (scale) scale.value = String(petPercent(preferences.scale, 0.33));
+  if (scale) scale.value = String(petPercent(preferences.scale, 0.22));
   if (opacity) opacity.value = String(petPercent(preferences.opacity, 1.0));
 
+  for (const [id,key,defaultValue] of [['pet-topmost','always_on_top',true],['pet-lock-position','lock_position',false],['pet-sound','sound',false],['pet-bubble-toggle','bubbles',true]]) {
+    if ($(id)) $(id).checked = preferences[key] === undefined ? defaultValue : Boolean(preferences[key]);
+  }
   updatePetRangeLabels();
 
   const isInApp = $('pet-runtime')?.value === 'in-app' || status?.in_app !== false;
@@ -914,11 +922,11 @@ function renderPetSettings(status) {
 
   if (statusLine) {
     if (isRunning) {
-      statusLine.textContent = isInApp ? (petT('pet.statusInAppActive') || '桌宠伴读小组件已在阅读器内运行') : petT('pet.installSuccess');
+      statusLine.textContent = '';
     } else if (status?.enabled && !isInApp) {
       statusLine.textContent = petT('pet.runtime.stoppedHint');
     } else if (isInApp || isInstalled) {
-      statusLine.textContent = petT('pet.installSuccess');
+      statusLine.textContent = '';
     } else {
       statusLine.textContent = petT('pet.statusEnableHint');
     }
@@ -926,6 +934,31 @@ function renderPetSettings(status) {
 
   syncPetWidgetVisibility(status);
 }
+
+const petPreviewImages = new Map();
+function paintPetPreview(element, slug = '', row = 0, frame = 0) {
+  if (!element) return;
+  const src = slug === 'bongocat' ? '/assets/pet/bongocat-preview.png' : !slug || slug === 'hermes' ? '/assets/pet/hermes-sprite.png' : `/api/pets/thumb?slug=${encodeURIComponent(slug)}`;
+  element.dataset.petPreviewSource = src;
+  let loading = petPreviewImages.get(src);
+  if (!loading) { loading = new Promise(resolve => { const image = new Image(); image.onload=()=>resolve(image); image.onerror=()=>resolve(null); image.src=src; }); petPreviewImages.set(src,loading); }
+  loading.then(image => {
+    if (!image || element.dataset.petPreviewSource !== src) return;
+    const v2=image.naturalWidth===1536 && image.naturalHeight===2288;
+    const duo=image.naturalWidth===1536 && image.naturalHeight===1024;
+    const fw=v2?192:duo?384:image.naturalWidth, fh=v2?208:duo?512:image.naturalHeight;
+    const canvas=document.createElement('canvas'); canvas.width=fw;canvas.height=fh;
+    const ctx=canvas.getContext('2d',{willReadFrequently:true});
+    ctx.drawImage(image, Math.min(frame,Math.floor(image.naturalWidth/fw)-1)*fw,Math.min(row,Math.floor(image.naturalHeight/fh)-1)*fh,fw,fh,0,0,fw,fh);
+    const pixels=ctx.getImageData(0,0,fw,fh).data; let l=fw,t=fh,r=0,b=0;
+    for(let y=0;y<fh;y++) for(let x=0;x<fw;x++) if(pixels[(y*fw+x)*4+3]>32) {l=Math.min(l,x);t=Math.min(t,y);r=Math.max(r,x+1);b=Math.max(b,y+1);}
+    if(r<=l || b<=t) return;
+    const cropped=document.createElement('canvas');cropped.width=r-l;cropped.height=b-t;
+    cropped.getContext('2d').drawImage(canvas,l,t,r-l,b-t,0,0,r-l,b-t);
+    element.classList.remove('is-sprite-anim','is-sprite-avatar'); element.classList.add('pet-authored-preview'); element.style.backgroundImage=`url("${cropped.toDataURL()}")`;
+  });
+}
+window.paintPetPreview = paintPetPreview;
 
 function updateCharacterPreview(rendererVal) {
   const charEl = document.querySelector('.pet-preview-character');
@@ -960,6 +993,9 @@ function updateCharacterPreview(rendererVal) {
       widgetCharEl.style.backgroundImage = `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`;
     }
   }
+  $('pet-sound')?.closest('.apple-list-row')?.classList.toggle('hidden', activeSlug !== 'bongocat');
+  if (!isLive2d) { paintPetPreview(charEl,activeSlug); paintPetPreview(widgetCharEl,activeSlug); }
+  else { charEl?.classList.remove('pet-authored-preview'); widgetCharEl?.classList.remove('pet-authored-preview'); }
   if (slugEl) {
     if (isLive2d) {
       slugEl.textContent = petT('pet.renderer.live2d') || 'Arch-Chan';
@@ -1007,28 +1043,39 @@ function closePetSettings() {
   $('pet-settings-modal')?.classList.add('hidden');
 }
 
-let isPetConfiguring = false;
-async function savePetSettings() {
-  if (isPetConfiguring) return { ok: false, code: 'pet_config_busy' };
-  isPetConfiguring = true;
-  try {
+let petSettingsVersion = 0, petSettingsQueue = Promise.resolve();
+function capturePetSettings() {
     const enabled = Boolean($('pet-enabled')?.checked);
-    const scale = Number($('pet-scale')?.value || 33) / 100;
+    const scale = Number($('pet-scale')?.value || 22) / 100;
     const opacity = Number($('pet-opacity')?.value || 100) / 100;
     const renderer = $('pet-renderer')?.value || 'hermes-sprite';
 
-    if (renderer === 'live2d' && $('pet-runtime')) $('pet-runtime').value = 'desktop';
-    const isDesktopChoice = $('pet-runtime')?.value === 'desktop';
     const activeSlug = (typeof currentActivePetSlug !== 'undefined' && currentActivePetSlug) || $('pet-gallery')?.value || undefined;
-    const config = {
+    if ((renderer === 'live2d' || activeSlug === 'bongocat') && $('pet-runtime')) $('pet-runtime').value = 'desktop';
+    const isDesktopChoice = $('pet-runtime')?.value === 'desktop';
+    return {
       enabled,
       scale,
       opacity,
       renderer,
       in_app: !isDesktopChoice,
-      character: activeSlug
+      character: renderer === 'live2d' ? 'arch-chan' : (activeSlug || ''),
+      always_on_top: $('pet-topmost')?.checked !== false,
+      lock_position: $('pet-lock-position')?.checked === true,
+      bubbles: $('pet-bubble-toggle')?.checked !== false,
+      quiet: window.petQuietMode === true,
+      sound: $('pet-sound')?.checked === true
     };
 
+}
+function savePetSettings() {
+  const config=capturePetSettings(), version=++petSettingsVersion;
+  const save=()=>version === petSettingsVersion ? applyPetSettings(config,version) : {ok:true,superseded:true};
+  petSettingsQueue=petSettingsQueue.then(save,save);
+  return petSettingsQueue;
+}
+async function applyPetSettings(config,version) {
+    const {enabled,renderer}=config;
     const stateChanged = Boolean(activePetSettingsStatus && activePetSettingsStatus.enabled !== enabled);
     if (enabled && !config.in_app && !activePetSettingsStatus?.adapter?.available) {
       const installed = await installDefaultPetRuntime();
@@ -1056,14 +1103,14 @@ async function savePetSettings() {
       if (typeof showToast === 'function') showToast(enabled ? petT('pet.enabledToast') : petT('pet.disabledToast'));
     }
 
-    const updatedStatus = await fetchPetRuntimeStatus();
-    renderPetSettings(updatedStatus);
-    setPetMenuStatus(updatedStatus);
-    syncPetWidgetVisibility(updatedStatus);
+    if(version === petSettingsVersion) {
+      const updatedStatus = await fetchPetRuntimeStatus();
+      if(version !== petSettingsVersion) return result;
+      renderPetSettings(updatedStatus);
+      setPetMenuStatus(updatedStatus);
+      syncPetWidgetVisibility(updatedStatus);
+    }
     return result;
-  } finally {
-    isPetConfiguring = false;
-  }
 }
 
 async function openPetSettings() {
@@ -1120,12 +1167,28 @@ async function pollPetControls() {
 
     if (batchRes.status === 'fulfilled' && batchRes.value && batchRes.value.ok) {
       const payload = await batchRes.value.json();
-      if (payload && payload.pending) receivePetBatch(payload.paths);
+      if (payload && payload.pending) {
+        try { await petNativeApi()?.show_window?.(); } catch (_) {}
+        receivePetBatch(payload.paths);
+      }
     }
 
     if (menuRes.status === 'fulfilled' && menuRes.value && menuRes.value.ok) {
       const payload = await menuRes.value.json();
-      if (payload && payload.pending) {
+      if (payload && payload.pending && payload.action) {
+        try { await petNativeApi()?.show_window?.(); } catch (_) {}
+        if (payload.action.type === 'clipboard') {
+          if (payload.action.paths?.length) await handlePetDroppedFiles(payload.action.paths);
+          else if (payload.action.image_png) {
+            const bytes=Uint8Array.from(atob(payload.action.image_png),c=>c.charCodeAt(0));
+            await handlePetDroppedFiles([new File([bytes],'clipboard.png',{type:'image/png'})]);
+          }
+          else if (payload.action.text && typeof renderVirtual === 'function') renderVirtual('clipboard','clipboard.md','',payload.action.text,[]);
+        }
+        const target = payload.action.target;
+        if (target === 'pet-settings') await openPetSettings();
+        else if (target === 'ai') { if (typeof openAIPanel === 'function') openAIPanel(); }
+      } else if (payload && payload.pending) {
         const trigger = $('btn-more');
         const menu = $('more-menu');
         if (trigger && menu && !menu.classList.contains('open')) trigger.click();
@@ -1226,6 +1289,7 @@ function initPetSystem() {
     }
   });
 
+  for (const id of ['pet-topmost','pet-lock-position','pet-sound','pet-bubble-toggle']) $(id)?.addEventListener('change', () => { void savePetSettings(); });
   $('pet-enabled')?.addEventListener('change', () => { void savePetSettings(); });
   $('pet-runtime')?.addEventListener('change', (e) => {
     const isDesktop = e.target.value === 'desktop';
@@ -1552,7 +1616,7 @@ async function refreshPetGallery() {
   window.dispatchEvent(new CustomEvent('readmd:pet-gallery', { detail: result }));
   const select = $('pet-gallery');
   if (select) {
-    select.replaceChildren(new Option(petT('pet.gallery.hermes') || '伴读使者', ''));
+    select.replaceChildren(new Option(petT('pet.gallery.hermes') || '伴读使者', ''), new Option('BongoCat','bongocat'));
     const allGalleryPets = [...currentGalleryPets];
     if (Array.isArray(result.catalog)) {
       for (const item of result.catalog) {
@@ -1571,24 +1635,5 @@ async function refreshPetGallery() {
     select.value = result.active || '';
     updatePetDeleteButtonVisibility(select.value);
   }
-  const isLive2d = ($('pet-renderer')?.value === 'live2d') || (activePetSettingsStatus?.preferences?.renderer === 'live2d');
-  const activeSlug = result.active || '';
-  const isAnimSprite = !activeSlug || activeSlug === 'hermes';
-  const image = isLive2d
-    ? 'url("/assets/pet/arch-chan-avatar.png")'
-    : (activeSlug ? `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")` : 'url("/assets/pet/hermes-sprite.png")');
-  for (const id of ['pet-character', 'pet-preview-character']) {
-    const element = $(id);
-    if (element) {
-      element.style.backgroundImage = image;
-      element.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan', 'hermes-sprite', 'is-sprite-anim', 'is-sprite-avatar');
-      if (isLive2d) {
-        element.classList.add('is-arch-chan', 'is-live2d');
-      } else if (isAnimSprite) {
-        element.classList.add('hermes-sprite', 'is-hermes', 'is-sprite-anim');
-      } else {
-        element.classList.add('is-sprite-avatar');
-      }
-    }
-  }
+  updateCharacterPreview($('pet-renderer')?.value || activePetSettingsStatus?.preferences?.renderer || 'hermes-sprite');
 }

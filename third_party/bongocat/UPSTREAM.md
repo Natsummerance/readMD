@@ -29,7 +29,10 @@ ReadMD adds only `keys.json`, a sorted inventory of those existing key images.
 The models are packaged under `models/bongocat-standard/`, with this license and
 notice in `licenses/bongocat/`. No upstream Cubism SDK binaries are copied;
 the renderer reuses ReadMD's existing packaged Cubism runtime and PIXI chunks.
-The remaining ReadMD characters retain their existing artwork and Canvas
-keyboard, mouse and forearm presentation.
+The remaining ReadMD characters retain their full authored sprite actions or
+Live2D portrait. Only BongoCat has keyboard/mouse layers; no extra forearms or
+instruments are attached to the other characters.
+`assets/pet/bongocat-preview.png` is a preview rendered from the unchanged
+bundled cat model and its original instrument artwork.
 Input identities live only in memory; no keyboard text or input sequence is
 written to logs, health reports or settings.

@@ -115,7 +115,7 @@
     box.querySelector('.pet-sheet-body').before(tabs);
     const list = box.querySelector('.apple-grouped-list');
     list.querySelectorAll('.apple-list-row').forEach(row => {
-      row.dataset.petSectionContent = row.querySelector('#pet-gallery') ? 'characters' : row.querySelector('#pet-bubble-toggle') ? 'companion' : 'settings';
+      row.dataset.petSectionContent ||= row.querySelector('#pet-gallery') ? 'characters' : row.querySelector('#pet-bubble-toggle') ? 'companion' : 'settings';
     });
     const roster = document.createElement('section');
     roster.id = 'pet-roster';
@@ -157,7 +157,6 @@
     companion.className = 'pet-companion-controls';
     companion.innerHTML = `<h4 data-i18n="ux.petStyle">${t('ux.petStyle')}</h4><div class="pet-mode-buttons"><button id="pet-mode-social" type="button" data-i18n="ux.petSocial">${t('ux.petSocial')}</button><button id="pet-mode-quiet" type="button" data-i18n="ux.petQuiet">${t('ux.petQuiet')}</button></div><p data-i18n="ux.petQuietHint">${t('ux.petQuietHint')}</p><h4 data-i18n="ux.petActions">${t('ux.petActions')}</h4><div class="pet-action-buttons"><button id="pet-say-hello" type="button" data-i18n="ux.petHello">${t('ux.petHello')}</button><button id="pet-chat-open" type="button"><span data-i18n="ai.title">${t('ai.title')}</span> ↗</button></div>`;
     list.appendChild(companion);
-
     companion.querySelector('#pet-mode-social').onclick = () => quiet(false);
     companion.querySelector('#pet-mode-quiet').onclick = () => quiet(true);
     companion.querySelector('#pet-say-hello').onclick = () => { if (typeof handlePetInteractiveClick === 'function') handlePetInteractiveClick(); else window.showPetBubble?.(t('ux.petGreeting'), 3500, 2); };
@@ -203,7 +202,7 @@
   }
   function quiet(value, persist = true) {
     window.petQuietMode = value;
-    if (persist) { try { localStorage.setItem('readmd.pet.quiet', String(value)); } catch (_) {} }
+    if (persist) { try { localStorage.setItem('readmd.pet.quiet', String(value)); } catch (_) {} void window.savePetSettings?.(); }
     if (value && typeof hidePetBubble === 'function') hidePetBubble();
     document.getElementById('readmd-pet-widget')?.classList.toggle('pet-quiet', value);
     document.getElementById('pet-mode-social')?.setAttribute('aria-pressed', String(!value));
@@ -239,7 +238,7 @@
         rendererSelect.value = renderer;
         delete rendererSelect.dataset.userChanged;
       }
-      if (renderer === 'live2d') document.getElementById('pet-runtime').value = 'desktop';
+      if (renderer === 'live2d' || slug === 'bongocat') document.getElementById('pet-runtime').value = 'desktop';
       const result = await savePetSettings();
       if (!result?.ok) throw new Error(result?.code || 'pet_config_failed');
     } catch (error) {
@@ -303,7 +302,7 @@
       { slug: 'arch-chan', display_name: 'Arch-Chan', renderer: 'live2d', groupPriority: 0 }
     ];
 
-    const allItems = [...customPets, companionPet, ...spriteCatalog, ...otherInstalled, ...live2dPets];
+    const allItems = [...customPets, companionPet, {slug:'bongocat',display_name:'BongoCat',renderer:'hermes-sprite',groupPriority:1}, ...spriteCatalog, ...otherInstalled, ...live2dPets];
     allItems.forEach((it, idx) => { it.originalIndex = idx; });
 
     // Filter by selected renderer:
@@ -370,10 +369,11 @@
           ? `url("/api/pets/thumb?slug=${encodeURIComponent(item.slug)}")`
           : 'url("/assets/pet/hermes-sprite.png")';
 
+      if (!live) window.paintPetPreview?.(art,item.slug);
       const name = document.createElement('strong');
       name.textContent = label;
       const kind = document.createElement('small');
-      const kindKey = live ? 'ux.petLive2d' : 'ux.petSprite';
+      const kindKey = live ? 'pet.behavior.live2d' : item.slug === 'bongocat' ? 'pet.behavior.bongo' : 'pet.behavior.sprite';
       kind.setAttribute('data-i18n', kindKey);
       kind.textContent = t(kindKey);
 
@@ -394,6 +394,7 @@
 
   window.addEventListener('readmd:pet-state', e => {
     status = e.detail;
+    if (typeof status?.preferences?.quiet === 'boolean') quiet(status.preferences.quiet, false);
     const rendererSelect = document.getElementById('pet-renderer');
     if (rendererSelect && status?.preferences?.renderer && !rendererSelect.dataset.userChanged) {
       rendererSelect.value = status.preferences.renderer;

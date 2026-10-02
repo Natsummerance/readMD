@@ -42,8 +42,8 @@ use windows_sys::Win32::System::Threading::CreateMutexW;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CallWindowProcW, GetClientRect, GetWindowLongPtrW, SetClassLongPtrW, SetWindowLongPtrW,
     SetWindowPos, SystemParametersInfoW, GCLP_HBRBACKGROUND, GWLP_WNDPROC, GWL_EXSTYLE, GWL_STYLE,
-    HWND_TOPMOST, SPI_GETWORKAREA, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
-    SWP_SHOWWINDOW, WM_ERASEBKGND, WM_NCACTIVATE, WM_NCPAINT, WNDPROC, WS_BORDER, WS_CAPTION,
+    HWND_TOPMOST, HWND_NOTOPMOST, SPI_GETWORKAREA, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+    WM_ERASEBKGND, WM_NCACTIVATE, WM_NCPAINT, WNDPROC, WS_BORDER, WS_CAPTION,
     WS_DLGFRAME, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
     WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU, WS_THICKFRAME,
 };
@@ -104,6 +104,7 @@ pub struct WindowsBackend {
     hwnd: Option<HWND>,
     mutex: Option<HANDLE>,
     click_through: bool,
+    always_on_top: bool,
     focusable: bool,
     interaction: InteractionRegionSnapshot,
     applied: Option<SnapshotBounds>,
@@ -153,7 +154,8 @@ impl Default for WindowsBackend {
         Self {
             hwnd: None,
             mutex: None,
-            click_through: false,
+            click_through: true,
+            always_on_top: true,
             focusable: false,
             interaction: InteractionRegionSnapshot::default(),
             applied: None,
@@ -229,12 +231,12 @@ impl WindowsBackend {
             SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style as isize);
             SetWindowPos(
                 hwnd,
-                HWND_TOPMOST,
+                if self.always_on_top { HWND_TOPMOST } else { HWND_NOTOPMOST },
                 0,
                 0,
                 0,
                 0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_SHOWWINDOW,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED,
             );
         }
         Ok(())
@@ -410,8 +412,7 @@ impl PlatformBackend for WindowsBackend {
         // tao rewrites GWL_STYLE from its own flags on every flag change and
         // always adds WS_CAPTION | WS_SYSMENU; with the DWM frame extended over
         // the whole client that paints a full title bar with min/max/close.
-        // Strip it again after each show (set_style uses SWP_SHOWWINDOW, so
-        // only when the pet is meant to be visible).
+        // Strip it again after each show. Style changes must preserve visibility.
         if visible {
             self.set_style(self.effective_click_through(), self.focusable)?;
         }
@@ -458,6 +459,14 @@ impl PlatformBackend for WindowsBackend {
             {
                 return Err(HostError::Backend("native_drag_start_failed".into()));
             }
+        }
+        Ok(())
+    }
+
+    fn set_always_on_top(&mut self, _window: &Window, enabled: bool) -> HostResult<()> {
+        if self.always_on_top != enabled {
+            self.always_on_top = enabled;
+            self.set_style(self.effective_click_through(), self.focusable)?;
         }
         Ok(())
     }

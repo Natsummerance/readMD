@@ -188,7 +188,7 @@ for (const kind of ['hermes-sprite','live2d']) {
         const b = window.__readmdLive2d; return { height:b.model.height,y:b.model.y,bottom:b.model.y+b.model.height,
           head:b.interactionRegions().head,regions:window.__bongoPet.interactionRegions };
       });
-      expect(layout.height).toBeGreaterThan(height*.65); expect(layout.y).toBeGreaterThanOrEqual(45);
+      expect(layout.height).toBeGreaterThan(50); expect(layout.height).toBeLessThan(height*.5); expect(layout.y).toBeGreaterThanOrEqual(45);
       expect(layout.bottom).toBeLessThan(height); expect(layout.regions.rects).toHaveLength(1);
       expect(layout.regions.head).toEqual(layout.head);
       expect(await page.locator('#live2d-stage canvas').count()).toBe(1);
@@ -264,7 +264,7 @@ test('quiet Live2D paints its full WebGL portrait and responds once without rest
   expect(await page.evaluate(() => {
     const b=window.__readmdLive2d;b.app.renderer.render(b.app.stage); const pixels=b.app.renderer.extract.pixels();
     let visible=0;for(let i=3;i<pixels.length;i+=4)if(pixels[i]>127)visible++;return visible;
-  })).toBeGreaterThan(8000);
+  })).toBeGreaterThan(2000);
   await page.evaluate(() => window.__readmdRustDispatch.control({type:'pet'}));
   expect(await page.evaluate(() => window.__readmdLive2d.parameters.MouseToggle)).toBe(1);
   expect(await page.evaluate(() => window.__readmdLive2d.app.ticker.started)).toBe(false);

@@ -1999,7 +1999,7 @@ fn with_state<T>(run: impl FnOnce(&mut PetApiState) -> T) -> T {
 
 // --------------------------------------------------------------- preferences
 
-/// `_pet_preferences()` minus the 43-key `lines` pack (see module notes).
+/// Persisted appearance, window behavior and localized companion copy.
 fn pet_preferences(app: &App) -> Value {
     let settings = app.settings_all();
     let settings = settings.as_object().cloned().unwrap_or_default();
@@ -2008,7 +2008,7 @@ fn pet_preferences(app: &App) -> Value {
             let mut m = map.clone();
             let w = m.get("width").and_then(Value::as_f64).unwrap_or(0.0);
             let h = m.get("height").and_then(Value::as_f64).unwrap_or(0.0);
-            if w < 320.0 || h < 380.0 {
+            if w < 80.0 || h < 80.0 {
                 m.insert("width".into(), json!(320.0));
                 m.insert("height".into(), json!(380.0));
             }
@@ -2017,9 +2017,9 @@ fn pet_preferences(app: &App) -> Value {
         _ => Value::Null,
     };
     let scale = clamp(
-        py_round(settings.get("pet_scale").unwrap_or(&json!(0.33)).as_f64().unwrap_or(0.33), 2),
-        0.18,
-        0.72,
+        py_round(settings.get("pet_scale").unwrap_or(&json!(0.22)).as_f64().unwrap_or(0.22), 2),
+        0.08,
+        0.48,
     );
     let opacity = clamp(
         py_round(settings.get("pet_opacity").unwrap_or(&json!(1.0)).as_f64().unwrap_or(1.0), 2),
@@ -2041,19 +2041,22 @@ fn pet_preferences(app: &App) -> Value {
         .and_then(Value::as_str)
         .unwrap_or("")
         .to_string();
-    let character = if slug.is_empty() { "arch-chan" } else { &slug };
+    let character = companion_character(&renderer, &slug);
     let mut info = Map::new();
     info.insert("scale".into(), json!(scale));
     info.insert("opacity".into(), json!(opacity));
     info.insert("locale".into(), json!(pet_locale()));
-    info.insert("lines".into(), Value::Object(Map::new()));
+    info.insert("lines".into(), pet_lines(app));
+    for (key, default) in [("always_on_top", true), ("lock_position", false), ("bubbles", true), ("quiet", false), ("sound", false)] {
+        info.insert(key.into(), json!(settings.get(&format!("pet_{key}")).and_then(Value::as_bool).unwrap_or(default)));
+    }
     if let Ok(mut companion) = PetCompanion::load(&pet_data_dir(app)).snapshot(character) {
         if let Some(object) = companion.as_object_mut() {
             object.insert("character".into(), json!(character));
         }
         info.insert("companion".into(), companion);
     }
-    let mut characters: Vec<Value> = vec![json!({
+    let mut characters: Vec<Value> = vec![json!({"slug":"bongocat", "name":"BongoCat", "renderer":"hermes-sprite"}), json!({
         "slug": "arch-chan",
         "name": format!("Arch-chan ({})", if pet_locale().starts_with("zh") { "Live2D" } else { "Live2D" }),
         "renderer": "live2d",
@@ -2062,7 +2065,7 @@ fn pet_preferences(app: &App) -> Value {
         let Some(catalog_slug) = item.get("slug").and_then(Value::as_str) else {
             continue;
         };
-        let name = preset_name(app, catalog_slug, &item, &pet_locale());
+        let name = info["lines"].get(format!("pet.preset.{catalog_slug}")).and_then(Value::as_str).map(str::to_string).unwrap_or_else(|| { item.get(if pet_locale().starts_with("zh") {"zh_name"} else {"en_name"}).and_then(Value::as_str).unwrap_or(catalog_slug).to_string() });
         characters.push(json!({ "slug": catalog_slug, "name": name, "renderer": "hermes-sprite" }));
     }
     info.insert("characters".into(), Value::Array(characters));
@@ -2070,33 +2073,23 @@ fn pet_preferences(app: &App) -> Value {
     json!({ "bounds": bounds, "renderer": renderer, "info": Value::Object(info) })
 }
 
-fn preset_name(app: &App, slug: &str, item: &Value, locale: &str) -> String {
-    let key = format!("pet.preset.{slug}");
-    let is_zh = locale.to_ascii_lowercase().starts_with("zh");
-    for candidate in [locale, "en"] {
+fn companion_character<'a>(renderer: &str, slug: &'a str) -> &'a str {
+    if renderer == "live2d" { "arch-chan" } else if slug.is_empty() { "hermes" } else { slug }
+}
+
+fn pet_lines(app: &App) -> Value {
+    let requested = app.setting("language").as_str().unwrap_or("auto").to_string();
+    let locale = if requested == "auto" || requested.is_empty() { pet_locale() } else { requested };
+    let mut lines = Map::new();
+    for candidate in ["en", locale.as_str()] {
         let path = app.paths.assets_dir.join("i18n").join(format!("{candidate}.json"));
-        if let Ok(text) = fs::read_to_string(&path) {
-            if let Ok(Value::Object(map)) = serde_json::from_str::<Value>(&text) {
-                if let Some(found) = map.get(&key).and_then(Value::as_str) {
-                    if !found.is_empty() {
-                        return found.to_string();
-                    }
-                }
+        if let Ok(raw) = fs::read_to_string(path) {
+            if let Ok(Value::Object(map)) = serde_json::from_str::<Value>(&raw) {
+                lines.extend(map.into_iter().filter(|(key, value)| key.starts_with("pet.") && value.is_string()));
             }
         }
     }
-    if is_zh {
-        item.get("zh_name")
-            .and_then(Value::as_str)
-            .map(|value| value.to_string())
-            .unwrap_or_else(|| slug.to_string())
-    } else {
-        item.get("en_name")
-            .and_then(Value::as_str)
-            .filter(|value| !value.is_empty())
-            .map(|value| value.to_string())
-            .unwrap_or_else(|| slug.to_string())
-    }
+    Value::Object(lines)
 }
 
 /// `get_system_language()` (`readmd_core/config.py:55`): 'auto' -> OS locale.
@@ -3335,7 +3328,7 @@ pub fn pet_runtime_status(app: &App) -> Value {
     status["preferences"] = info;
     let active_slug = app.setting("pet_slug").as_str().unwrap_or_default().to_string();
     status["active_slug"] = json!(active_slug);
-    let character = if active_slug.is_empty() { "arch-chan" } else { active_slug.as_str() };
+    let character = companion_character(preferences["renderer"].as_str().unwrap_or("hermes-sprite"), &active_slug);
     status["companion"] = match PetCompanion::load(&pet_data_dir(app)).snapshot(character) {
         Ok(profile) => profile,
         Err(_) => Value::Null,
@@ -3581,7 +3574,7 @@ pub fn publish_pet_runtime(app: &App, runtime: Option<&Value>, renderer_override
         info["enabled"] = json!(is_visible);
     }
 
-    let companion_character = if slug.is_empty() { "arch-chan" } else { slug };
+    let companion_character = companion_character(&renderer, slug);
     if let Ok(profile) = PetCompanion::load(&pet_data_dir(app)).snapshot(companion_character) {
         info["companion"] = profile;
     }
@@ -3639,7 +3632,7 @@ pub fn configure_pet(app: &App, settings: &Value) -> Value {
         return json!({ "ok": false, "code": "invalid_pet_settings" });
     }
     let mut preference_updates = Map::new();
-    for (key, low, high) in [("scale", 0.18f64, 0.72f64), ("opacity", 0.35f64, 1.0f64)] {
+    for (key, low, high) in [("scale", 0.08f64, 0.48f64), ("opacity", 0.35f64, 1.0f64)] {
         let Some(raw) = settings.get(key) else {
             continue;
         };
@@ -3655,9 +3648,16 @@ pub fn configure_pet(app: &App, settings: &Value) -> Value {
         }
         preference_updates.insert(format!("pet_{key}"), json!(value));
     }
+    for key in ["always_on_top", "lock_position", "bubbles", "quiet", "sound"] {
+        if let Some(value) = settings.get(key) {
+            if !value.is_boolean() { return json!({"ok":false,"code":"invalid_pet_settings"}); }
+            preference_updates.insert(format!("pet_{key}"), value.clone());
+        }
+    }
     let previous_runtime = with_state(|state| state.controller.snapshot());
     let previous_enabled = previous_runtime["enabled"].as_bool().unwrap_or(false);
     if settings.contains_key("renderer") {
+        preference_updates.insert("pet_renderer".into(), json!(renderer));
         with_state(|state| state.renderer = Some(renderer.clone()));
     }
     if settings.contains_key("in_app") {
@@ -3966,6 +3966,9 @@ pub fn drain_pet_commands(app: &Arc<App>) {
                     }
                 }
             }
+            crate::desktop_pet::PetCommand::Clipboard => {
+                if let Ok(mut ctrl) = app.control.lock() { ctrl.pet_actions.push_back(json_val.clone()); }
+            }
             crate::desktop_pet::PetCommand::Bounds { bounds } => {
                 app.update_settings(&json!({ "pet_bounds": bounds }));
             }
@@ -3974,6 +3977,31 @@ pub fn drain_pet_commands(app: &Arc<App>) {
             }
             crate::desktop_pet::PetCommand::Ready => {
                 publish_pet_runtime(app, None, None);
+            }
+            crate::desktop_pet::PetCommand::Passthrough(command) => {
+                match command["type"].as_str().unwrap_or("") {
+                    "interact" => {
+                        let prefs = pet_preferences(app);
+                        let slug = app.setting("pet_slug").as_str().unwrap_or("").to_string();
+                        let character = companion_character(prefs["renderer"].as_str().unwrap_or("hermes-sprite"), &slug);
+                        if PetCompanion::load(&pet_data_dir(app)).interact(character, command["action"].as_str().unwrap_or("")).is_ok() {
+                            publish_pet_runtime(app, None, None);
+                        }
+                    }
+                    "character" => {
+                        let slug = command["slug"].as_str().unwrap_or("");
+                        if slug.is_empty() || slug == "arch-chan" || slug == "bongocat" || find_pet(&pet_data_dir(app), &pet_assets(app), slug).is_some() {
+                            configure_pet(app, &json!({"renderer":command["renderer"], "slug":slug}));
+                        }
+                    }
+                    "open-app" if command["target"] == "hide-pet" => {
+                        configure_pet(app, &json!({"enabled":false}));
+                    }
+                    "open-app" | "submit" | "pop-in" => {
+                        if let Ok(mut ctrl) = app.control.lock() { ctrl.pet_actions.push_back(command); }
+                    }
+                    _ => {}
+                }
             }
             _ => {}
         }
@@ -4155,7 +4183,7 @@ pub fn h_pet_active(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
         return ec(400, "confirmation_required");
     }
     let slug = body_str(object, "slug").trim().to_ascii_lowercase();
-    if !slug.is_empty() && find_pet(&pet_data_dir(app), &pet_assets(app), &slug).is_none() {
+    if !slug.is_empty() && slug != "bongocat" && find_pet(&pet_data_dir(app), &pet_assets(app), &slug).is_none() {
         return ec(404, "pet_not_found");
     }
     if !slug.is_empty() {
@@ -4386,7 +4414,8 @@ pub fn h_pet_interact(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     } else {
         character_raw
     };
-    let character = if character.is_empty() { "arch-chan" } else { &character };
+    let prefs = pet_preferences(app);
+    let character = companion_character(prefs["renderer"].as_str().unwrap_or("hermes-sprite"), &character);
     match PetCompanion::load(&pet_data_dir(app)).interact(character, &action) {
         Ok(result) => {
             if result.get("ok").and_then(Value::as_bool) == Some(true) {
@@ -4617,6 +4646,52 @@ mod tests {
         fs::create_dir_all(dir.join("assets")).unwrap();
         let paths = paths::AppPaths::with_dirs(&dir.join("data"), &dir, &dir.join("assets"));
         Arc::new(App::bootstrap(paths).unwrap())
+    }
+
+    #[test]
+    fn companion_preferences_restore_small_sizes_window_options_and_localized_lines() {
+        let app = test_app("preferences-overhaul");
+        let i18n = app.paths.assets_dir.join("i18n"); fs::create_dir_all(&i18n).unwrap();
+        fs::write(i18n.join("en.json"), r#"{"pet.pokeQuote1":"Hello","other":"omit"}"#).unwrap();
+        fs::write(i18n.join("zh-CN.json"), r#"{"pet.pokeQuote1":"你好"}"#).unwrap();
+        app.update_settings(&json!({"language":"zh-CN"}));
+        let result = configure_pet(&app,&json!({"enabled":false,"in_app":true,"renderer":"hermes-sprite","scale":0.08,"always_on_top":false,"lock_position":true,"quiet":true,"bubbles":false,"sound":true}));
+        assert_eq!(result["ok"],true);
+        let prefs = pet_preferences(&app); let info=&prefs["info"];
+        assert_eq!(info["scale"],0.08); assert_eq!(info["always_on_top"],false);
+        assert_eq!(info["lock_position"],true); assert_eq!(info["quiet"],true);
+        assert_eq!(info["lines"]["pet.pokeQuote1"],"你好"); assert!(info["lines"].get("other").is_none());
+        assert_eq!(companion_character("hermes-sprite",""),"hermes");
+        assert_eq!(companion_character("live2d","hermes"),"arch-chan");
+        let previous=app.setting("pet_scale");
+        assert_eq!(configure_pet(&app,&json!({"scale":0.01}))["ok"],false);
+        assert_eq!(configure_pet(&app,&json!({"always_on_top":"false"}))["ok"],false);
+        assert_eq!(app.setting("pet_scale"),previous);
+    }
+
+    #[test]
+    fn durable_native_commands_reach_file_inbox_character_preferences_and_companion() {
+        let app=test_app("native-consumer");
+        configure_pet(&app,&json!({"enabled":false,"in_app":true}));
+        let (root,_) = bridge_paths(&app);
+        let bridge=crate::pet_launcher::HermesPetBridge::new(root.parent().unwrap());
+        fs::create_dir_all(&bridge.commands_dir).unwrap();
+        for (index,command) in [json!({"type":"drop","paths":["C:/fixture/book.md"]}),json!({"type":"character","slug":"bongocat","renderer":"hermes-sprite"}),json!({"type":"interact","action":"rest"}),json!({"type":"open-app","target":"pet-settings"})].into_iter().enumerate() {
+            fs::write(bridge.commands_dir.join(format!("{index:04}.json")),serde_json::to_vec(&json!({"command":command})).unwrap()).unwrap();
+        }
+        drain_pet_commands(&app);
+        assert_eq!(app.setting("pet_slug"),"bongocat");
+        assert_eq!(app.setting("pet_renderer"),"hermes-sprite");
+        assert_eq!(PetCompanion::load(&pet_data_dir(&app)).snapshot("bongocat").ok().unwrap()["resting"],true);
+        let mut ctrl=app.control.lock().unwrap();
+        assert_eq!(ctrl.pet_batches.pop_front().unwrap(),vec!["C:/fixture/book.md"]);
+        assert_eq!(ctrl.pet_actions.pop_front().unwrap()["target"],"pet-settings");
+        drop(ctrl);
+        app.update_settings(&json!({"pet_enabled":true}));
+        fs::write(bridge.commands_dir.join("hide.json"), serde_json::to_vec(&json!({"command":{"type":"open-app","target":"hide-pet"}})).unwrap()).unwrap();
+        drain_pet_commands(&app);
+        assert_eq!(app.setting("pet_enabled"), false);
+        assert!(app.control.lock().unwrap().pet_actions.is_empty());
     }
 
     /// A request whose declared `Content-Length` is independent of the bytes it
@@ -4905,7 +4980,7 @@ mod tests {
             ("12", "12"),
             ("{\"a\": 1}", "{'a': 1}"),
             ("[1, 2]", "[1, 2]"),
-            ("false", "arch-chan"),
+            ("false", "hermes"),
         ];
         for (raw_value, expected) in cases {
             let raw = format!("{{\"action\":\"pet\",\"character\":{raw_value}}}");

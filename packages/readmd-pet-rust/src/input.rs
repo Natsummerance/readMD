@@ -28,6 +28,9 @@ pub struct HitTestTarget {
     pub height: f64,
     pub scale_factor: f64,
     pub rects: Vec<InputRect>,
+    pub pet_rects: Vec<InputRect>,
+    pub regions_declared: bool,
+    pub lock_position: bool,
     pub head: Option<InputRect>,
     pub visible: bool,
 }
@@ -91,7 +94,7 @@ pub fn probe_cursor(
 
     let mut hit = false;
     if target.visible {
-        if target.rects.is_empty() {
+        if target.rects.is_empty() && !target.regions_declared {
             hit = contains(
                 &InputRect {
                     x: 0.0,
@@ -119,7 +122,7 @@ pub fn probe_cursor(
         rel_x,
         rel_y,
         hovering: hit,
-        head_clicked: hit && left_pressed && dx * dx + dy * dy < 1.0,
+        head_clicked: hit && left_pressed && if target.regions_declared { target.pet_rects.iter().any(|r| contains(r, rel_x, rel_y)) } else { dx * dx + dy * dy < 1.0 },
     }
 }
 
@@ -252,7 +255,23 @@ mod tests {
             rects: Vec::new(),
             head: None,
             visible: true,
+            ..Default::default()
         }
+    }
+
+    #[test]
+    fn declared_empty_surface_and_transparent_holes_pass_through() {
+        let mut pet = target(320.0, 420.0, 1.5);
+        pet.regions_declared = true;
+        assert!(!probe_cursor(&pet,(0.0,0.0),(160.0,160.0),true).hovering);
+        pet.rects = vec![InputRect {x:100.0,y:300.0,width:40.0,height:80.0}];
+        pet.pet_rects = pet.rects.clone();
+        assert!(probe_cursor(&pet,(0.0,0.0),(180.0,480.0),true).head_clicked);
+        assert!(!probe_cursor(&pet,(0.0,0.0),(240.0,480.0),true).hovering);
+        pet.rects.push(InputRect {x:10.0,y:10.0,width:80.0,height:44.0});
+        let menu = probe_cursor(&pet,(0.0,0.0),(30.0,30.0),true);
+        assert!(menu.hovering);
+        assert!(!menu.head_clicked, "UI clicks must not pet or start native dragging");
     }
 
     #[test]

@@ -928,3 +928,48 @@
   #plugin-box .plugin-card-foot { grid-column: 1; grid-row: auto; flex-direction: row; flex-wrap: wrap; align-items: center; }
   #plugin-box .plugin-card-desc { margin-left: 0; }
 }
+
+/* Companion settings: compact window, complete art, native-looking controls. */
+#pet-settings-box.pet-workbench { width:min(800px,calc(100vw - 32px));height:min(650px,calc(100dvh - 40px));max-height:calc(100dvh - 40px);box-sizing:border-box; }
+#pet-settings-box .pet-sheet-body { grid-template-columns:minmax(180px,.65fr) minmax(0,1.35fr);min-height:0; }
+#pet-settings-box .apple-grouped-list { min-width:0;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-right:8px; }
+#pet-settings-box .pet-group-title { margin:16px 0 6px;font-size:var(--text-xs);font-weight:var(--weight-semibold);color:var(--fg3); }
+#pet-settings-box .pet-group-title:first-child { margin-top:0; }
+#pet-settings-box :is(button,select,input[type="search"],.apple-list-row) { min-height:44px;box-sizing:border-box; }
+#pet-settings-box .apple-list-row { gap:12px;flex-wrap:wrap; }
+#pet-settings-box .apple-slider-row { display:flex;flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:4px;padding:10px 0; }
+#pet-settings-box .apple-slider-wrap { width:100%;min-width:0;max-width:100%;gap:12px; }
+#pet-settings-box .apple-range { min-width:0;flex:1;height:44px;max-height:none;cursor:pointer;accent-color:var(--accent); }
+#pet-settings-box .apple-range-val { flex:0 0 48px;min-width:0;box-sizing:border-box;text-align:right;font-variant-numeric:tabular-nums;color:var(--fg3); }
+#pet-settings-box .apple-switch { position:relative;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;margin-left:auto;flex-shrink:0;cursor:pointer; }
+#pet-settings-box .plugin-switch-track { pointer-events:none; }
+#pet-settings-box .plugin-switch-input:focus-visible + .plugin-switch-track { outline:2px solid var(--accent);outline-offset:4px; }
+#pet-settings-box #pet-roster { grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px; }
+#pet-settings-box .pet-character-card { padding:12px 8px;min-height:126px; }
+#pet-settings-box .pet-card-art { width:64px;height:64px; }
+#pet-settings-box .pet-character-card strong { white-space:normal;overflow-wrap:anywhere;line-height:1.4; }
+#pet-settings-box .pet-character-card small { display:block;color:var(--fg3);font-size:var(--text-xs);line-height:1.4; }
+#pet-settings-box .pet-fav-btn { width:44px;height:44px;top:0;right:0; }
+#pet-settings-box .pet-fav-btn svg { stroke:var(--fg3);filter:none; }
+#pet-settings-box .pet-core-hint { margin:8px 0;font-size:var(--text-xs);line-height:1.7;color:var(--fg3);text-align:center;max-width:24ch; }
+#pet-settings-box .pet-action-buttons { flex-wrap:wrap;gap:8px; }
+#pet-settings-box .pet-action-buttons button { flex:1 0 28%; }
+#pet-settings-box .pet-preview-badge { flex-wrap:wrap;justify-content:center; }
+#pet-settings-box .pet-authored-preview, #readmd-pet-widget .pet-authored-preview { background-size:contain;background-position:center;background-repeat:no-repeat;animation:none; }
+body { scrollbar-color:var(--border) transparent;scrollbar-width:thin; }
+:is(.apple-grouped-list,.modal-scroll,.panel-body,#pet-settings-box,#ai-settings-box,#export-box,#plugin-box) { scrollbar-width:thin;scrollbar-color:var(--border) transparent; }
+::-webkit-scrollbar { width:8px;height:8px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border);border:2px solid transparent;background-clip:padding-box;border-radius:8px; }
+::-webkit-scrollbar-thumb:hover { background:var(--fg3);border:2px solid transparent;background-clip:padding-box; }
+input[type="checkbox"] { accent-color:var(--accent);border-radius:4px;cursor:pointer; }
+@media(max-width:640px) {
+  #pet-settings-box.pet-workbench { padding:16px;height:calc(100dvh - 32px);max-height:calc(100dvh - 32px); }
+  #pet-settings-box .pet-sheet-body { display:block;overflow-y:auto; }
+  #pet-settings-box .pet-preview-stage { flex-direction:row;align-items:center;flex-wrap:wrap;gap:8px;padding:12px;margin-bottom:12px; }
+  #pet-settings-box .pet-preview-aura { height:88px;min-height:88px;width:88px; }
+  #pet-settings-box .pet-core-hint { max-width:none;text-align:left; }
+  #pet-settings-box .apple-grouped-list { height:auto;overflow:visible; }
+  #pet-settings-box .pet-workbench-tabs { gap:8px; }
+  #pet-settings-box .pet-workbench-tabs button { padding:8px 4px; }
+}

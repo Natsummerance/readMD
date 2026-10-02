@@ -1660,7 +1660,7 @@ pub fn validate_command_ord(value: &OrdValue) -> Option<OrdValue> {
         };
         let scale = ord_float(&raw)?;
         let scale = crate::pdf_editor::py_round(scale, 2);
-        if !(0.18..=0.72).contains(&scale) {
+        if !(0.08..=0.72).contains(&scale) {
             return None;
         }
         return Some(OrdValue::object(vec![
@@ -2957,14 +2957,14 @@ mod tests {
     fn validate_command_scale_uses_python_round_and_band() {
         // CPython measured table (`python -c "print(round(0.185, 2))"` -> 0.18):
         // `round(x, 2)` is the correctly-rounded decimal of the *binary* value,
-        // so 0.175 -> 0.17 (reject), 0.185 -> 0.18 (accept), 2.675 -> 2.67.
-        // Whole band verified against the authority in one go:
-        // [(0.18, 0.18), (0.175, None), (0.185, 0.18), (0.715, 0.71),
+        // so 0.175 -> 0.17, 0.185 -> 0.18 (accept), 2.675 -> 2.67.
+        // ReadMD extends the lower bound to 0.08; legacy clients up to 0.72 remain accepted.
+        // [(0.18, 0.18), (0.175, 0.17), (0.185, 0.18), (0.715, 0.71),
         //  (0.72, 0.72), (0.725, 0.72), (0.73, None), (2.675, None),
         //  (-0.0, None), ("0.5", 0.5)]
         let cases: Vec<(Value, Option<f64>)> = vec![
             (json!(0.18), Some(0.18)),
-            (json!(0.175), None),
+            (json!(0.175), Some(0.17)),
             (json!(0.185), Some(0.18)),
             (json!(0.715), Some(0.71)),
             (json!(0.72), Some(0.72)),

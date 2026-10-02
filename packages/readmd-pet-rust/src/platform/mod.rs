@@ -30,6 +30,10 @@ pub trait PlatformBackend {
     fn applied_bounds(&self) -> Option<SnapshotBounds> {
         None
     }
+    fn set_always_on_top(&mut self, window: &Window, enabled: bool) -> HostResult<()> {
+        window.set_always_on_top(enabled);
+        Ok(())
+    }
     fn set_visible(&mut self, window: &Window, visible: bool) -> HostResult<()>;
     fn set_opacity(&mut self, window: &Window, opacity: f64) -> HostResult<()>;
     fn set_click_through(&mut self, window: &Window, click_through: bool) -> HostResult<()>;

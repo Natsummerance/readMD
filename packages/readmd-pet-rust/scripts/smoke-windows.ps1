@@ -45,12 +45,15 @@ $snapshot = @{ format_version=1; generation=1; renderer=$Renderer; visible=$true
 function Publish-Snapshot { $snapshot | ConvertTo-Json -Depth 8 -Compress | Set-Content -LiteralPath $bridge -Encoding utf8NoBOM }
 function Require($condition, $message) { if (-not $condition) { throw $message } }
 Publish-Snapshot
-$names = @('READMD_PET_BRIDGE_FILE','READMD_PET_RENDERER_ROOT','READMD_DATA_DIR','READMD_PARENT_PID','READMD_PARENT_PIPE_HANDLE')
+$names = @('READMD_PET_BRIDGE_FILE','READMD_PET_RENDERER_ROOT','READMD_DATA_DIR','READMD_PARENT_PID','READMD_PARENT_PIPE_HANDLE','WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS')
 $saved = @{}
 foreach ($name in $names) { $saved[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
 $hostProcess = $null
 $window = [IntPtr]::Zero
 try {
+    $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0)
+    $listener.Start(); $debugPort = $listener.LocalEndpoint.Port; $listener.Stop()
+    $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = "--remote-debugging-port=$debugPort"
     $env:READMD_PET_BRIDGE_FILE = $bridge
     $env:READMD_PET_RENDERER_ROOT = (Resolve-Path -LiteralPath $RendererRoot).Path
     $env:READMD_DATA_DIR = $fixture
@@ -73,13 +76,10 @@ try {
     $before = [PetSmokeWin32]::Bounds($window)
     $width = $before.Right - $before.Left
     $height = $before.Bottom - $before.Top
-    $x = $before.Left + [int]($width * 0.5)
-    $headY = switch ($Character) {
-        'arch-chan' { 120 }
-        'bongocat' { 305 }
-        default { 300 } # The full sprite silhouette, including its body.
-    }
-    $y = $before.Top + [int]($height * ($headY / 420.0))
+    $hit = (& node (Join-Path $PSScriptRoot 'native-hit-point.mjs') $debugPort) | ConvertFrom-Json
+    Require ($null -ne $hit -and $hit.rects -gt 0) 'No actual opaque model point'
+    $x = $before.Left + [int]($width * $hit.x / $hit.width)
+    $y = $before.Top + [int]($height * $hit.y / $hit.height)
     [void][PetSmokeWin32]::SetCursorPos($x, $y)
     Start-Sleep -Milliseconds 180
     Require (([PetSmokeWin32]::GetWindowLongPtrW($window, -20).ToInt64() -band 0x20) -eq 0) 'Visible pet remained click-through under the pointer'
@@ -114,10 +114,48 @@ try {
     Start-Sleep -Milliseconds 250
     $acknowledged = [PetSmokeWin32]::Bounds($window)
     Require ($acknowledged.Left -eq $after.Left -and $acknowledged.Top -eq $after.Top) 'Acknowledging final drag bounds moved the overlay'
+    $snapshot.generation = 4
+    $snapshot.info.lock_position = $true
+    Publish-Snapshot
+    Start-Sleep -Milliseconds 250
+    $lockedX = $after.Left + [int]($width * $hit.x / $hit.width)
+    $lockedY = $after.Top + [int]($height * $hit.y / $hit.height)
+    [void][PetSmokeWin32]::SetCursorPos($lockedX,$lockedY)
+    Start-Sleep -Milliseconds 200
+    [PetSmokeWin32]::mouse_event(2,0,0,0,[UIntPtr]::Zero)
+    Start-Sleep -Milliseconds 80
+    [void][PetSmokeWin32]::SetCursorPos($lockedX+70,$lockedY+30)
+    Start-Sleep -Milliseconds 200
+    [PetSmokeWin32]::mouse_event(4,0,0,0,[UIntPtr]::Zero)
+    $locked = [PetSmokeWin32]::Bounds($window)
+    Require ($locked.Left -eq $after.Left -and $locked.Top -eq $after.Top) 'Locked native pet moved'
+    $snapshot.generation = 5
+    $snapshot.info.always_on_top = $false
+    Publish-Snapshot
+    Start-Sleep -Milliseconds 250
+    Require (([PetSmokeWin32]::GetWindowLongPtrW($window,-20).ToInt64() -band 0x8) -eq 0) 'Non-topmost setting did not reach the native window'
+    [void][PetSmokeWin32]::SetCursorPos($lockedX,$lockedY)
+    Start-Sleep -Milliseconds 180
+    Require (([PetSmokeWin32]::GetWindowLongPtrW($window,-20).ToInt64() -band 0x8) -eq 0) 'Hover restored unwanted topmost style'
+    $snapshot.generation = 6
+    $snapshot.info.always_on_top = $true
+    Publish-Snapshot
+    Start-Sleep -Milliseconds 250
+    Require (([PetSmokeWin32]::GetWindowLongPtrW($window,-20).ToInt64() -band 0x8) -ne 0) 'Topmost setting did not restore the native window'
     [void][PetSmokeWin32]::SetCursorPos($after.Left + 2, $after.Top + 2)
     Start-Sleep -Milliseconds 180
     Require (([PetSmokeWin32]::GetWindowLongPtrW($window, -20).ToInt64() -band 0x20) -ne 0) 'Transparent margin did not restore click-through'
-    Write-Output "Native drag PASS ($Character/$Renderer): physical delta $($after.Left-$before.Left),$($after.Top-$before.Top); durable bounds, stale snapshot guard, acknowledgement and transparent-margin click-through. Fixture: $fixture"
+    $snapshot.generation = 7
+    $snapshot.visible = $false
+    Publish-Snapshot
+    Start-Sleep -Milliseconds 250
+    Require (-not [PetSmokeWin32]::IsWindowVisible($window)) 'Hidden pet remained visible'
+    $snapshot.generation = 8
+    $snapshot.info.always_on_top = $false
+    Publish-Snapshot
+    Start-Sleep -Milliseconds 250
+    Require (-not [PetSmokeWin32]::IsWindowVisible($window)) 'Window style refresh restored a hidden pet'
+    Write-Output "Native drag PASS ($Character/$Renderer): physical delta $($after.Left-$before.Left),$($after.Top-$before.Top); durable bounds, stale snapshot guard, acknowledgement, locked dragging, topmost switching, transparent-margin click-through and persistent hiding. Fixture: $fixture"
 } finally {
     [PetSmokeWin32]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
     [void][PetSmokeWin32]::SetCursorPos($cursor.X, $cursor.Y)

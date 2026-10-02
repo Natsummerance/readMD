@@ -817,6 +817,7 @@ pub struct ControlQueue {
     pub pet_batches: std::collections::VecDeque<Vec<String>>,
     /// `_CONTROL['pet_menus']` — `push_pet_menu()` / `pop_pet_menu()`.
     pub pet_menus: u32,
+    pub pet_actions: std::collections::VecDeque<serde_json::Value>,
 }
 
 /// Workspace documents indexed before the first request is served.

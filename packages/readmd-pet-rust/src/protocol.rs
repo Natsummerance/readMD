@@ -202,7 +202,7 @@ pub const CONSUMER_COMMANDS: &[&str] = &[
 ];
 
 const INTERACT_ACTIONS: &[&str] = &["pet", "feed", "play", "rest", "wake"];
-const MIN_COMMAND_SCALE: f64 = 0.18;
+const MIN_COMMAND_SCALE: f64 = 0.08;
 const MAX_COMMAND_SCALE: f64 = 0.72;
 const MAX_COMMAND_PATH_CHARS: usize = 32_768;
 

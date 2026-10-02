@@ -243,6 +243,7 @@ impl PetHost {
                     write_health(&health, &state, "degraded", code);
                 }
                 Event::UserEvent(UserEvent::DragStart) => {
+                    if state.lock_position { return; }
                     if let Err(error) = backend.drag_window(&window) {
                         write_health(&health, &state, "degraded", &format_error(&error));
                     }
@@ -369,6 +370,8 @@ struct HostState {
     renderer_retry_at: Option<Instant>,
     renderer_circuit_open: bool,
     interaction_rects: Vec<InputRect>,
+    pet_rects: Vec<InputRect>,
+    lock_position: bool,
     interaction_head: Option<InputRect>,
     input_fault: Option<&'static str>,
     pending_drag: Option<(SnapshotBounds, Instant)>,
@@ -390,6 +393,8 @@ impl HostState {
             renderer_retry_at: None,
             renderer_circuit_open: false,
             interaction_rects: Vec::new(),
+            pet_rects: Vec::new(),
+            lock_position: false,
             interaction_head: None,
             input_fault: None,
             pending_drag: None,
@@ -412,8 +417,11 @@ fn sync_input_watcher(
         height: state.bounds.height,
         scale_factor: window.scale_factor().max(0.1),
         rects: state.interaction_rects.clone(),
+        pet_rects: state.pet_rects.clone(),
+        regions_declared: state.interaction_generation > 0,
+        lock_position: state.lock_position,
         head: state.interaction_head,
-        visible: state.visible,
+        visible: state.visible && state.interaction_generation > 0,
     });
 }
 
@@ -508,6 +516,8 @@ fn apply_snapshot(
         backend.set_bounds(window, bounds)?;
         state.bounds = backend.applied_bounds().unwrap_or(bounds);
     }
+    state.lock_position = snapshot.info.get("lock_position").and_then(Value::as_bool).unwrap_or(false);
+    backend.set_always_on_top(window, snapshot.info.get("always_on_top").and_then(Value::as_bool).unwrap_or(true))?;
     backend.set_opacity(window, snapshot.opacity())?;
     state.visible = snapshot.visible && !snapshot.fullscreen;
     backend.set_visible(window, state.visible)?;
@@ -553,7 +563,7 @@ fn handle_renderer_message(
                     .and_then(Value::as_str)
                     .unwrap_or("renderer_script_failed")
                     .chars()
-                    .take(128)
+                    .take(512)
                     .collect(),
             ));
         }
@@ -605,17 +615,18 @@ fn handle_renderer_message(
             publish(publisher, serde_json::json!({"type":"open-app"}))?;
         }
         "close" => {
-            // Hiding the overlay is host-local state.  `close` is not in
-            // `HermesPetBridge._COMMANDS` (hermes_adapter.py:81), so publishing
-            // it only ever produced a file the consumer deleted unread while
-            // this host reported the command as a success.
+            // Persist through the existing application command channel, so a
+            // later preferences snapshot cannot restore a hidden pet.
+            publish(publisher, serde_json::json!({"type":"open-app","target":"hide-pet"}))?;
             state.visible = false;
             backend.set_visible(window, false)?;
         }
-        "drop" => publish(
-            publisher,
-            serde_json::json!({"type":"drop","paths":payload.get("paths").cloned().unwrap_or(Value::Null)}),
-        )?,
+        "drop-hover" => webview.send_control(&serde_json::json!({"type":"drop-hover","active":payload["active"]}))?,
+        "drop" => {
+            publish(publisher, serde_json::json!({"type":"drop","paths":payload.get("paths").cloned().unwrap_or(Value::Null)}))?;
+            webview.send_control(&serde_json::json!({"type":"drop-hover","active":false}))?;
+            webview.send_control(&serde_json::json!({"type":"drop-received","count":payload["paths"].as_array().map(Vec::len).unwrap_or(0)}))?;
+        }
         "control" => {
             // `parse_renderer_message` unwraps the outer `payload` field, so
             // control callbacks normally arrive here as the control object
@@ -673,9 +684,10 @@ fn handle_renderer_message(
                     let rects: Vec<InteractionRect> = control
                         .get("rects")
                         .and_then(Value::as_array)
-                        .map(|items| items.iter().take(128).filter_map(value_rect).collect())
+                        .map(|items| items.iter().take(512).filter_map(value_rect).collect())
                         .unwrap_or_default();
                     state.interaction_generation = generation;
+                    state.pet_rects = control.get("petRects").or_else(|| control.get("rects")).and_then(Value::as_array).map(|items| items.iter().take(512).filter_map(value_rect).map(input_rect).collect()).unwrap_or_default();
                     state.interaction_head =
                         control.get("head").and_then(value_rect).map(input_rect);
                     state.interaction_rects = rects
@@ -715,9 +727,10 @@ fn handle_renderer_message(
             let rects: Vec<InteractionRect> = payload
                 .get("rects")
                 .and_then(Value::as_array)
-                .map(|items| items.iter().take(128).filter_map(value_rect).collect())
+                .map(|items| items.iter().take(512).filter_map(value_rect).collect())
                 .unwrap_or_default();
             state.interaction_generation = generation;
+            state.pet_rects = payload.get("petRects").or_else(|| payload.get("rects")).and_then(Value::as_array).map(|items| items.iter().take(512).filter_map(value_rect).map(input_rect).collect()).unwrap_or_default();
             state.interaction_head = payload.get("head").and_then(value_rect).map(input_rect);
             state.interaction_rects = rects
                 .iter()
@@ -825,7 +838,7 @@ fn write_health(writer: &HealthWriter, state: &HostState, lifecycle: &str, code:
 }
 
 fn format_error(error: &HostError) -> String {
-    error.to_string().chars().take(128).collect()
+    error.to_string().chars().take(512).collect()
 }
 
 fn input_rect(rect: InteractionRect) -> InputRect {
@@ -875,6 +888,7 @@ fn start_native_drag(
     _state: &mut HostState,
     _publisher: &DurableCommandPublisher,
 ) -> HostResult<()> {
+    if _state.lock_position { return Ok(()); }
     backend.drag_window(window)?;
     // Other platforms retain their existing Tao drag/persistence path. Windows
     // publishes the final measured position after WM_EXITSIZEMOVE instead.

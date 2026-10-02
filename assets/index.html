@@ -498,6 +498,7 @@
           <span class="pet-slug-divider">·</span>
           <span id="pet-active-slug" data-i18n="pet.gallery.companion">伴读使者</span>
         </div>
+        <p class="pet-core-hint" data-i18n="pet.coreHint">点击互动 · 拖动移动 · 右键菜单 · 拖入文件打开或转换</p>
         <p id="pet-status-line" class="pet-status-note" role="status" aria-live="polite"></p>
       </div>
 
@@ -539,14 +540,15 @@
           </select>
         </div>
 
+        <h4 class="pet-group-title" data-pet-section-content="settings" data-i18n="pet.appearanceGroup">外观与尺寸</h4>
         <div class="apple-list-row apple-slider-row">
           <div class="apple-row-info">
             <span class="apple-row-title" data-i18n="pet.size">大小比例</span>
             <span class="apple-row-desc" data-i18n="pet.sizeDesc">调整桌宠在屏幕上的缩放尺寸</span>
           </div>
           <div class="apple-slider-wrap">
-            <input id="pet-scale" type="range" class="apple-range" min="18" max="72" value="33" step="1" data-i18n-aria="pet.size">
-            <output id="pet-scale-value" class="apple-range-val">33%</output>
+            <input id="pet-scale" type="range" class="apple-range" min="8" max="48" value="22" step="1" data-i18n-aria="pet.size">
+            <output id="pet-scale-value" class="apple-range-val">22%</output>
           </div>
         </div>
 
@@ -572,6 +574,19 @@
           </label>
         </div>
 
+        <h4 class="pet-group-title" data-pet-section-content="settings" data-i18n="pet.windowGroup">窗口行为</h4>
+        <div class="apple-list-row" data-pet-section-content="settings">
+          <label class="apple-row-title" for="pet-topmost" data-i18n="pet.alwaysOnTop">保持置顶</label>
+          <label class="apple-switch plugin-switch"><input id="pet-topmost" class="plugin-switch-input" type="checkbox" checked data-i18n-aria="pet.alwaysOnTop"><span class="apple-switch-track plugin-switch-track" aria-hidden="true"><span class="apple-switch-thumb plugin-switch-thumb"></span></span></label>
+        </div>
+        <div class="apple-list-row" data-pet-section-content="settings">
+          <label class="apple-row-title" for="pet-lock-position" data-i18n="pet.lockPosition">锁定位置</label>
+          <label class="apple-switch plugin-switch"><input id="pet-lock-position" class="plugin-switch-input" type="checkbox"  data-i18n-aria="pet.lockPosition"><span class="apple-switch-track plugin-switch-track" aria-hidden="true"><span class="apple-switch-thumb plugin-switch-thumb"></span></span></label>
+        </div>
+        <div class="apple-list-row" data-pet-section-content="companion">
+          <label class="apple-row-title" for="pet-sound" data-i18n="pet.sound">BongoCat 按键音效</label>
+          <label class="apple-switch plugin-switch"><input id="pet-sound" class="plugin-switch-input" type="checkbox"  data-i18n-aria="pet.sound"><span class="apple-switch-track plugin-switch-track" aria-hidden="true"><span class="apple-switch-thumb plugin-switch-thumb"></span></span></label>
+        </div>
         <div class="apple-list-row hidden" id="pet-update-progress-row">
           <div class="apple-row-info" style="width: 100%;">
             <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-bottom:4px;">
