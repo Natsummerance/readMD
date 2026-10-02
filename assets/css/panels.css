@@ -611,3 +611,83 @@
 }
 #ai-panel #ai-output .ai-msg.is-error .ai-err { margin: 0 0 var(--space-2); color: var(--color-danger); }
 #ai-panel #ai-output .ai-msg.is-error .ai-retry-btn { color: var(--accent); }
+
+/* ── Knowledge graph "cosmos": dark glass shell around the animated canvas ── */
+#graph-modal { --g-ink: hsl(225 40% 92%); --g-ink2: hsl(228 22% 72%); --g-ink3: hsl(230 16% 56%); --g-line: hsla(230 60% 70% / .14); --g-glass: hsla(234 45% 9% / .93); }
+#graph-modal .graph-backdrop { background: radial-gradient(ellipse at 50% 40%, hsla(255 70% 22% / .55), hsla(232 60% 3% / .82)); backdrop-filter: none; -webkit-backdrop-filter: none; }
+#graph-modal .graph-dialog {
+  background: hsl(232 48% 6%); color: var(--g-ink); border: 1px solid hsla(250 80% 72% / .22);
+  box-shadow: 0 30px 90px hsla(255 80% 4% / .7), 0 0 0 1px hsla(200 100% 70% / .06), 0 0 60px hsla(260 90% 60% / .18);
+  animation: graph-portal-in var(--motion-slow) var(--ease-emphasized) both; position: relative;
+}
+#graph-modal .graph-dialog::before {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none; z-index: 3;
+  background: conic-gradient(from 210deg, hsla(200 100% 65% / .7), hsla(280 100% 70% / .1), hsla(325 100% 68% / .7), hsla(165 100% 60% / .1), hsla(200 100% 65% / .7));
+  -webkit-mask: linear-gradient(black 0 0) content-box, linear-gradient(black 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+}
+@keyframes graph-portal-in { from { opacity: 0; transform: scale(.92) translateY(12px); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+#graph-modal .graph-header { background: linear-gradient(180deg, hsla(240 50% 12% / .95), hsla(236 46% 8% / .9)); border-bottom: 1px solid var(--g-line); }
+#graph-modal #graph-title { letter-spacing: .02em; background: linear-gradient(90deg, hsl(200 100% 78%), hsl(280 100% 82%), hsl(325 100% 76%), hsl(200 100% 78%)); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: graph-sheen 6s linear infinite; }
+@keyframes graph-sheen { to { background-position: -200% 0; } }
+#graph-modal .graph-title-orb { width: var(--space-3); height: var(--space-3); border-radius: var(--radius-full); flex: none; background: radial-gradient(circle at 35% 35%, hsl(200 100% 92%), hsl(220 100% 62%) 45%, hsl(265 90% 40%)); box-shadow: 0 0 12px hsla(210 100% 65% / .9); animation: graph-breathe 2.6s var(--ease-standard) infinite; }
+@keyframes graph-breathe { 50% { transform: scale(1.18); opacity: .8; } }
+#graph-modal .graph-stats-badge { color: var(--g-ink2); background: hsla(230 60% 70% / .1); border: 1px solid var(--g-line); padding: var(--space-1) var(--space-2); border-radius: var(--radius-full); }
+#graph-modal .graph-tool-btn { background: hsla(230 60% 70% / .07); border: 1px solid var(--g-line); color: var(--g-ink2); transition: background var(--motion-fast), color var(--motion-fast), box-shadow var(--motion-base), transform var(--motion-fast); }
+#graph-modal .graph-tool-btn:hover { color: hsl(0 0% 100%); background: hsla(220 90% 65% / .2); box-shadow: 0 0 14px hsla(215 100% 65% / .45); transform: translateY(-1px); }
+#graph-modal .graph-tool-btn:active { transform: scale(.94); }
+#graph-modal .graph-tool-btn:focus-visible { outline: 2px solid hsl(200 100% 70%); outline-offset: 2px; }
+#graph-modal .graph-tool-btn[aria-pressed="true"] { color: hsl(200 100% 85%); border-color: hsla(200 100% 70% / .5); box-shadow: inset 0 0 10px hsla(200 100% 60% / .3); }
+#graph-modal .graph-fx-btn[aria-pressed="true"] { animation: graph-twinkle 2.4s var(--ease-standard) infinite; }
+@keyframes graph-twinkle { 50% { opacity: .55; } }
+#graph-modal .graph-sidebar { background: linear-gradient(180deg, hsla(238 46% 10% / .96), hsla(236 46% 7% / .96)); border-right: 1px solid var(--g-line); }
+#graph-modal .ux-search { background: hsla(230 60% 70% / .07); border-color: var(--g-line); color: var(--g-ink2); }
+#graph-modal .ux-search:focus-within { border-color: hsla(200 100% 70% / .6); box-shadow: 0 0 0 3px hsla(200 100% 60% / .18), 0 0 18px hsla(210 100% 60% / .25); }
+#graph-modal .ux-search input { color: var(--g-ink); background: transparent; }
+#graph-modal .graph-options { color: var(--g-ink2); }
+#graph-modal .graph-node-row { color: var(--g-ink2); position: relative; transition: background var(--motion-fast), color var(--motion-fast), transform var(--motion-fast); }
+#graph-modal .graph-node-row.enter { animation: graph-row-in var(--motion-slow) var(--ease-emphasized) both; animation-delay: calc(var(--i) * 28ms + 220ms); }
+@keyframes graph-row-in { from { opacity: 0; transform: translateX(-10px); } }
+#graph-modal .graph-node-row:hover { background: hsla(var(--h) 90% 60% / .12); color: hsl(var(--h) 100% 88%); transform: translateX(2px); }
+#graph-modal .graph-node-row.selected { background: linear-gradient(90deg, hsla(var(--h) 90% 60% / .28), hsla(var(--h) 90% 60% / .04)); color: hsl(0 0% 100%); box-shadow: inset 2px 0 0 hsl(var(--h) 100% 70%); }
+#graph-modal .graph-node-row small { color: var(--g-ink3); }
+#graph-modal .graph-node-dot { width: var(--space-2); height: var(--space-2); background: hsl(var(--h) 90% 65%); box-shadow: 0 0 8px hsl(var(--h) 100% 65%); }
+#graph-modal .graph-node-dot.dead { background: transparent; border: 1px dashed hsl(352 90% 70%); box-shadow: none; }
+#graph-modal .graph-body { background: hsl(232 48% 6%); }
+#graph-modal #graph-canvas { cursor: grab; }
+#graph-modal #graph-canvas:active { cursor: grabbing; }
+#graph-modal .graph-viewport-tools { background: var(--g-glass); border: 1px solid var(--g-line); box-shadow: 0 8px 30px hsla(240 80% 3% / .5); }
+#graph-modal #graph-zoom { color: var(--g-ink2); }
+#graph-modal .graph-control-hint { color: var(--g-ink3); }
+#graph-modal .graph-tooltip {
+  display: grid; gap: var(--space-1); min-width: 140px; max-width: 280px; white-space: normal;
+  background: var(--g-glass); color: var(--g-ink); border: 1px solid hsla(var(--tip-h, 210) 100% 70% / .45); border-radius: var(--radius-m);
+  box-shadow: 0 10px 34px hsla(240 80% 3% / .6), 0 0 22px hsla(var(--tip-h, 210) 100% 60% / .3);
+  padding: var(--space-2) var(--space-3); animation: graph-pop var(--motion-fast) var(--ease-emphasized) both;
+}
+#graph-modal .graph-tooltip.hidden { display: none; }
+#graph-modal .graph-tooltip strong { color: hsl(var(--tip-h, 210) 100% 86%); font-size: var(--text-sm); }
+#graph-modal .graph-tooltip span, #graph-modal .graph-tooltip small { color: var(--g-ink2); font-size: var(--text-xs); overflow: hidden; text-overflow: ellipsis; }
+@keyframes graph-pop { from { opacity: 0; transform: translateY(4px) scale(.96); } }
+#graph-modal .graph-detail {
+  background: var(--g-glass); color: var(--g-ink); border: 1px solid hsla(var(--h, 210) 100% 70% / .4);
+  box-shadow: 0 16px 44px hsla(240 80% 3% / .55), 0 0 30px hsla(var(--h, 210) 100% 60% / .22);
+  animation: graph-slide var(--motion-base) var(--ease-emphasized) both;
+}
+@keyframes graph-slide { from { opacity: 0; transform: translateY(-10px); } }
+#graph-modal .graph-detail strong { color: hsl(var(--h, 210) 100% 88%); }
+#graph-modal .graph-detail p, #graph-modal .graph-detail small { color: var(--g-ink2); }
+#graph-modal .graph-detail-orb { width: var(--space-6); height: var(--space-6); flex: none; border-radius: var(--radius-full); background: radial-gradient(circle at 34% 30%, hsl(var(--h) 100% 95%), hsl(var(--h) 90% 62%) 42%, hsl(var(--h) 85% 28%)); box-shadow: 0 0 18px hsl(var(--h) 100% 60%); animation: graph-breathe 2.6s var(--ease-standard) infinite; }
+#graph-modal .graph-detail-chips { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: var(--space-2); }
+#graph-modal .graph-chip { border: 1px solid hsla(var(--h) 100% 70% / .4); background: hsla(var(--h) 90% 60% / .12); color: hsl(var(--h) 100% 86%); border-radius: var(--radius-full); padding: var(--space-1) var(--space-2); font-size: var(--text-xs); cursor: pointer; transition: background var(--motion-fast), box-shadow var(--motion-fast), transform var(--motion-fast); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#graph-modal .graph-chip:hover { background: hsla(var(--h) 90% 60% / .26); box-shadow: 0 0 12px hsla(var(--h) 100% 60% / .5); transform: translateY(-1px); }
+#graph-modal .graph-chip:focus-visible { outline: 2px solid hsl(var(--h) 100% 75%); outline-offset: 1px; }
+#graph-modal .graph-open-btn { box-shadow: 0 0 18px hsla(var(--h, 210) 100% 60% / .45); }
+#graph-modal .graph-loading { background: transparent; color: var(--g-ink2); gap: var(--space-4); pointer-events: none; }
+#graph-modal .graph-loading-orbit { position: relative; width: 56px; height: 56px; }
+#graph-modal .graph-loading-orbit i { position: absolute; inset: 0; border-radius: var(--radius-full); border: 2px solid transparent; border-top-color: hsl(200 100% 70%); animation: graph-orbit 1.2s linear infinite; }
+#graph-modal .graph-loading-orbit i:nth-child(2) { inset: 8px; border-top-color: hsl(280 100% 72%); animation-duration: 1.7s; animation-direction: reverse; }
+#graph-modal .graph-loading-orbit i:nth-child(3) { inset: 18px; border-top-color: hsl(325 100% 70%); animation-duration: .9s; }
+@keyframes graph-orbit { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  #graph-modal #graph-title, #graph-modal .graph-title-orb, #graph-modal .graph-detail-orb, #graph-modal .graph-fx-btn { animation: none; }
+}

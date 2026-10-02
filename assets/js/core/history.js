@@ -289,8 +289,8 @@ function updateStatus() {
   const canEdit = hasDoc && !state.editing;
   const canReload = state.mode === 'file';
   const canSaveas = hasDoc && (state.mode === 'virtual' || state.fixed !== '');
-  // 编辑始终可用：欢迎页会新建空白文档（toggleEdit）。
-  $('btn-edit').disabled = false;
+  // 没有打开文档时禁用编辑；新建文档走 newDocument()。
+  $('btn-edit').disabled = !hasDoc && !state.editing;
   setUnavailableReason($('btn-edit'), _t('toast.openDocumentToUse'));
   $('btn-reload').disabled = !canReload;
   $('btn-saveas').disabled = !canSaveas;

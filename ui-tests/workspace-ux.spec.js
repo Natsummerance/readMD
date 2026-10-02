@@ -44,6 +44,18 @@ test('3D graph rotates, switches dimension and searches accessible nodes', async
   const overflow=await page.locator('.graph-dialog').evaluate(el=>el.scrollWidth>el.clientWidth+1);
   expect(overflow).toBe(false);
 });
+test('graph indexes the folder first and falls back to the document links when empty', async ({ page }) => {
+  let indexed = null;
+  await page.route('**/api/links/index', r => { indexed = JSON.parse(r.request().postData() || '{}'); r.fulfill({ json: { ok: true, stats: {} } }); });
+  await page.route('**/api/links/graph?**', r => r.fulfill({ json: { ok: true, graph: { nodes: [], edges: [] } } }));
+  await page.evaluate(async () => { state.mode = 'virtual'; state.original = '[[Alpha]] and [[Beta|b]] and [[Alpha]]'; state.fixed = ''; await ReadMDGraph.open('C:/notes'); });
+  expect(indexed?.dir).toBe('C:/notes');
+  await expect(page.locator('#graph-canvas')).toHaveAttribute('data-node-count', '3');
+  await expect(page.locator('#graph-loading')).toBeHidden();
+  await page.locator('#graph-btn-fx').click();
+  await expect(page.locator('#graph-btn-fx')).toHaveAttribute('aria-pressed', 'false');
+  await page.locator('#graph-btn-fx').click();
+});
 test('Backlinks filters, switches tabs and exposes unresolved targets',async({page})=>{
   await page.route('**/api/links/backlinks?**',r=>r.fulfill({json:{ok:true,backlinks:[{source_title:'Research',source_path:'C:/notes/Research.md',line_no:9,alias:'Useful context'}],forward_links:[{target_clean:'Missing',target_path:null}]}}));
   await page.evaluate(async()=>{state.mode='file';state.original='[[Missing]]';await ReadMDGraph.refreshBacklinks('C:/notes/A.md');ReadMDGraph.toggleDrawer();});

@@ -1,4 +1,7 @@
 {
+  "graph.effects": "Glow effects",
+  "graph.hint": "Drag nodes to pull · Double-click to open · Shift+drag to pan",
+  "graph.indexing": "Indexing links…",
   "ai.starter.outlineAsk": "Create a clear, nested outline of this document as a Markdown list.",
   "ai.assistant": "Assistant",
   "ai.codeCopied": "Copied",

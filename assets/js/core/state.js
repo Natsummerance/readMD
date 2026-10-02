@@ -172,7 +172,7 @@ function afterRender() {
   }
   if (window.ReadMDGraph && typeof window.ReadMDGraph.refreshBacklinks === 'function' && state && state.file) {
     window.ReadMDGraph.refreshBacklinks(state.file);
-  } else if (!state || !state.file || state.mode === 'welcome') {
+  } else if (!state || state.mode === 'welcome') {
     if (window.ReadMDGraph && typeof window.ReadMDGraph.updateVisibility === 'function') {
       window.ReadMDGraph.updateVisibility(false);
     }

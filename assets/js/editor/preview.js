@@ -437,11 +437,8 @@ async function toggleEdit() {
     applyPvUi();
     return;
   }
-  // 欢迎页没有文档时直接新建空白文档进入编辑；空文件同样可以编辑。
-  if (state.mode !== 'file' && state.mode !== 'virtual') {
-    await renderVirtual('', '', '', '', []);
-  }
-  if (state.original == null) { showToast(_t('toast.noEditableContent') || '没有可编辑的内容'); return; }
+  // 没有打开文档时不能编辑（新建文档请用 Ctrl+N / 欢迎页“新建”）；空文件可以编辑。
+  if ((state.mode !== 'file' && state.mode !== 'virtual') || state.original == null) { showToast(_t('toast.noEditableContent') || '没有可编辑的内容'); return; }
   $('edit-bar').classList.remove('hidden');
   $('content').classList.add('hidden');
   state.editing = true;

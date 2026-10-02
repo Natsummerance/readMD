@@ -10,11 +10,11 @@ test.beforeEach(async ({ page }) => {
   await page.waitForFunction(() => typeof toggleEdit === 'function' && typeof openExportModal === 'function');
 });
 
-test('edit from the welcome screen opens a blank document in the editor', async ({ page }) => {
-  await expect(page.locator('#btn-edit')).toBeEnabled();
+test('edit is disabled on the welcome screen until a document is open', async ({ page }) => {
+  await expect(page.locator('#btn-edit')).toBeDisabled();
   await page.evaluate(() => toggleEdit());
-  await expect(page.locator('#edit-bar')).toBeVisible();
-  await page.waitForFunction(() => state.editing === true && state.mode === 'virtual');
+  await expect(page.locator('#edit-bar')).toBeHidden();
+  expect(await page.evaluate(() => state.editing)).toBeFalsy();
 });
 
 test('an empty document can be edited', async ({ page }) => {
