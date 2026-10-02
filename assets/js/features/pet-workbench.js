@@ -365,6 +365,8 @@
       art.className = live ? 'pet-card-art live2d' : 'pet-card-art sprite';
       art.style.backgroundImage = live
         ? 'url("/assets/pet/arch-chan-avatar.png")'
+        : item.slug === 'bongocat'
+          ? 'url("/assets/pet/bongocat-preview.png")'
         : item.slug
           ? `url("/api/pets/thumb?slug=${encodeURIComponent(item.slug)}")`
           : 'url("/assets/pet/hermes-sprite.png")';

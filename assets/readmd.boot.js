@@ -15901,7 +15901,7 @@ function syncPetWidgetVisibility(status) {
         charEl.style.backgroundImage = 'url("/assets/pet/hermes-sprite.png")';
       } else {
         charEl.classList.add('is-sprite-avatar');
-        charEl.style.backgroundImage = `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`;
+        charEl.style.backgroundImage = activeSlug === 'bongocat' ? 'url("/assets/pet/bongocat-preview.png")' : `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`;
       }
       if (!isLive2d) paintPetPreview(charEl,activeSlug);
       else charEl.classList.remove('pet-authored-preview');
@@ -16372,7 +16372,7 @@ function updateCharacterPreview(rendererVal) {
       charEl.style.backgroundImage = 'url("/assets/pet/hermes-sprite.png")';
     } else {
       charEl.classList.add('is-sprite-avatar');
-      charEl.style.backgroundImage = `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`;
+      charEl.style.backgroundImage = activeSlug === 'bongocat' ? 'url("/assets/pet/bongocat-preview.png")' : `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`;
     }
   }
   if (widgetCharEl) {
@@ -16385,7 +16385,7 @@ function updateCharacterPreview(rendererVal) {
       widgetCharEl.style.backgroundImage = 'url("/assets/pet/hermes-sprite.png")';
     } else {
       widgetCharEl.classList.add('is-sprite-avatar');
-      widgetCharEl.style.backgroundImage = `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`;
+      widgetCharEl.style.backgroundImage = activeSlug === 'bongocat' ? 'url("/assets/pet/bongocat-preview.png")' : `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`;
     }
   }
   $('pet-sound')?.closest('.apple-list-row')?.classList.toggle('hidden', activeSlug !== 'bongocat');
@@ -17401,6 +17401,8 @@ async function refreshPetGallery() {
       art.className = live ? 'pet-card-art live2d' : 'pet-card-art sprite';
       art.style.backgroundImage = live
         ? 'url("/assets/pet/arch-chan-avatar.png")'
+        : item.slug === 'bongocat'
+          ? 'url("/assets/pet/bongocat-preview.png")'
         : item.slug
           ? `url("/api/pets/thumb?slug=${encodeURIComponent(item.slug)}")`
           : 'url("/assets/pet/hermes-sprite.png")';

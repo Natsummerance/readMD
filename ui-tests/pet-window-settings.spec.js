@@ -1,5 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const path = require('node:path');
+test.use({bypassCSP:false});
 
 test.beforeEach(async ({ page, request }) => {
   await request.post('/api/pets/configure',{data:{enabled:false,in_app:true,renderer:'hermes-sprite',character:'',scale:.22,always_on_top:true,lock_position:false,bubbles:true,quiet:false}});
@@ -42,6 +43,17 @@ for(const [width,height] of [[1160,820],[1024,680]]) test(`pet settings and orig
   expect(preview.width).toBeLessThan(preview.height);expect(preview.size).toBe('contain');
   for(const tab of ['characters','companion','settings']) {
     await page.locator(`[data-pet-section=${tab}]`).click();
+    if(tab==='characters') {
+      const cards=page.locator('#pet-roster .pet-character-card');
+      const sizes=await cards.evaluateAll(elements=>elements.map(el=>({card:el.getBoundingClientRect().height,art:el.querySelector('.pet-card-art').getBoundingClientRect().height,name:el.querySelector('strong').getBoundingClientRect().height})));
+      expect(sizes.length).toBeGreaterThan(6);
+      expect(sizes.every(s=>s.card>=126 && s.art>=64 && s.name>0)).toBe(true);
+      for(const slug of ['mochi','moss','amber','','bongocat','cache-capy']) {
+        const art=page.locator(`#pet-roster .pet-character-card[data-slug="${slug}"] .pet-card-art`);
+        expect(await art.evaluate(async el=>{const img=new Image();img.src=getComputedStyle(el).backgroundImage.slice(5,-2);await img.decode();return img.naturalWidth>0 && img.naturalHeight>0;})).toBe(true);
+      }
+      if(process.env.READMD_PET_SCREENSHOTS) await page.screenshot({path:path.join(process.env.READMD_PET_SCREENSHOTS,`pet-character-previews-${width}x${height}.png`)});
+    }
     const modal=await page.locator('#pet-settings-box').boundingBox();
     expect(modal.x).toBeGreaterThanOrEqual(0);expect(modal.y).toBeGreaterThanOrEqual(0);
     expect(modal.y+modal.height).toBeLessThanOrEqual(height);
