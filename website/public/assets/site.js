@@ -9,11 +9,12 @@
       fastgit: (url) => `https://gh-proxy.com/${url}`,
     };
 
-    let activeMirror = localStorage.getItem('readmd_download_mirror') || 'direct';
+    let activeMirror = 'direct';
+    try { activeMirror = localStorage.getItem('readmd_download_mirror') || 'direct'; } catch {}
 
     const updateDownloadLinks = (mirrorKey, animate = true) => {
       activeMirror = mirrorKey;
-      localStorage.setItem('readmd_download_mirror', mirrorKey);
+      try { localStorage.setItem('readmd_download_mirror', mirrorKey); } catch {}
 
       const targetElements = document.querySelectorAll('.platform-card a, .platform-card button');
 
@@ -70,51 +71,10 @@
 
     updateDownloadLinks(activeMirror);
 
-    // Dual-Layer Dynamic Version & Release Synchronizer
-    const GITHUB_REPO = 'Natsummerance/rust-ReadMD';
+    // The shared release module owns version discovery and validated URLs.
+    document.addEventListener('readmd:release', () => updateDownloadLinks(activeMirror, false));
+    window.__readmdReleaseReady?.then(() => updateDownloadLinks(activeMirror, false));
 
-    const applyVersionData = (versionTag, pureVersion) => {
-      if (!versionTag) return;
-      const cleanTag = /^[vV]/.test(versionTag) ? versionTag : `v${versionTag}`;
-      const cleanPure = pureVersion || cleanTag.replace(/^[vV]/, '');
-
-      document.querySelectorAll('.latest-version-badge, [data-version-slot]').forEach((el) => {
-        el.textContent = cleanTag;
-      });
-      document.querySelectorAll('[data-pure-version]').forEach((el) => {
-        el.textContent = cleanPure;
-      });
-
-      // Update SHA256SUMS.txt links
-      document.querySelectorAll('a[href*="SHA256SUMS.txt"]').forEach((a) => {
-        a.href = `https://github.com/${GITHUB_REPO}/releases/download/${cleanTag}/SHA256SUMS.txt`;
-      });
-
-      // Update all download URLs and mirror slots
-      document.querySelectorAll('a[data-mirror-url]').forEach((link) => {
-        let orig = link.dataset.mirrorUrl;
-        if (orig.includes('/releases/download/')) {
-          const oldTagMatch = orig.match(/\/releases\/download\/([^/]+)\//);
-          if (oldTagMatch && oldTagMatch[1] && oldTagMatch[1] !== cleanTag) {
-            const oldTag = oldTagMatch[1];
-            const oldPure = oldTag.replace(/^[vV]/, '');
-            let updated = orig.replace(new RegExp(`/releases/download/${oldTag}/`, 'g'), `/releases/download/${cleanTag}/`);
-            updated = updated.replace(new RegExp(`-${oldPure}\\.`, 'g'), `-${cleanPure}.`);
-            link.dataset.mirrorUrl = updated;
-          }
-        }
-      });
-
-      updateDownloadLinks(activeMirror);
-    };
-
-    // Published manifest is same-origin and independent of API rate limits.
-    fetch('/version.json', { signal: AbortSignal.timeout(5000) })
-      .then(response => response.ok ? response.json() : null)
-      .then(data => {
-        if (data && /^V\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(data.releaseTag))
-          applyVersionData(data.releaseTag, data.version);
-      }).catch(() => {});
   };
 
   /* Interactive MCP Configuration & 1-Click Multi-Harness Generator */

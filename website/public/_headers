@@ -1,5 +1,5 @@
 /*
-  Content-Security-Policy: default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self' 'sha256-uJuAvMIp2Q8ccpJZ1hE+tmA/cSA2tLCowpIGH+vhNWI='; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; connect-src 'self' https://api.github.com; img-src 'self'; style-src 'self'; script-src 'self' 'sha256-bcXldlDVuYXWHbR/k+T/SRkeGbUDHWA1ykRzc9F892E=' 'sha256-XahvD1gYEUMJmcxldyJexQPh6ntVN0QeksIt4bOPW0A=' 'sha256-mfXzPWxfdiv/aNYOWzudMk/wG+JHeeAkzgGcb7Vr914=' 'sha256-k6oqiwXn/Uw6aLNwpquSMrIL8Ug5ehD/47bQcxsx+9M=' 'sha256-uJuAvMIp2Q8ccpJZ1hE+tmA/cSA2tLCowpIGH+vhNWI='; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY

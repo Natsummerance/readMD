@@ -37,8 +37,7 @@
   <meta name="twitter:description" content="取得 ReadMD V0.0.4 正式版的桌面、編輯器、MCP 和校驗套件；自用通道發布，安裝前請核對 SHA256SUMS.txt。">
   <meta name="twitter:image" content="https://rust.readmd.asia/media/overview-reader.png">
   <meta name="twitter:image:alt" content="ReadMD 閱讀介面顯示排版後的 Markdown 文件與目錄。">
-  <script type="application/ld+json">
-  {
+  <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@graph": [
     {
@@ -73,7 +72,7 @@
       "operatingSystem": "Windows 10/11, macOS 13+, Linux x86_64/ARM64",
       "applicationCategory": "UtilitiesApplication",
       "softwareVersion": "0.0.4",
-      "dateModified": "2026-09-03",
+      "dateModified": "2026-10-07",
       "isAccessibleForFree": true,
       "license": "https://github.com/Natsummerance/rust-ReadMD/blob/main/LICENSE",
       "downloadUrl": "https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMDSetup-windows-x64.exe",
@@ -94,8 +93,7 @@
       }
     }
   ]
-}
-  </script>
+}</script>
 <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
@@ -144,9 +142,7 @@
       <h1 class="mt-4 text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground">
         下載 ReadMD
       </h1>
-      <p class="mx-auto mt-4 max-w-2xl text-base md:text-lg text-muted leading-relaxed">
-        目前頁面提供 <span class="latest-version-badge font-semibold text-[var(--color-action)]">ReadMD V0.0.4 正式版</span>，已於 2026 年 10 月 7 日在 GitHub 正式發行。本版本經 READMD_SELF_USE_RELEASE 自用通道發布：資產未做 Authenticode / macOS codesign 簽名，原生平台證據清單按參考口徑提供——安裝前請先核對 SHA256SUMS.txt。
-      </p>
+      <p class="mx-auto mt-4 max-w-2xl text-base md:text-lg text-muted leading-relaxed">Download ReadMD <span class="latest-version-badge" data-version-slot>V0.0.4</span>, the current stable release. Published <time data-release-date datetime="2026-10-07T01:48:12Z">2026-10-07</time>. Choose a package below and verify SHA256SUMS.txt before installing.</p>
 
       <div class="mt-8">
         <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-muted/80">下載通道與鏡像加速 · Download Mirror</p>
@@ -317,7 +313,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             下載 MCP 獨立套件 (.zip)
           </a>
-          <a class="apple-pill-secondary" href="https://github.com/Natsummerance/rust-ReadMD/tree/main/packages/mcp-server" target="_blank" rel="noopener">
+          <a class="apple-pill-secondary" href="https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/readmd-mcp-server-0.0.4.zip" target="_blank" rel="noopener">
             GitHub 原始碼
           </a>
         </div>
@@ -330,7 +326,7 @@
             <span class="text-sm font-semibold text-white">準備 MCP 獨立套件</span>
           </div>
           <p class="mt-2.5 text-xs text-[#8b949e] leading-relaxed">
-            點擊上方按鈕下載 <code>ReadMD --mcp</code> 並解壓縮至本機任意路徑（如 <code>~/readmd-mcp</code> 或 <code>D:\readmd-mcp</code>）。
+            點擊上方按鈕下載 <code>readmd-mcp-server-0.0.4.zip</code> 並解壓縮至本機任意路徑（如 <code>~/readmd-mcp</code> 或 <code>D:\readmd-mcp</code>）。
           </p>
         </div>
 
@@ -604,5 +600,5 @@
   <p class="text-center text-xs mt-4"><a class="link-action" href="https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMD-macos-arm64.dmg">macOS ARM64 DMG</a> · <a class="link-action" href="https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMD-macos-x64.dmg">macOS Intel DMG</a></p>
 </main>
   <script src="/assets/site.js" defer></script>
-<script src="/assets/motion.js" defer></script></body>
+<script src="/assets/motion.js" defer></script><script type="module" src="/assets/release.js"></script></body>
 </html>

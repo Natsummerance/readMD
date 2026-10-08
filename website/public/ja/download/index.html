@@ -37,8 +37,7 @@
   <meta name="twitter:description" content="ReadMD V0.0.4 正式版のデスクトップ、エディター、MCP、チェックサム資産。セルフユースチャネル経由のため、インストール前に SHA256SUMS.txt を検証してください。">
   <meta name="twitter:image" content="https://rust.readmd.asia/media/overview-reader.png">
   <meta name="twitter:image:alt" content="整形された Markdown 文書と目次を表示する ReadMD の読書画面。">
-  <script type="application/ld+json">
-  {
+  <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@graph": [
     {
@@ -73,7 +72,7 @@
       "operatingSystem": "Windows 10/11, macOS 13+, Linux x86_64/ARM64",
       "applicationCategory": "UtilitiesApplication",
       "softwareVersion": "0.0.4",
-      "dateModified": "2026-09-03",
+      "dateModified": "2026-10-07",
       "isAccessibleForFree": true,
       "license": "https://github.com/Natsummerance/rust-ReadMD/blob/main/LICENSE",
       "downloadUrl": "https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMDSetup-windows-x64.exe",
@@ -94,8 +93,7 @@
       }
     }
   ]
-}
-  </script>
+}</script>
 <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
@@ -146,9 +144,7 @@
       <h1 class="mt-4 text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground">
         ReadMD をダウンロード
       </h1>
-      <p class="mx-auto mt-4 max-w-2xl text-base md:text-lg text-muted leading-relaxed">
-        このページでは <span class="latest-version-badge font-semibold text-[var(--color-action)]">ReadMD V0.0.4 正式版</span>を案内しています。2026 年 10 月 7 日に GitHub で正式リリースされました。READMD_SELF_USE_RELEASE セルフユースチャネル経由の提供のため資産は Authenticode / macOS codesign で署名されておらず、ネイティブ プラットフォーム証拠の一覧は参考情報です。インストール前に SHA256SUMS.txt を確認してください。
-      </p>
+      <p class="mx-auto mt-4 max-w-2xl text-base md:text-lg text-muted leading-relaxed">ReadMD <span class="latest-version-badge" data-version-slot>V0.0.4</span> 安定版。公開日：<time data-release-date datetime="2026-10-07T01:48:12Z">2026-10-07</time>。以下のパッケージを選び、インストール前に SHA256SUMS.txt を確認してください。</p>
 
       <!-- Apple Glass Mirror Capsule -->
       <div class="mt-8">
@@ -201,7 +197,7 @@
               Windows インストーラー (.exe)
             </a>
             <a class="apple-pill-secondary w-full text-center" href="https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMD-windows-x64.zip">
-              ポータブル版 (.exe)
+              ポータブル版 (.zip)
             </a>
           </div>
         </div>
@@ -326,7 +322,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             MCP パッケージをダウンロード (.zip)
           </a>
-          <a class="apple-pill-secondary" href="https://github.com/Natsummerance/rust-ReadMD/tree/main/packages/mcp-server" target="_blank" rel="noopener">
+          <a class="apple-pill-secondary" href="https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/readmd-mcp-server-0.0.4.zip" target="_blank" rel="noopener">
             GitHub ソース
           </a>
         </div>
@@ -340,7 +336,7 @@
             <span class="text-sm font-semibold text-white">パッケージの展開</span>
           </div>
           <p class="mt-2.5 text-xs text-[#8b949e] leading-relaxed">
-            上のボタンから <code>ReadMD --mcp</code> をダウンロードし、ローカルの任意の場所（例: <code>~/readmd-mcp</code>）に解凍します。
+            上のボタンから <code>readmd-mcp-server-0.0.4.zip</code> をダウンロードし、ローカルの任意の場所（例: <code>~/readmd-mcp</code>）に解凍します。
           </p>
         </div>
 
@@ -627,5 +623,5 @@
   <p class="text-center text-xs mt-4"><a class="link-action" href="https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMD-macos-arm64.dmg">macOS ARM64 DMG</a> · <a class="link-action" href="https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMD-macos-x64.dmg">macOS Intel DMG</a></p>
 </main>
   <script src="/assets/site.js" defer></script>
-<script src="/assets/motion.js" defer></script></body>
+<script src="/assets/motion.js" defer></script><script type="module" src="/assets/release.js"></script></body>
 </html>

@@ -14,6 +14,12 @@ on:
       - "showcase/reports/website_approval.json"
       - "website/tools/validate-website.mjs"
       - "website/**"
+  release:
+    types: [published, edited]
+  repository_dispatch:
+    types: [readmd-stable-release]
+  schedule:
+    - cron: '17 * * * *'
   workflow_dispatch:
 
 concurrency:
@@ -26,7 +32,26 @@ permissions:
   id-token: write
 
 jobs:
+  refresh-after-release:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Rebuild published website from main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          node --input-type=module <<'NODE'
+          const r = await fetch('https://api.github.com/repos/' + process.env.GITHUB_REPOSITORY + '/actions/workflows/website-github-pages.yml/dispatches', {
+            method: 'POST', headers: { Authorization: 'Bearer ' + process.env.GITHUB_TOKEN, Accept: 'application/vnd.github+json' },
+            body: JSON.stringify({ref:'main'})
+          });
+          if (!r.ok) throw Error('Website refresh dispatch failed: HTTP ' + r.status);
+          NODE
   build:
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +63,13 @@ jobs:
       - name: Install website dependencies
         working-directory: website
         run: npm ci
+      - name: Resolve complete published Rust release
+        if: github.event_name != 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node website/tools/published-release.mjs --refresh
+      - name: Test published download contract
+        run: node --test website/tools/published-release.test.mjs
       - name: Build and validate release
         working-directory: website
         run: npm run verify:release

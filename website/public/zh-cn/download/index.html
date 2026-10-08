@@ -38,8 +38,7 @@
   <meta name="twitter:description" content="获取 ReadMD V0.0.4 正式版的桌面、编辑器、MCP 和校验包；自用通道发布，安装前请核对 SHA256SUMS.txt。">
   <meta name="twitter:image" content="https://rust.readmd.asia/media/overview-reader.png">
   <meta name="twitter:image:alt" content="ReadMD 阅读界面展示排版后的 Markdown 文档和目录。">
-  <script type="application/ld+json">
-  {
+  <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@graph": [
     {
@@ -74,7 +73,7 @@
       "operatingSystem": "Windows 10/11, macOS 13+, Linux x86_64/ARM64",
       "applicationCategory": "UtilitiesApplication",
       "softwareVersion": "0.0.4",
-      "dateModified": "2026-09-03",
+      "dateModified": "2026-10-07",
       "isAccessibleForFree": true,
       "license": "https://github.com/Natsummerance/rust-ReadMD/blob/main/LICENSE",
       "downloadUrl": "https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMDSetup-windows-x64.exe",
@@ -95,8 +94,7 @@
       }
     }
   ]
-}
-  </script>
+}</script>
 <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
@@ -147,9 +145,7 @@
       <h1 class="mt-4 text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground">
         下载 ReadMD
       </h1>
-      <p class="mx-auto mt-4 max-w-2xl text-base md:text-lg text-muted leading-relaxed">
-        当前页面提供 <span class="latest-version-badge font-semibold text-[var(--color-action)]">ReadMD V0.0.4 正式版</span>，已于 2026 年 10 月 7 日在 GitHub 正式发布。本版本经 READMD_SELF_USE_RELEASE 自用通道发布：资产未做 Authenticode / macOS codesign 签名，原生平台证据清单按参考口径提供——安装前请先核对 SHA256SUMS.txt。
-      </p>
+      <p class="mx-auto mt-4 max-w-2xl text-base md:text-lg text-muted leading-relaxed">下载 ReadMD <span class="latest-version-badge" data-version-slot>V0.0.4</span> 当前正式版，发布于 <time data-release-date datetime="2026-10-07T01:48:12Z">2026-10-07</time>。选择下方安装包，安装前请核对 SHA256SUMS.txt。</p>
 
       <!-- Apple Glass Mirror Capsule -->
       <div class="mt-8">
@@ -202,7 +198,7 @@
               Windows 安装版 (.exe)
             </a>
             <a class="apple-pill-secondary w-full text-center" href="https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMD-windows-x64.zip">
-              便携免安装版 (.exe)
+              便携免安装版 (.zip)
             </a>
           </div>
         </div>
@@ -327,7 +323,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             MCP · readmd --mcp
           </a>
-          <a class="apple-pill-secondary" href="https://github.com/Natsummerance/rust-ReadMD/tree/main/packages/mcp-server" target="_blank" rel="noopener">
+          <a class="apple-pill-secondary" href="https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/readmd-mcp-server-0.0.4.zip" target="_blank" rel="noopener">
             GitHub 源码
           </a>
         </div>
@@ -341,7 +337,7 @@
             <span class="text-sm font-semibold text-white">准备 MCP 独立包</span>
           </div>
           <p class="mt-2.5 text-xs text-[#8b949e] leading-relaxed">
-            点击上方按钮下载 <code>ReadMD --mcp</code> 并解压至本地任意路径（如 <code>~/readmd-mcp</code> 或 <code>D:\readmd-mcp</code>）。
+            点击上方按钮下载 <code>readmd-mcp-server-0.0.4.zip</code> 并解压至本地任意路径（如 <code>~/readmd-mcp</code> 或 <code>D:\readmd-mcp</code>）。
           </p>
         </div>
 
@@ -628,5 +624,5 @@
   <p class="text-center text-xs mt-4"><a class="link-action" href="https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMD-macos-arm64.dmg">macOS ARM64 DMG</a> · <a class="link-action" href="https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMD-macos-x64.dmg">macOS Intel DMG</a></p>
 </main>
   <script src="/assets/site.js" defer></script>
-<script src="/assets/motion.js" defer></script></body>
+<script src="/assets/motion.js" defer></script><script type="module" src="/assets/release.js"></script></body>
 </html>

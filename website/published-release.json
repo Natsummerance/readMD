@@ -1,0 +1,65 @@
+{
+  "version": "0.0.4",
+  "releaseTag": "V0.0.4",
+  "repository": "Natsummerance/rust-ReadMD",
+  "updatedAt": "2026-10-07T01:48:12Z",
+  "assetsBaseUrl": "https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/",
+  "checksumUrl": "https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/SHA256SUMS.txt",
+  "assets": [
+    {
+      "name": "ReadMDSetup-windows-x64.exe",
+      "size": 48816305,
+      "url": "https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMDSetup-windows-x64.exe"
+    },
+    {
+      "name": "ReadMD-windows-x64.zip",
+      "size": 50908251,
+      "url": "https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMD-windows-x64.zip"
+    },
+    {
+      "name": "ReadMD-macos-arm64.zip",
+      "size": 50620261,
+      "url": "https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMD-macos-arm64.zip"
+    },
+    {
+      "name": "ReadMD-macos-x64.zip",
+      "size": 50899242,
+      "url": "https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMD-macos-x64.zip"
+    },
+    {
+      "name": "ReadMD-macos-arm64.dmg",
+      "size": 55732815,
+      "url": "https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMD-macos-arm64.dmg"
+    },
+    {
+      "name": "ReadMD-macos-x64.dmg",
+      "size": 56242820,
+      "url": "https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMD-macos-x64.dmg"
+    },
+    {
+      "name": "ReadMD-linux-x86_64.tar.gz",
+      "size": 50247812,
+      "url": "https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMD-linux-x86_64.tar.gz"
+    },
+    {
+      "name": "ReadMD-linux-x86_64.deb",
+      "size": 43523704,
+      "url": "https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/ReadMD-linux-x86_64.deb"
+    },
+    {
+      "name": "readmd-vscode-0.0.4.vsix",
+      "size": 14027159,
+      "url": "https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/readmd-vscode-0.0.4.vsix"
+    },
+    {
+      "name": "readmd-mcp-server-0.0.4.zip",
+      "size": 4815,
+      "url": "https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/readmd-mcp-server-0.0.4.zip"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "size": 903,
+      "url": "https://github.com/Natsummerance/rust-ReadMD/releases/download/V0.0.4/SHA256SUMS.txt"
+    }
+  ]
+}
