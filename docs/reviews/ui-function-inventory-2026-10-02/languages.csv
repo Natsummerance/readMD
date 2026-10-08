@@ -1,0 +1,47 @@
+﻿code,name,native,dir
+zh-CN,简体中文,简体中文,ltr
+zh-HK,繁体中文（香港）,繁體中文（香港）,ltr
+zh-TW,繁体中文（台湾）,繁體中文（台灣）,ltr
+en,英语,English,ltr
+ja,日语,日本語,ltr
+ko,韩语,한국어,ltr
+fr,法语,Français,ltr
+de,德语,Deutsch,ltr
+es,西班牙语,Español,ltr
+pt,葡萄牙语,Português,ltr
+ru,俄语,Русский,ltr
+it,意大利语,Italiano,ltr
+ar,阿拉伯语,العربية,rtl
+he,希伯来语,עברית,rtl
+ug,维吾尔语,ئۇيغۇرچە,rtl
+bo,藏语,བོད་སྐད།,ltr
+mn,蒙古语,Монгол хэл,ltr
+th,泰语,ไทย,ltr
+vi,越南语,Tiếng Việt,ltr
+id,印尼语,Bahasa Indonesia,ltr
+hi,印地语,हिन्दी,ltr
+bn,孟加拉语,বাংলা,ltr
+my,缅甸语,မြန်မာဘာသာ,ltr
+lo,老挝语,ພາສາລາວ,ltr
+km,高棉语,ភាសាខ្មែរ,ltr
+ms,马来语,Bahasa Melayu,ltr
+ga,爱尔兰语,Gaeilge,ltr
+da,丹麦语,Dansk,ltr
+fi,芬兰语,Suomi,ltr
+kg,刚果语,Kikongo,ltr
+tl,菲律宾语,Filipino,ltr
+no,挪威语,Norsk,ltr
+sv,瑞典语,Svenska,ltr
+kl,格陵兰语,Kalaallisut,ltr
+nl,荷兰语,Nederlands,ltr
+hr,克罗地亚语,Hrvatski,ltr
+rw,卢旺达语,Ikinyarwanda,ltr
+ro,罗马尼亚语,Română,ltr
+mt,马耳他语,Malti,ltr
+ne,尼泊尔语,नेपाली,ltr
+eo,世界语,Esperanto,ltr
+sl,斯洛文尼亚语,Slovenščina,ltr
+tr,土耳其语,Türkçe,ltr
+uk,乌克兰语,Українська,ltr
+el,希腊语,Ελληνικά,ltr
+hu,匈牙利语,Magyar,ltr

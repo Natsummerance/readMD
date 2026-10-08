@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ReadMD | ローカルで使う Markdown リーダー、エディター、変換、発表ツール</title>
-  <meta name="description" content="ReadMD は Windows 10/11、macOS 13+、Linux x86_64/ARM64 向けのローカル Markdown ワークスペースです。長文を高速に開き、表示だけを自動修復し、Office や PDF を変換し、Markdown をそのまま発表できます。v2.3.9 正式版を公開中。">
+  <meta name="description" content="ReadMD は Windows 10/11、macOS 13+、Linux x86_64/ARM64 向けのローカル Markdown ワークスペースです。長文を高速に開き、表示だけを自動修復し、Office や PDF を変換し、Markdown をそのまま発表できます。V0.0.4 正式版を公開中。">
   <meta name="author" content="ReadMD">
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
@@ -23,7 +23,7 @@
   <meta property="og:locale:alternate" content="zh_TW">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="ReadMD | ローカルで使う Markdown リーダー、エディター、変換、発表ツール">
-  <meta name="twitter:description" content="Windows 10/11、macOS 13+、Linux x86_64/ARM64 向けのローカル Markdown ワークスペース。v2.3.9 正式版を公開中。">
+  <meta name="twitter:description" content="Windows 10/11、macOS 13+、Linux x86_64/ARM64 向けのローカル Markdown ワークスペース。V0.0.4 正式版を公開中。">
   <meta name="twitter:image" content="https://rust.readmd.asia/media/overview-reader.png">
   <meta name="twitter:image:alt" content="ReadMD product interface with formatted Markdown and its outline.">
   <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/rust-ReadMD/releases.atom">
@@ -39,7 +39,7 @@
   <link rel="license" href="https://github.com/Natsummerance/rust-ReadMD/blob/main/LICENSE">
   <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
   <link rel="stylesheet" href="/assets/site.css">
-  <link rel="preload" as="image" href="/media/overview-reader.webp" fetchpriority="high">
+  <link rel="preload" as="image" href="/showcase/posters/F013.webp">
   <script type="application/ld+json">
   {
   "@context": "https://schema.org",
@@ -96,7 +96,7 @@
       "name": "ReadMD",
       "operatingSystem": "Windows 10/11, macOS 13+, Linux x86_64/ARM64",
       "applicationCategory": "UtilitiesApplication",
-      "softwareVersion": "2.3.9",
+      "softwareVersion": "0.0.4",
       "dateModified": "2026-09-10",
       "isAccessibleForFree": true,
       "license": "https://github.com/Natsummerance/rust-ReadMD/blob/main/LICENSE",
@@ -154,7 +154,7 @@
       "name": "対応環境は？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "ReadMD v2.3.9 正式版は Windows 10/11、macOS 13+、Linux x86_64/ARM64 に対応します。UOS、Kylin などの国産 OS 向けパッケージはネイティブ証拠が未整備のため、正式サポートの約束ではありません。VSCode 拡張と MCP Server でエディターや AI ツールにも接続できます。"
+        "text": "ReadMD V0.0.4 は Windows x64、macOS Intel / Apple Silicon、Linux x86_64 のパッケージを提供します。VS Code と MCP はインストール済み Rust エンジンを共有。UOS と Kylin はネイティブ環境での検証が必要です。"
       }
     },
     {
@@ -188,45 +188,30 @@
     }
   ]
 }</script>
+
+<link rel="stylesheet" href="/assets/home.css">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/assets/motion.css">
 </head>
-<body class="antialiased">
-  <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
-    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
-      <a class="text-lg font-semibold tracking-tight" href="/ja/">ReadMD</a>
-      <nav class="hidden items-center gap-7 text-sm md:flex"><a href="#capabilities">機能</a><a href="/ja/download/#mcp-guide">MCP サーバー</a><a href="#answers">AI 回答</a><a href="https://github.com/Natsummerance/rust-ReadMD">ソース</a></nav>
-      <div class="flex items-center gap-3"><a class="text-sm link-action" href="/">English</a><a class="button-primary text-sm" href="/ja/download/">ダウンロード</a></div>
-    </div>
-  </header>
-  <main>
-    <section class="hero hero--poster mx-auto max-w-6xl px-5 pb-12 pt-16 text-center md:pt-24">
-      <h1 class="hero-title mx-auto max-w-4xl">ファイルは手元に。</h1>
-      <p class="section-copy mx-auto mt-6">ReadMD は同じ Markdown を読書、編集、変換、発表までつなげます。8,000 行を超える長文は意味単位の改ページになり、表や数式の補正は表示層だけに適用され、元のファイルは書き換わりません。オフライン機能は各環境のネイティブ証拠に基づきます。</p>
-      <div class="mt-8 flex flex-wrap justify-center gap-3"><a class="button-primary" href="/ja/download/">無料で入手</a><a class="button-secondary" href="#answers">回答を見る</a></div>
-      <figure class="product-frame mx-auto mt-14 max-w-5xl"><picture><source srcset="/media/overview-reader.webp" type="image/webp"><img src="/media/overview-reader.png" width="2880" height="1620" alt="整形された Markdown 文書と目次を表示する ReadMD の読書画面。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
-    </section>
-    <section id="capabilities" class="bg-[var(--color-surface)] py-20">
-      <div class="mx-auto grid max-w-6xl gap-10 px-5 lg:grid-cols-[0.9fr_1.1fr]">
-        <h2 class="display-title">ReadMD とは？</h2>
-        <p>ReadMD はクラウド アカウントを必要としないクロスプラットフォームの Markdown アプリです。拡張子 `.md` をダブルクリックして読み、ライブ プレビューを見ながら編集し、Word、PowerPoint、Excel、PDF、HTML、LaTeX を Markdown に取り込みます。長文は意味的に分割され、目次、検索、数式が連動します。表の区切り行や閉じていない記号の修復はメモリ上の表示だけに行われます。AI アシスト、文献カード、オフライン OCR、Zen 編集、LAN 共有が同じファイルを中心に動きます。</p>
-      </div>
-    </section>
-    <section id="answers" class="py-20">
-      <div class="mx-auto max-w-6xl px-5">
-        <h2 class="display-title">ReadMD への直接回答</h2>
-        <div class="mt-12 grid gap-x-14 gap-y-10 md:grid-cols-2 xl:grid-cols-3">
-          <article class="answer-card"><h3>長い Markdown をどう開けますか？</h3><p>文書が約 8,000 行または 500 KB を超えると、ReadMD は意味的な改ページを使います。目次、全文検索、数式、ページ操作は連動したままのため、全ファイルを一度に描画しなくても読み進められます。</p></article>
-          <article class="answer-card"><h3>自動修復は元のファイルを変えますか？</h3><p>変えません。構文復元はメモリ内の表示層だけに適用されます。表の区切り行の欠落や閉じていない記号は見た目として直り、明示的に保存するまで元の Markdown バイト列は保持されます。</p></article>
-          <article class="answer-card"><h3>スライド製品の代わりになりますか？</h3><p>技術発表や講義資料ではなります。ReadMD の発表モードは執筆とレビューに使った同じ Markdown を使い、見出し、数式、図、コードを保持します。直前の編集でも別のスライドへコピーしません。</p></article>
-          <article class="answer-card"><h3>対応環境は？</h3><p>ReadMD v2.3.9 正式版は Windows 10/11、macOS 13+、Linux x86_64/ARM64 に対応します。UOS、Kylin などの国産 OS 向けパッケージはネイティブ証拠が未整備のため、正式サポートの約束ではありません。VSCode 拡張と MCP Server でエディターや AI ツールにも接続できます。</p></article>
-          <article class="answer-card"><h3>プライバシーは守られますか？</h3><p>読書、編集、改ページ、OCR、変換のコア機能はローカル実行を前提に設計されています。文書にクラウド アカウントは不要です。Web 取得と共有は明示的な操作であり、LAN 共有は同じネットワーク内を想定します。</p></article>
-          <article class="answer-card"><h3>ライセンスは？</h3><p>ReadMD は MIT ライセンスで公開されています。ソース コード、リリース ファイル、チェックサム、プラットフォーム資産は公開リポジトリ Natsummerance/readMD にあります。</p></article>
-          <div class="col-span-full mt-2 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/ja/large-markdown-files/">巨大な Markdown を開く</a><a class="link-action" href="/ja/markdown-to-slides/">PowerPoint を使わず発表</a><a class="link-action" href="/ja/convert-to-markdown/">文書を Markdown へ変換</a><a class="link-action" href="/ja/markdown-tables/">Markdown 表を作成</a><a class="link-action" href="/ja/pdf-to-markdown/">PDF から Markdown</a><a class="link-action" href="/ja/scan-to-markdown/">スキャン文字を抽出</a><a class="link-action" href="/ja/bibtex-citations/">BibTeX 文献を管理</a><a class="link-action" href="/ja/release-notes/">リリースノート</a></div>
-        </div>
-      </div>
-    </section>
-    <section id="share" class="border-t border-[var(--color-line)] py-14"><div class="mx-auto max-w-4xl px-5 text-center"><h2 class="display-title">ReadMD を共有</h2><p class="section-copy mx-auto mt-5">長い Markdown、形式変換、発表資料で困っている人にこのワークフローを紹介してください。</p><div class="mt-6 flex flex-wrap justify-center gap-3"><a class="button-secondary" href="https://twitter.com/intent/tweet?text=ReadMD%EF%BC%9A%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E5%84%AA%E5%85%88%E3%81%AEMarkdown%E8%AA%AD%E6%9B%B8%E3%80%81%E5%A4%89%E6%8F%9B%E3%80%81%E7%99%BA%E8%A1%A8&url=https%3A%2F%2Frust.readmd.asia%2Fja%2F" rel="noopener">X</a><a class="button-secondary" href="https://t.me/share/url?url=https%3A%2F%2Frust.readmd.asia%2Fja%2F&text=ReadMD%EF%BC%9A%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E5%84%AA%E5%85%88%E3%81%AEMarkdown%E8%AA%AD%E6%9B%B8%E3%80%81%E5%A4%89%E6%8F%9B%E3%80%81%E7%99%BA%E8%A1%A8" rel="noopener">Telegram</a><a class="button-secondary" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Frust.readmd.asia%2Fja%2F" rel="noopener">LinkedIn</a></div></div></section>
-    <footer class="border-t border-[var(--color-line)] py-10 text-sm text-muted"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 md:flex-row md:items-center md:justify-between"><p>© 2026 ReadMD. MIT License.</p><nav class="flex flex-wrap gap-5"><a href="/ja/llms.txt">llms.txt</a><a href="/ja/llms-full.txt">AI 用全文</a><a href="https://github.com/Natsummerance/rust-ReadMD/stargazers">GitHub で Star</a></nav></div></footer>
-  </main>
-  <script src="/assets/site.js" defer></script>
-</body>
-</html>
+<body class="antialiased readmd-home">
+<a class="home-skip" href="#main">ワークフローを探す</a>
+<header class="nav-shell sticky top-0 z-40"><div class="home-nav-inner mx-auto flex max-w-6xl items-center justify-between px-5"><a class="home-logo text-lg font-semibold tracking-tight" href="/ja/"><img src="/assets/icon-256.png" width="26" height="26" alt="" aria-hidden="true">ReadMD</a><nav class="home-nav-links" aria-label="ReadMD"><a href="#capabilities">ワークフローを探す</a><a href="/showcase/">機能デモを見る</a><a href="/ja/download/#mcp-guide">MCP</a></nav><div class="home-nav-actions"><details class="home-languages"><summary aria-label="Language">文 / EN</summary><div><a href="/">English</a><a href="/zh-cn/">简体中文</a><a href="/zh-tw/">繁體中文</a><a href="/ja/">日本語</a></div></details><button id="home-theme" type="button" aria-label="Theme">◐</button><a class="button-primary" href="/ja/download/">ReadMD をダウンロード</a></div></div></header>
+<main id="main">
+<section class="hero hero--poster mx-auto max-w-6xl px-5 pb-12 pt-16 text-center md:pt-24"><p class="home-eyebrow">Pure Rust · ローカル優先</p><h1 class="hero-title mx-auto max-w-5xl">ファイルは手元に。</h1><p class="home-subtitle">ローカル優先の Markdown リーダーとエディター</p><p class="section-copy mx-auto mt-6 home-hero-copy">長い文書を快適に読む。プレビューを見ながら書く。資料を Markdown に変換し、好きな形式で書き出す。</p><div class="mt-8 flex flex-wrap justify-center gap-4"><a class="button-primary" href="/ja/download/">ReadMD をダウンロード</a><a class="home-demo-link link-action" href="/showcase/">機能デモを見る <span aria-hidden="true">›</span></a></div><figure class="product-frame mx-auto mt-14 max-w-5xl"><a href="/showcase/#F013" aria-label="機能デモを見る · 集中して読む"><img src="/showcase/posters/F013.webp" width="1280" height="800" loading="eager" fetchpriority="high" decoding="async" alt="集中して読む · ReadMD"></a></figure></section>
+<section id="journey" class="journey" data-readmd-cinema aria-labelledby="journey-title"><div class="journey-sticky"><div class="journey-aura" aria-hidden="true"></div><div class="journey-grid"><div><p class="journey-kicker">スクロールして体験</p><h2 id="journey-title" class="journey-heading">読む、書く、考える。<br>思いのままに。</h2><div class="journey-caption-stage"><article class="journey-caption is-active" data-video="/showcase/videos/F013.mp4" data-poster="/showcase/posters/F013.webp"><strong>集中して読む</strong><p>目次、検索、引用、関連ノート。</p><a class="link-action" href="/showcase/#F013">実際の操作を見る <span aria-hidden="true">›</span></a></article><article class="journey-caption" data-video="/showcase/videos/F022.mp4" data-poster="/showcase/posters/F022.webp"><strong>安心して編集する</strong><p>下書き、安全なコピー、変更の復元。</p><a class="link-action" href="/showcase/#F022">実際の操作を見る <span aria-hidden="true">›</span></a></article><article class="journey-caption" data-video="/showcase/videos/F058.mp4" data-poster="/showcase/posters/F058.webp"><strong>資料をまとめる</strong><p>EPUB、PDF、Office、画像、音声と動画。</p><a class="link-action" href="/showcase/#F058">実際の操作を見る <span aria-hidden="true">›</span></a></article><article class="journey-caption" data-video="/showcase/videos/F072.mp4" data-poster="/showcase/posters/F072.webp"><strong>仕上げて書き出す</strong><p>ページプレビュー、書式設定と複数の形式。</p><a class="link-action" href="/showcase/#F072">実際の操作を見る <span aria-hidden="true">›</span></a></article><article class="journey-caption" data-video="/showcase/videos/F042.mp4" data-poster="/showcase/posters/F042.webp"><strong>文書に質問する</strong><p>選択した AI 接続で文書を読み、結果を編集。</p><a class="link-action" href="/showcase/#F042">実際の操作を見る <span aria-hidden="true">›</span></a></article><article class="journey-caption" data-video="/showcase/videos/F087.mp4" data-poster="/showcase/posters/F087.webp"><strong>キャラクターと過ごす</strong><p>スプライト、Live2D、BongoCat の個別の動作。</p><a class="link-action" href="/showcase/#F087">実際の操作を見る <span aria-hidden="true">›</span></a></article></div></div><figure class="journey-stage"><img src="/showcase/posters/F013.webp" width="1280" height="800" loading="lazy" alt="集中して読む · ReadMD"><div class="journey-progress" aria-hidden="true"><span></span></div></figure></div></div></section>
+<section id="capabilities" class="home-demos"><div class="mx-auto max-w-6xl px-5"><div class="home-section-heading"><div><h2 class="display-title">最初の資料から、完成した文書まで。</h2></div><a class="link-action" href="/showcase/">すべての操作動画 <span aria-hidden="true">›</span></a></div><div class="home-demo-grid"><a class="demo-card" href="/showcase/#F013"><div class="demo-card-copy"><h3>集中して読む</h3><p>目次、検索、引用、関連ノート。</p><span class="link-action">機能デモを見る <span aria-hidden="true">›</span></span></div><img src="/showcase/posters/F013.webp" width="1280" height="800" loading="lazy" alt="集中して読む · ReadMD"></a><a class="demo-card" href="/showcase/#F022"><div class="demo-card-copy"><h3>安心して編集する</h3><p>下書き、安全なコピー、変更の復元。</p><span class="link-action">機能デモを見る <span aria-hidden="true">›</span></span></div><img src="/showcase/posters/F022.webp" width="1280" height="800" loading="lazy" alt="安心して編集する · ReadMD"></a><a class="demo-card" href="/showcase/#F058"><div class="demo-card-copy"><h3>資料をまとめる</h3><p>EPUB、PDF、Office、画像、音声と動画。</p><span class="link-action">機能デモを見る <span aria-hidden="true">›</span></span></div><img src="/showcase/posters/F058.webp" width="1280" height="800" loading="lazy" alt="資料をまとめる · ReadMD"></a><a class="demo-card" href="/showcase/#F072"><div class="demo-card-copy"><h3>仕上げて書き出す</h3><p>ページプレビュー、書式設定と複数の形式。</p><span class="link-action">機能デモを見る <span aria-hidden="true">›</span></span></div><img src="/showcase/posters/F072.webp" width="1280" height="800" loading="lazy" alt="仕上げて書き出す · ReadMD"></a><a class="demo-card" href="/showcase/#F042"><div class="demo-card-copy"><h3>文書に質問する</h3><p>選択した AI 接続で文書を読み、結果を編集。</p><span class="link-action">機能デモを見る <span aria-hidden="true">›</span></span></div><img src="/showcase/posters/F042.webp" width="1280" height="800" loading="lazy" alt="文書に質問する · ReadMD"></a><a class="demo-card" href="/showcase/#F087"><div class="demo-card-copy"><h3>キャラクターと過ごす</h3><p>スプライト、Live2D、BongoCat の個別の動作。</p><span class="link-action">機能デモを見る <span aria-hidden="true">›</span></span></div><img src="/showcase/posters/F087.webp" width="1280" height="800" loading="lazy" alt="キャラクターと過ごす · ReadMD"></a></div><p class="home-recording-note">104 録画済み操作 · 21 機能カテゴリ</p></div></section>
+<section id="answers" class="py-20"><div class="mx-auto max-w-6xl px-5"><h2 class="display-title">よくある質問</h2><div class="mt-12 grid gap-x-14 gap-y-10 md:grid-cols-2 xl:grid-cols-3"><article class="answer-card"><h3>長い Markdown をどう開けますか？</h3><p>文書が約 8,000 行または 500 KB を超えると、ReadMD は意味的な改ページを使います。目次、全文検索、数式、ページ操作は連動したままのため、全ファイルを一度に描画しなくても読み進められます。</p></article><article class="answer-card"><h3>自動修復は元のファイルを変えますか？</h3><p>変えません。構文復元はメモリ内の表示層だけに適用されます。表の区切り行の欠落や閉じていない記号は見た目として直り、明示的に保存するまで元の Markdown バイト列は保持されます。</p></article><article class="answer-card"><h3>スライド製品の代わりになりますか？</h3><p>技術発表や講義資料ではなります。ReadMD の発表モードは執筆とレビューに使った同じ Markdown を使い、見出し、数式、図、コードを保持します。直前の編集でも別のスライドへコピーしません。</p></article><article class="answer-card"><h3>対応環境は？</h3><p>ReadMD V0.0.4 は Windows x64、macOS Intel / Apple Silicon、Linux x86_64 のパッケージを提供します。VS Code と MCP はインストール済み Rust エンジンを共有。UOS と Kylin はネイティブ環境での検証が必要です。</p></article><article class="answer-card"><h3>プライバシーは守られますか？</h3><p>読書、編集、改ページ、OCR、変換のコア機能はローカル実行を前提に設計されています。文書にクラウド アカウントは不要です。Web 取得と共有は明示的な操作であり、LAN 共有は同じネットワーク内を想定します。</p></article><article class="answer-card"><h3>ライセンスは？</h3><p>ReadMD は MIT ライセンスで公開されています。ソース コード、リリース ファイル、チェックサム、プラットフォーム資産は公開リポジトリ Natsummerance/readMD にあります。</p></article><div class="col-span-full home-guide-links"><a class="link-action" href="/ja/large-markdown-files/">長い文書を読む <span aria-hidden="true">›</span></a><a class="link-action" href="/ja/markdown-to-slides/">Markdown をスライドにする <span aria-hidden="true">›</span></a><a class="link-action" href="/ja/convert-to-markdown/">ファイルを Markdown に変換 <span aria-hidden="true">›</span></a><a class="link-action" href="/ja/scan-to-markdown/">スキャンから文字を抽出 <span aria-hidden="true">›</span></a><a class="link-action" href="/ja/bibtex-citations/">文献引用を使う <span aria-hidden="true">›</span></a><a class="link-action" href="/ja/release-notes/">更新履歴を見る <span aria-hidden="true">›</span></a><a class="link-action" href="/ja/workflows/">ワークフローを探す <span aria-hidden="true">›</span></a></div></div></div></section>
+<section id="share" class="border-t border-[var(--color-line)] py-14"><div class="mx-auto max-w-4xl px-5 text-center"><h2 class="display-title">ReadMD を共有</h2><div class="mt-6 flex flex-wrap justify-center gap-3"><a class="button-secondary" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Frust.readmd.asia" rel="noopener">X</a><a class="button-secondary" href="https://t.me/share/url?url=https%3A%2F%2Frust.readmd.asia" rel="noopener">Telegram</a><a class="button-secondary" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Frust.readmd.asia" rel="noopener">LinkedIn</a></div></div></section>
+<section id="ai-autocomplete" class="mx-auto max-w-6xl px-5 py-16 md:py-24"><p class="text-sm text-muted">V0.0.5 · AI 自動補完 · リリース候補 · 未公開</p><h2 class="mt-4 text-3xl md:text-5xl font-bold tracking-tight">次のひらめきを、Tab でつなぐ。</h2><p class="mt-6 text-xl text-muted max-w-3xl">カーソル横に候補が順次表示されます。Tab で見えている文字を確定、Esc で破棄。元に戻す操作で原稿を復元できます。</p><a class="apple-pill-secondary inline-flex mt-6" href="/ja/ai-autocomplete/">Tab · Esc · 元に戻す →</a></section></main><footer class="home-footer border-t border-[var(--color-line)] py-10 text-sm text-muted"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 md:flex-row md:items-center md:justify-between"><p>© 2026 ReadMD · MIT</p><nav class="flex flex-wrap gap-5"><a href="/ja/llms-full.txt">AI corpus</a><a href="/ja/release-notes/">更新履歴を見る</a><a href="https://github.com/Natsummerance/rust-ReadMD/stargazers">GitHub ★</a></nav></div><p class="text-center py-6"><a class="link-action" href="/ja/integrations/">Markdown をエディターと AI につなぐ</a></p></footer><script src="/assets/home.js" defer></script><script src="/assets/site.js" defer></script><script src="/assets/motion.js" defer></script></body></html>

@@ -5,7 +5,7 @@
   <id>https://rust.readmd.asia/feed.xml</id>
   <link rel="self" href="https://rust.readmd.asia/feed.xml"/>
   <link rel="alternate" href="https://rust.readmd.asia/"/>
-  <updated>2026-08-26T00:00:00Z</updated>
+  <updated>2026-10-04T00:00:00Z</updated>
   <generator>ReadMD broad SEO layer</generator>
   <entry>
     <id>https://rust.readmd.asia/zh-tw/workflows/</id>
@@ -315,4 +315,13 @@
     <updated>2026-08-24T00:00:00Z</updated>
     <summary>ReadMD is a local-first Markdown workspace for Windows, macOS, Linux, and Chinese operating systems. It opens long documents instantly, repairs rendering without changing source files, converts Office and PDF files, and presents Markdown directly.</summary>
   </entry>
+  <entry><id>https://rust.readmd.asia/showcase/</id><title>ReadMD 功能操作演示</title><link rel="alternate" href="https://rust.readmd.asia/showcase/"/><updated>2026-10-03T00:00:00Z</updated><summary>按最新清单浏览阅读、编辑、保存恢复、转换、导出和桌宠的真实操作短视频。</summary></entry>
+<entry><id>https://rust.readmd.asia/integrations/</id><title>ReadMD in VS Code and MCP</title><link rel="alternate" href="https://rust.readmd.asia/integrations/"/><updated>2026-10-07T00:00:00Z</updated><summary>Local engine integrations and V0.0.5 preview.</summary></entry>
+<entry><id>https://rust.readmd.asia/zh-cn/integrations/</id><title>ReadMD 的 VS Code 与 MCP 集成</title><link rel="alternate" href="https://rust.readmd.asia/zh-cn/integrations/"/><updated>2026-10-07T00:00:00Z</updated><summary>本地内核集成与 V0.0.5 新能力预览。</summary></entry>
+<entry><id>https://rust.readmd.asia/zh-tw/integrations/</id><title>ReadMD 的 VS Code 與 MCP 整合</title><link rel="alternate" href="https://rust.readmd.asia/zh-tw/integrations/"/><updated>2026-10-07T00:00:00Z</updated><summary>本機核心整合與 V0.0.5 新能力預覽。</summary></entry>
+<entry><id>https://rust.readmd.asia/ja/integrations/</id><title>ReadMD の VS Code と MCP 連携</title><link rel="alternate" href="https://rust.readmd.asia/ja/integrations/"/><updated>2026-10-07T00:00:00Z</updated><summary>ローカルエンジンの連携と V0.0.5 の新機能。</summary></entry>
+<entry><id>https://rust.readmd.asia/ai-autocomplete/</id><title>AI autocomplete in V0.0.5</title><link rel="alternate" href="https://rust.readmd.asia/ai-autocomplete/"/><updated>2026-10-07T00:00:00Z</updated><summary>Suggestions stream beside your cursor. Tab accepts the visible words; Esc dismisses, and undo restores your draft.</summary></entry>
+<entry><id>https://rust.readmd.asia/zh-cn/ai-autocomplete/</id><title>V0.0.5 · AI 自动补全</title><link rel="alternate" href="https://rust.readmd.asia/zh-cn/ai-autocomplete/"/><updated>2026-10-07T00:00:00Z</updated><summary>灰色候选在光标旁流式出现。Tab 接受眼前的文字，Esc 忽略；不满意，一次撤销回到原稿。</summary></entry>
+<entry><id>https://rust.readmd.asia/zh-tw/ai-autocomplete/</id><title>V0.0.5 · AI 自動補全</title><link rel="alternate" href="https://rust.readmd.asia/zh-tw/ai-autocomplete/"/><updated>2026-10-07T00:00:00Z</updated><summary>灰色候選在游標旁串流出現。Tab 接受眼前的文字，Esc 忽略；不滿意，一次復原回到原稿。</summary></entry>
+<entry><id>https://rust.readmd.asia/ja/ai-autocomplete/</id><title>V0.0.5 · AI 自動補完</title><link rel="alternate" href="https://rust.readmd.asia/ja/ai-autocomplete/"/><updated>2026-10-07T00:00:00Z</updated><summary>カーソル横に候補が順次表示されます。Tab で見えている文字を確定、Esc で破棄。元に戻す操作で原稿を復元できます。</summary></entry>
 </feed>

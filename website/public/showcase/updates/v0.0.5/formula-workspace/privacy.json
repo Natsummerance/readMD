@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "clips": [
+    {
+      "id": "formula-visual",
+      "passed": true,
+      "frames": 45,
+      "findings": [],
+      "videoSha256": "dfad4598a016c3e26bbb4494a0c7ed5be696e7dfc28ef53e5fa85100cecac963",
+      "posterSha256": "90b8ade0207f20b61c2f91c8b160603675b5496ca9b453a617c8ba2679f62b33"
+    }
+  ]
+}

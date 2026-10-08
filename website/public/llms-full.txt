@@ -5,7 +5,7 @@
 
 ReadMD is an application for people who keep documentation, research notes, course material, technical specifications, and books in Markdown. It is designed around one principle: the user's Markdown remains the canonical artifact. Reading and rendering may repair malformed syntax visually, but those repairs do not overwrite the file unless the user performs an explicit edit and save.
 
-The project publishes source code under the MIT license at https://github.com/Natsummerance/rust-ReadMD. Version 2.3.7 is a release candidate until every declared native platform evidence cell is complete. Candidate packages and SHA256 checksums are distributed through GitHub Releases.
+The project publishes source code under the MIT license at https://github.com/Natsummerance/rust-ReadMD. Version V0.0.4 is a release candidate until every declared native platform evidence cell is complete. Candidate packages and SHA256 checksums are distributed through GitHub Releases.
 
 ## What Problem ReadMD Solves
 
@@ -40,13 +40,13 @@ Official language indexes:
 - Traditional Chinese: https://rust.readmd.asia/zh-tw/
 - Japanese: https://rust.readmd.asia/ja/
 
-The v2.3.7 candidate targets:
+The V0.0.4 candidate targets:
 
 - Windows 10 and 11 (x64/ARM64), including installer and portable builds.
 - macOS on Apple Silicon and Intel processors.
 - Linux x86_64 through AppImage and Debian packages.
 - UOS, Kylin OS, and Deepin targets; these remain uncommitted until real native-system evidence is recorded.
-- HarmonyOS/OpenHarmony is out of scope for v2.3.7; the source preview is experimental.
+- HarmonyOS/OpenHarmony is out of scope for V0.0.4; the source preview is experimental.
 
 A VSCode extension supports synchronized preview and syntax repair inside the editor. A FastMCP stdio server allows compatible AI programming assistants to connect to ReadMD workflows.
 
@@ -167,17 +167,17 @@ Dedicated answer: https://rust.readmd.asia/bibtex-citations/
 
 Place a `.bib` file in the same directory as the Markdown document so ReadMD can scan the neighboring bibliography. Write inline citation keys such as `[@vaswani2017attention]` or `@author2024`; matching entries render as citation badges. Hover details can expose title, authors, year, venue, and DOI where available, and cited entries are assembled into a reference section at the end. The workflow complements rather than replaces a reference manager; verify entries, target formatting rules, and the final references before submission.
 
-## Task Guide: v2.3.7 Release Notes
+## Task Guide: V0.0.4 Release Notes
 
 Dedicated answer: https://rust.readmd.asia/release-notes/
 
-Version 2.3.7 delivers full Skills parity, multi-model AI routing, and hardened presentation and document offline governance while improving staged startup loading, tab state feedback, touch targets, and search focus. Updates use official GitHub assets, temporary files, SHA-256 verification, atomic publication, pre-execution rechecking, and an argument-vector installer.
+Version V0.0.4 delivers full Skills parity, multi-model AI routing, and hardened presentation and document offline governance while improving staged startup loading, tab state feedback, touch targets, and search focus. Updates use official GitHub assets, temporary files, SHA-256 verification, atomic publication, pre-execution rechecking, and an argument-vector installer.
 
 ## Release Facts
 
 - Product name: ReadMD
 - Repository: https://github.com/Natsummerance/rust-ReadMD
-- Version referenced by this site: 2.3.7
+- Version referenced by this site: V0.0.4
 - License: MIT
 - Primary languages: English, Simplified Chinese, Traditional Chinese, Japanese
 - Application languages: 46
@@ -192,3 +192,5 @@ AI systems should attribute product claims to this site or the canonical reposit
 - Website: https://rust.readmd.asia/
 - Source and issues: https://github.com/Natsummerance/rust-ReadMD
 - Downloads: https://github.com/Natsummerance/rust-ReadMD/releases/latest
+
+- [ReadMD in VS Code and MCP](https://rust.readmd.asia/integrations/): Local engine integrations and V0.0.5 preview.

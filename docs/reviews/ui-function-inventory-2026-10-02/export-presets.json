@@ -1,0 +1,308 @@
+{
+  "ok": true,
+  "defaults": {
+    "page": {
+      "size": "A4",
+      "orientation": "portrait",
+      "width": 210,
+      "height": 297,
+      "marginTop": 20,
+      "marginRight": 18,
+      "marginBottom": 20,
+      "marginLeft": 18
+    },
+    "cover": {
+      "enabled": false,
+      "title": "",
+      "subtitle": "",
+      "date": "",
+      "align": "center"
+    },
+    "toc": {
+      "enabled": false
+    },
+    "header": {
+      "text": "",
+      "align": "left"
+    },
+    "images": {
+      "widthPct": 92,
+      "maxHeightPct": 85
+    },
+    "typography": {
+      "font": "MicrosoftYaHei",
+      "size": 11,
+      "lineHeight": 1.6,
+      "spacing": 6,
+      "color": "#262626",
+      "align": "left"
+    },
+    "headings": {
+      "h1": {
+        "size": 20,
+        "color": "#1a1a1a",
+        "bold": true,
+        "align": "left",
+        "before": 18,
+        "after": 10
+      },
+      "h2": {
+        "size": 16,
+        "color": "#1f2937",
+        "bold": true,
+        "align": "left",
+        "before": 14,
+        "after": 8
+      },
+      "h3": {
+        "size": 14,
+        "color": "#2d3748",
+        "bold": true,
+        "align": "left",
+        "before": 12,
+        "after": 6
+      },
+      "h4": {
+        "size": 12,
+        "color": "#374151",
+        "bold": true,
+        "align": "left",
+        "before": 10,
+        "after": 6
+      },
+      "h5": {
+        "size": 11,
+        "color": "#4a5568",
+        "bold": true,
+        "align": "left",
+        "before": 8,
+        "after": 4
+      },
+      "h6": {
+        "size": 10.5,
+        "color": "#4a5568",
+        "bold": true,
+        "align": "left",
+        "before": 8,
+        "after": 4
+      }
+    },
+    "table": {
+      "headerBg": "#3b6ef5",
+      "headerColor": "#ffffff",
+      "headerBold": true,
+      "borderColor": "#c8cdd4",
+      "borderWidth": 0.75,
+      "banded": true,
+      "bandColor": "#f3f5f9",
+      "cellSize": 10,
+      "cellPadding": 6,
+      "align": "left",
+      "widthPct": 100
+    },
+    "code": {
+      "bg": "#f5f6f8",
+      "color": "#2f3b4a",
+      "font": "Consolas",
+      "size": 9.5,
+      "borderColor": "#dfe3e8",
+      "borderWidth": 0.5,
+      "rounded": true
+    },
+    "quote": {
+      "barColor": "#3b6ef5",
+      "bg": "#f3f6ff",
+      "color": "#4a5568"
+    },
+    "link": {
+      "color": "#2b6cb0"
+    },
+    "hr": {
+      "color": "#d8dce2"
+    },
+    "footer": {
+      "pageNumbers": true,
+      "text": ""
+    },
+    "math": {
+      "dpi": 220
+    },
+    "meta": {
+      "title": "",
+      "author": "",
+      "subject": ""
+    },
+    "htmlTheme": "light"
+  },
+  "presets": {
+    "minimal": {
+      "typography": {
+        "size": 10.5,
+        "lineHeight": 1.55,
+        "color": "#333333",
+        "align": "left"
+      },
+      "headings": {
+        "h1": {
+          "size": 18,
+          "color": "#111111"
+        },
+        "h2": {
+          "size": 14.5,
+          "color": "#222222"
+        },
+        "h3": {
+          "size": 12.5,
+          "color": "#333333"
+        }
+      },
+      "table": {
+        "headerBg": "#eef1f5",
+        "headerColor": "#333333",
+        "headerBold": true,
+        "borderColor": "#ccd2da",
+        "borderWidth": 0.5,
+        "banded": false,
+        "cellSize": 9.5,
+        "cellPadding": 5,
+        "align": "left",
+        "widthPct": 100
+      },
+      "code": {
+        "bg": "#f7f8fa",
+        "color": "#444444",
+        "borderColor": "#e3e6ea",
+        "borderWidth": 0.5
+      },
+      "quote": {
+        "barColor": "#9aa3af",
+        "bg": "#f6f7f9",
+        "color": "#555555"
+      },
+      "link": {
+        "color": "#1a73e8"
+      },
+      "hr": {
+        "color": "#e0e3e8"
+      }
+    },
+    "classic": {
+      "typography": {
+        "size": 12,
+        "lineHeight": 1.8,
+        "spacing": 8,
+        "color": "#1a1a1a",
+        "align": "left"
+      },
+      "headings": {
+        "h1": {
+          "size": 22,
+          "color": "#000000",
+          "align": "center"
+        },
+        "h2": {
+          "size": 17,
+          "color": "#111111"
+        },
+        "h3": {
+          "size": 14.5,
+          "color": "#222222"
+        },
+        "h4": {
+          "size": 13,
+          "color": "#333333"
+        }
+      },
+      "table": {
+        "headerBg": "#d9e2ec",
+        "headerColor": "#1f2d3d",
+        "headerBold": true,
+        "borderColor": "#8a94a6",
+        "borderWidth": 1,
+        "banded": true,
+        "bandColor": "#f2f5f8",
+        "cellSize": 10.5,
+        "cellPadding": 7,
+        "align": "left",
+        "widthPct": 100
+      },
+      "code": {
+        "bg": "#f4f4f0",
+        "color": "#333333",
+        "borderColor": "#c9c9c4",
+        "borderWidth": 0.75
+      },
+      "quote": {
+        "barColor": "#7a8699",
+        "bg": "#f5f6f8",
+        "color": "#3d4852"
+      },
+      "link": {
+        "color": "#8a2be2"
+      },
+      "hr": {
+        "color": "#b5b5ad"
+      }
+    },
+    "business": {
+      "typography": {
+        "size": 11,
+        "lineHeight": 1.65,
+        "spacing": 6,
+        "color": "#2c3e50",
+        "align": "left"
+      },
+      "headings": {
+        "h1": {
+          "size": 20,
+          "color": "#1f3864",
+          "bold": true
+        },
+        "h2": {
+          "size": 16,
+          "color": "#2e5395"
+        },
+        "h3": {
+          "size": 13.5,
+          "color": "#3a6db5"
+        },
+        "h4": {
+          "size": 12,
+          "color": "#4a7fd4"
+        }
+      },
+      "table": {
+        "headerBg": "#1f3864",
+        "headerColor": "#ffffff",
+        "headerBold": true,
+        "borderColor": "#9fb3d1",
+        "borderWidth": 0.75,
+        "banded": true,
+        "bandColor": "#eef3fa",
+        "cellSize": 10,
+        "cellPadding": 6,
+        "align": "left",
+        "widthPct": 100
+      },
+      "code": {
+        "bg": "#f0f4fa",
+        "color": "#1f3864",
+        "borderColor": "#c3d0e4",
+        "borderWidth": 0.5
+      },
+      "quote": {
+        "barColor": "#1f3864",
+        "bg": "#eef3fa",
+        "color": "#34507c"
+      },
+      "link": {
+        "color": "#1f3864"
+      },
+      "hr": {
+        "color": "#b9c6da"
+      }
+    }
+  },
+  "custom": {},
+  "last": null
+}

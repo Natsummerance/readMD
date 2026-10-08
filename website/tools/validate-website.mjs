@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-// Validate the staged ReadMD website (Node port of
-// showcase/scripts/validate_website.py; same checks, same error texts).
+// Validate the staged website, SEO metadata and inventory-backed recordings.
 // Usage: node website/tools/validate-website.mjs [--release] [--root DIR]
 import fs from 'node:fs';
 import path from 'node:path';
@@ -30,6 +29,8 @@ const pageSet = slug => Object.fromEntries(Object.entries(LANG_PREFIX).map(([lan
 }]));
 const INTENT_PAGES = pageSet('workflows');
 const DOWNLOAD_PAGES = pageSet('download');
+const INTEGRATION_PAGES = pageSet('integrations');
+const AI_PAGES = pageSet('ai-autocomplete');
 const ANSWER_TOPICS = [
   ['large-files', 'large-markdown-files'], ['slides', 'markdown-to-slides'], ['conversion', 'convert-to-markdown'],
   ['pdf', 'pdf-to-markdown'], ['tables', 'markdown-tables'], ['release-notes', 'release-notes'],
@@ -40,12 +41,13 @@ for (const [key, slug] of ANSWER_TOPICS) {
   for (const [lang, c] of Object.entries(pageSet(slug))) ANSWER_PAGES[`${lang}-${key}`] = c;
 }
 
-const VERSION = fs.readFileSync(path.join(ROOT, 'VERSION'), 'utf8').trim();
+const RELEASE_INFO = JSON.parse(fs.readFileSync(path.join(SITE, 'release.json'), 'utf8'));
+const VERSION = RELEASE_INFO.stable;
 const RELEASE_ASSETS = new Set([
-  `ReadMDSetup-v${VERSION}.exe`, `ReadMD-portable-v${VERSION}.exe`, `ReadMD-macos-arm64-v${VERSION}.zip`,
-  `ReadMD-macos-x64-v${VERSION}.zip`, `ReadMD-linux-x86_64-v${VERSION}.AppImage`, `ReadMD-linux-aarch64-v${VERSION}.AppImage`,
-  `readmd_${VERSION}_amd64.deb`, `readmd_${VERSION}_arm64.deb`, `readmd-vscode-${VERSION}.vsix`,
-  `readmd-mcp-server-${VERSION}.zip`, 'SHA256SUMS.txt',
+  'ReadMDSetup-windows-x64.exe', 'ReadMD-windows-x64.zip',
+  'ReadMD-macos-arm64.zip', 'ReadMD-macos-x64.zip', 'ReadMD-macos-arm64.dmg', 'ReadMD-macos-x64.dmg',
+  'ReadMD-linux-x86_64.tar.gz', 'ReadMD-linux-x86_64.deb', 'SHA256SUMS.txt',
+  `readmd-vscode-${VERSION}.vsix`, `readmd-mcp-server-${VERSION}.zip`,
 ]);
 const AI_CRAWLERS = ['GPTBot', 'OAI-SearchBot', 'ClaudeBot', 'PerplexityBot'];
 const FAQ_QUESTION_COUNTS = {};
@@ -97,19 +99,19 @@ function parseAttrs(src) {
 class PageAudit {
   constructor(content) {
     this.title = ''; this.metas = []; this.links = []; this.headings = []; this.images = []; this.stylesheets = [];
-    let inTitle = false, heading = '';
+    let inTitle = false, heading = '', headingText = '';
     const re = /<!--[\s\S]*?-->|<(script|style)\b[^>]*>([\s\S]*?)<\/\1\s*>|<\/([a-zA-Z][\w-]*)\s*>|<([a-zA-Z][\w-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>|([^<]+)/g;
     let m;
     const data = text => {
       if (inTitle) this.title += text.trim();
-      if (heading) this.headings.push([heading, text.split(/\s+/).filter(Boolean).join(' ')]);
+      if (heading) headingText += text;
     };
     while ((m = re.exec(content))) {
       if (m[1]) { continue; }             // script / style bodies are CDATA; not titles or headings here
       if (m[3]) {
         const tag = m[3].toLowerCase();
         if (tag === 'title') inTitle = false;
-        else if (tag === 'h1' || tag === 'h2' || tag === 'h3') heading = '';
+        else if (tag === heading) { this.headings.push([heading, headingText.split(/\s+/).filter(Boolean).join(' ')]); heading = ''; headingText = ''; }
         continue;
       }
       if (m[4]) {
@@ -118,7 +120,7 @@ class PageAudit {
         if (tag === 'title') inTitle = true;
         else if (tag === 'meta') this.metas.push(attrs);
         else if (tag === 'link') { this.links.push(attrs); if (attrs.rel === 'stylesheet') this.stylesheets.push(attrs.href || ''); }
-        else if (tag === 'h1' || tag === 'h2' || tag === 'h3') heading = tag;
+        else if (tag === 'h1' || tag === 'h2' || tag === 'h3') { heading = tag; headingText = ''; }
         else if (tag === 'img') this.images.push(attrs);
         continue;
       }
@@ -164,7 +166,9 @@ function auditPage(p, canonical) {
   const hreflang = new Set(audit.links.filter(i => i.rel === 'alternate' && i.hreflang).map(i => i.hreflang));
   if (!setEq(hreflang, new Set(['en', 'zh-CN', 'zh-TW', 'ja', 'x-default']))) errors.push(`${s}: incomplete hreflang set: ${pyList(sorted([...hreflang].filter(Boolean)))}`);
   if (audit.headings.filter(([t, x]) => t === 'h1' && x).length !== 1) errors.push(`${s}: page must contain exactly one non-empty h1`);
-  for (const img of audit.images) {
+  const decorativeBrand = img => img.src === '/assets/icon-256.png' && img.alt === '' && img['aria-hidden'] === 'true';
+  const productImages = audit.images.filter(img => !decorativeBrand(img));
+  for (const img of productImages) {
     if ((img.alt || '').trim().length < 10) errors.push(`${s}: image lacks meaningful alt text: ${img.src || ''}`);
     if (img.loading === 'eager' && img.fetchpriority !== 'high') errors.push(`${s}: eager hero image must declare fetchpriority=high`);
   }
@@ -173,7 +177,8 @@ function auditPage(p, canonical) {
   for (const r of ['icon', 'apple-touch-icon', 'manifest', 'license']) if (!rels.has(r)) errors.push(`${s}: missing ${r} link`);
   if (!audit.links.some(i => i.type === 'application/atom+xml' && (i.href || '').endsWith('releases.atom'))) errors.push(`${s}: release Atom feed link is missing`);
   if (!audit.links.some(i => i.type === 'application/atom+xml' && i.href === '/feed.xml')) errors.push(`${s}: full-site Atom feed link is missing`);
-  if (content.split('<picture>').length - 1 !== audit.images.length) errors.push(`${s}: every product image must have a WebP picture fallback`);
+  const genuineHome=/class="[^\"]*\breadmd-home\b/.test(content)&&productImages.every(img=>(img.src||'').endsWith('.webp'));
+  if (!genuineHome && content.split('<picture>').length - 1 !== productImages.length) errors.push(`${s}: every product image must have a WebP picture fallback`);
   if (audit.images.length && !content.includes('.webp')) errors.push(`${s}: optimized WebP source is missing`);
   if (!/https:\/\/github\.com\/Natsummerance\/(?:rust-)?readMD\/stargazers/i.test(content)) errors.push(`${s}: star call to action is missing`);
   const blocks = jsonBlocks(content);
@@ -248,7 +253,8 @@ function validateRobotsAndSitemap() {
   if (!robots.includes('Sitemap: https://rust.readmd.asia/sitemap.xml')) errors.push('robots.txt omits canonical sitemap');
   const sitemap = read(P('sitemap.xml'));
   if (!sitemap.includes('xmlns:xhtml="http://www.w3.org/1999/xhtml"')) errors.push('sitemap omits XHTML hreflang namespace');
-  const expected = new Set([LANGUAGES, INTENT_PAGES, DOWNLOAD_PAGES, ANSWER_PAGES].flatMap(g => Object.values(g).map(c => c.canonical)));
+  const expected = new Set([LANGUAGES, INTENT_PAGES, DOWNLOAD_PAGES, ANSWER_PAGES, INTEGRATION_PAGES, AI_PAGES].flatMap(g => Object.values(g).map(c => c.canonical)));
+  expected.add('https://rust.readmd.asia/showcase/');
   const actual = new Set([...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map(m => m[1]));
   if (!setEq(actual, expected)) errors.push(`sitemap mismatch: missing=${pySet(minus(expected, actual))}, extra=${pySet(minus(actual, expected))}`);
   const entries = [...sitemap.matchAll(/<url>([\s\S]*?)<\/url>/g)].map(m => m[1]);
@@ -263,7 +269,7 @@ function validateRobotsAndSitemap() {
     for (const m of entry.matchAll(/<xhtml:link[^>]+hreflang="([^"]+)"[^>]+href="([^"]+)"/g)) alternates[m[1]] = m[2];
     let section = urlPath(url);
     for (const pre of ['/zh-cn', '/zh-tw', '/ja']) if (section.startsWith(pre + '/')) { section = section.slice(pre.length); break; }
-    for (const [lang, base] of Object.entries(bases)) {
+    for (const [lang, base] of Object.entries(url==='https://rust.readmd.asia/showcase/'?{}:bases)) {
       if (alternates[lang] !== base + section) errors.push(`sitemap ${url} has bad hreflang ${lang}: ${alternates[lang] ?? 'None'}`);
     }
     if (!/<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/.test(entry)) errors.push(`sitemap ${url} lacks valid ISO lastmod`);
@@ -288,21 +294,33 @@ function validateLanguageCrosslinks() {
   return errors;
 }
 
-function validateApproval() {
-  const errors = [];
-  const a = JSON.parse(read(path.join(ROOT, 'showcase', 'reports', 'website_approval.json')));
-  const minimum = parseFloat(a.minimum_score);
-  const rounds = a.rounds || [];
-  const pyFloat = x => (Number.isInteger(x) ? x.toFixed(1) : String(x));
-  if (rounds.length < parseInt(a.required_rounds ?? 3, 10)) errors.push('approval has fewer than three review rounds');
-  for (const r of rounds) {
-    if (r.status !== 'approved' || parseFloat(r.score ?? 0) < minimum) errors.push(`approval round ${r.round ?? 'None'} is not approved at or above ${pyFloat(minimum)}`);
+function validateShowcase() {
+  const errors=[];
+  const inventoryPath=path.join(ROOT,'docs/reviews/ui-function-inventory-2026-10-02/inventory.json');
+  const inventory=JSON.parse(read(inventoryPath));
+  const manifest=JSON.parse(read(path.join(ROOT,'showcase/manifest.json')));
+  const catalog=JSON.parse(read(P('showcase/catalog.json')));
+  const digest=p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
+  if(manifest.inventory_sha256!==digest(inventoryPath))errors.push('showcase inventory changed: recordings must be reviewed');
+  if(JSON.stringify(manifest.features.map(f=>f.id))!==JSON.stringify(inventory.features.map(f=>f.id)))errors.push('showcase does not cover the current inventory');
+  if(catalog.features.length!==inventory.features.length)errors.push('public gallery omits inventory features');
+  for(const f of manifest.features){
+    const r=f.recording;
+    if(r?.status!=='recorded'){errors.push(f.id+': genuine recording is missing');continue;}
+    if(!r.evidence?.length||!r.steps?.length||!r.duration||!r.bytes)errors.push(f.id+': missing operation evidence');
+    for(const name of ['video','poster','captions']){
+      const local=path.join(ROOT,'showcase',r[name]||'');const published=P('showcase',r[name]||'');
+      if(!isFile(local)||!isFile(published))errors.push(f.id+': missing '+name);
+      else if(digest(local)!==digest(published))errors.push(f.id+': published '+name+' differs from recording');
+    }
+    const v=path.join(ROOT,'showcase',r.video);
+    if(isFile(v)&&digest(v)!==r.sha256)errors.push(f.id+': video checksum mismatch');
+    const c=catalog.features.find(c=>c.id===f.id);
+    if(c?.recording.sha256!==r.sha256)errors.push(f.id+': public catalog is stale');
   }
-  const m = a.final_decision_meeting || {};
-  if (m.status !== 'approved_for_staged_publication' || parseFloat(m.score ?? 0) < minimum) errors.push('final decision meeting is not approved at or above threshold');
-  const conds = m.conditions;
-  const all = conds == null ? true : (Array.isArray(conds) ? conds.every(Boolean) : Object.keys(conds).every(Boolean));
-  if (!all) errors.push('final decision conditions are incomplete');
+  const html=read(P('showcase/index.html')),js=read(P('assets/showcase.js'));
+  for(const marker of ['id="search"','id="categories"','id="player"','<video','/assets/showcase.js'])if(!html.includes(marker))errors.push('gallery missing '+marker);
+  if(html.includes('autoplay')||html.includes('journey-frames')||js.includes('cinema-frames'))errors.push('gallery contains the retired automatic playback pipeline');
   return errors;
 }
 
@@ -320,47 +338,6 @@ function validateRights() {
     const t = read(p);
     for (const marker of ['apple.com', '1比1', '1:1 copy', '完全一致']) if (t.includes(marker)) errors.push(`${show(p)}: forbidden clone/reference marker found: ${marker}`);
   }
-  return errors;
-}
-
-function validateMotionExperience() {
-  const errors = [];
-  const content = read(P('index.html'));
-  for (const m of ['particle-field', 'data-journey', '/assets/site.js', 'journey-film', 'data-frame-count="57"']) if (!content.includes(m)) errors.push(`home page omits motion experience marker: ${m}`);
-  const scriptPath = P('assets', 'site.js');
-  if (!isFile(scriptPath)) errors.push('assets/site.js is missing');
-  else {
-    const sc = read(scriptPath);
-    if (sc.includes('addEventListener("scroll"') || sc.includes("addEventListener('scroll'")) errors.push('site.js uses a main-thread scroll event listener');
-  }
-  const frameDir = P('media', 'journey-frames');
-  const frames = isDir(frameDir) ? fs.readdirSync(frameDir).filter(f => /^frame-.*\.webp$/.test(f)).sort().map(f => path.join(frameDir, f)) : [];
-  if (frames.length !== 57) errors.push(`scroll-driven film expects 57 frames, found ${frames.length}`);
-  if (frames.length) {
-    const hashes = frames.map(f => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex'));
-    const ratio = new Set(hashes).size / hashes.length;
-    if (ratio < 0.75) errors.push(`scroll-driven film has too many duplicate frames (unique ratio ${(ratio * 100).toFixed(2)}%)`);
-    let run = 1;
-    for (let i = 1; i < hashes.length; i++) {
-      if (hashes[i] === hashes[i - 1]) {
-        if (++run > 8) { errors.push('scroll-driven film contains a repeated frame run longer than 8 frames'); break; }
-      } else run = 1;
-    }
-  }
-  return errors;
-}
-
-function validateCapabilityCinema() {
-  const errors = [];
-  const content = read(P('index.html'));
-  for (const m of ['id="capability-cinema"', 'data-capability-cinema', 'capability-canvas', 'data-capability-track', '/large-markdown-files/', '/markdown-to-slides/', '/release-notes/']) {
-    if (!content.includes(m)) errors.push(`capability cinema omits ${m}`);
-  }
-  const panels = content.split('class="capability-panel"').length - 1;
-  if (panels !== 9) errors.push(`capability cinema expects 9 feature panels, found ${panels}`);
-  const sp = P('assets', 'site.js');
-  const script = isFile(sp) ? read(sp) : '';
-  for (const m of ['startCapabilityCinema', 'drawBlendedFrame', 'drawSlices', 'drawParticles']) if (!script.includes(m)) errors.push(`capability cinema script omits ${m}`);
   return errors;
 }
 
@@ -383,7 +360,8 @@ function validateGrowthHomepages() {
   const errors = [];
   for (const [lang, c] of Object.entries(LANGUAGES)) {
     const content = read(c.path);
-    if (!content.includes('rel="preload" as="image" href="/media/overview-reader.webp"')) errors.push(`${lang}: hero WebP preload is missing`);
+    if (!content.includes('/showcase/posters/F013.webp') || !content.includes('fetchpriority="high"')) errors.push(`${lang}: genuine reader hero is missing`);
+    if (!content.includes('/assets/home.js') || !content.includes('/showcase/')) errors.push(`${lang}: updated navigation is missing`);
     if (!content.includes('id="share"')) errors.push(`${lang}: share section is missing`);
     for (const sig of ['twitter.com/intent/tweet', 't.me/share/url', 'linkedin.com/sharing/share-offsite']) if (!content.includes(sig)) errors.push(`${lang}: share network missing: ${sig}`);
   }
@@ -479,7 +457,7 @@ function validateFeed() {
   const alternates = feedLinks.filter(l => l.rel === 'alternate' && l.href !== 'https://rust.readmd.asia/feed.xml').map(l => l.href);
   const ids = new Set(entries.map(e => text(e, 'id')));
   const canonicalIds = new Set([...read(P('sitemap.xml')).matchAll(/<loc>(.*?)<\/loc>/g)].map(m => m[1]));
-  if (entries.length !== 44 || !setEq(ids, canonicalIds)) errors.push(`Atom feed must contain exactly 44 canonical entries, found ${entries.length}`);
+  if (entries.length !== canonicalIds.size || !setEq(ids, canonicalIds)) errors.push(`Atom feed must contain all ${canonicalIds.size} canonical entries, found ${entries.length}`);
   if (JSON.stringify(selfLinks) !== JSON.stringify(['https://rust.readmd.asia/feed.xml'])) errors.push('Atom feed lacks its canonical self link');
   if (JSON.stringify(alternates) !== JSON.stringify(['https://rust.readmd.asia/'])) errors.push('Atom feed lacks the homepage alternate link');
   if (!text(head, 'updated')) errors.push('Atom feed lacks an updated timestamp');
@@ -495,7 +473,7 @@ function validateSecurityTxt() {
   const p = P('.well-known', 'security.txt');
   if (!isFile(p)) return ['security.txt is missing'];
   const t = read(p);
-  const req = ['Contact: https://github.com/Natsummerance/readMD/security/advisories/new', 'Expires: 2027-08-26T00:00:00Z', 'Preferred-Languages: en, zh-CN, zh-TW, ja', 'Canonical: https://rust.readmd.asia/.well-known/security.txt'];
+  const req = ['Contact: https://github.com/Natsummerance/rust-ReadMD/security/advisories/new', 'Expires: 2027-08-26T00:00:00Z', 'Preferred-Languages: en, zh-CN, zh-TW, ja', 'Canonical: https://rust.readmd.asia/.well-known/security.txt'];
   return req.every(r => t.includes(r)) ? [] : ['security.txt omits required trust fields'];
 }
 
@@ -509,6 +487,21 @@ function validate404() {
 
 function main() {
   const errors = [];
+  for (const c of Object.values(LANGUAGES)) {
+    const html=read(c.path);
+    for (const asset of ['motion.css','motion.js']) if(!html.includes('/assets/'+asset)||!isFile(P('assets',asset))) errors.push('Missing shared motion asset: '+asset);
+    const videos=[...html.matchAll(/data-video="([^"]+)"/g)].map(m=>m[1]);
+    if(videos.length!==6||new Set(videos).size!==6)errors.push('Homepage must contain six distinct scroll chapters: '+c.path);
+    for(const src of videos)if(!/^\/showcase\/videos\/F\d{3}\.mp4$/.test(src)||!isFile(P(src.slice(1))))errors.push('Scroll chapter recording missing: '+src);
+    if(/data-webm=/.test(html))errors.push('Derived WebM belongs to ignored dist only: '+c.path);
+    if(/class="journey-caption[^>]*\sinert\b/.test(html))errors.push('Static chapters must remain accessible without JavaScript: '+c.path);
+  }
+  for (const c of [...Object.values(INTEGRATION_PAGES),...Object.values(AI_PAGES)]) {
+    if (!isFile(c.path)) { errors.push('Missing integration page: '+c.canonical); continue; }
+    const html=read(c.path);
+    if (!html.includes('rel="canonical" href="'+c.canonical+'"')) errors.push('Integration canonical mismatch: '+c.canonical);
+    if (!html.includes('V'+RELEASE_INFO.candidate) || (!html.includes('--mcp') && !html.includes('ai-autocomplete.mp4'))) errors.push('Integration capabilities missing: '+c.canonical);
+  }
   const groups = [[LANGUAGES, 'index'], [INTENT_PAGES, 'workflow page'], [DOWNLOAD_PAGES, 'download page'], [ANSWER_PAGES, 'answer page']];
   for (const [group, label] of groups) {
     for (const [name, c] of Object.entries(group)) {
@@ -517,8 +510,7 @@ function main() {
     }
   }
   if (!isFile(P('llms.txt'))) errors.push('missing public/llms.txt'); else errors.push(...validateLlms(P('llms.txt')));
-  for (const f of [validateLanguageCrosslinks, validateRobotsAndSitemap, validateApproval, validateRights, validateMotionExperience,
-    validateCapabilityCinema, validateSecurityHeaders, validateGrowthHomepages, validateSpecialPageInternalLinks,
+  for (const f of [validateLanguageCrosslinks, validateRobotsAndSitemap, validateShowcase, validateRights, validateSecurityHeaders, validateGrowthHomepages, validateSpecialPageInternalLinks,
     validateAnswerInternalLinks, validateIndexnow, validateReleaseAssetLinks, validateFeed, validateSecurityTxt, validate404]) {
     errors.push(...f());
   }
@@ -533,10 +525,10 @@ function main() {
     intent_pages: Object.keys(INTENT_PAGES),
     download_pages: Object.keys(DOWNLOAD_PAGES),
     answer_pages: Object.keys(ANSWER_PAGES),
-    review_rounds: 3,
+    showcase_features: JSON.parse(read(P('showcase/catalog.json'))).features.length,
     broad_seo: {
-      canonical_pages: [LANGUAGES, INTENT_PAGES, DOWNLOAD_PAGES, ANSWER_PAGES].reduce((n, g) => n + Object.keys(g).length, 0),
-      atom_feed: true, entity_graph: true, security_txt: true, quality_404: true, capability_cinema: true,
+      canonical_pages: 1 + [LANGUAGES, INTENT_PAGES, DOWNLOAD_PAGES, ANSWER_PAGES, INTEGRATION_PAGES, AI_PAGES].reduce((n, g) => n + Object.keys(g).length, 0),
+      atom_feed: true, entity_graph: true, security_txt: true, quality_404: true, genuine_operation_gallery: true,
     },
   }));
   return 0;

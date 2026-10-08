@@ -5,9 +5,10 @@
   "scripts": {
     "clean": "node tools/clean.mjs",
     "build:css": "tailwindcss -i ./src/site.css -o ./dist/assets/site.css --minify",
-    "build": "npm run clean && npm run build:css && node tools/copy-static.mjs && node tools/sync-version.mjs",
+    "build": "node tools/build-integrations.mjs && node tools/build-ai-pages.mjs && node tools/build-motion-pages.mjs && npm run clean && npm run build:css && node tools/copy-static.mjs && node tools/sync-version.mjs && node tools/build-scroll-media.mjs",
     "verify": "node tools/validate-website.mjs",
     "verify:themes": "node tools/theme-smoke.cjs",
+    "verify:motion": "node tools/motion-smoke.cjs",
     "verify:release": "npm run build && node tools/validate-website.mjs --release",
     "indexnow": "node tools/indexnow-submit.mjs https://rust.readmd.asia",
     "deploy": "npm run verify:release && npx wrangler deploy --config wrangler.worker.jsonc"
@@ -15,8 +16,5 @@
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.13",
     "tailwindcss": "^4.1.13"
-  },
-  "dependencies": {
-    "gsap": "3.13.0"
   }
 }

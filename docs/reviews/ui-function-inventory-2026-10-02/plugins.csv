@@ -1,0 +1,15 @@
+﻿id,capability,category,weight,approx_size,requires_model,alternatives,runtime_connected,installed,enabled,cached,version,name,description,native_builtin,native_engine,visible_state
+easyocr,ocr,ocr,heavy,< 16 KB · Rust,False,"[""rapidocr""]",False,False,False,True,,系统 OCR 版面,Windows OCR 识别图片、扫描 PDF，保留阅读顺序。,True,system-ocr,可安装原生扩展
+pylatexenc,latex,latex,light,< 16 KB · Rust,False,[],False,False,False,False,,LaTeX 文档解析,Rust 解析器转换 TeX 结构、公式和表格。,True,texmd,可安装原生扩展
+rapidocr,ocr,ocr,light,< 16 KB · Rust,False,"[""easyocr""]",False,False,False,False,,系统 OCR 转换,原生图片识别、PDF OCR 回退，共用互斥槽位。,True,system-ocr,可安装原生扩展
+rapid_table,table,document,light,< 16 KB · Rust,False,[],False,False,False,False,,对齐表格恢复,将 OCR、PDF 文本连续对齐的列恢复为表格，保留代码围栏。,True,native-table-layout,可安装原生扩展
+whisper,audio,audio,heavy,< 16 KB · Rust,False,"[""faster_whisper""]",False,False,False,True,,离线语音正文,系统语音识别及 FFmpeg 解码，正文不带时间戳，不下载 Whisper 模型。,True,system-speech,可安装原生扩展
+jieba,keywords,text,light,< 16 KB · Rust,False,[],False,False,False,False,,文档关键词,Rust 词频分析提取重复的中文短语和英文词，追加关键词段落。,True,native-keyphrases,可安装原生扩展
+pygments,highlight,code,light,< 16 KB · Rust,False,[],False,False,False,False,,代码文档适配,源码转为带语言标记的 Markdown 围栏，接入语法高亮。,True,code-highlight,可安装原生扩展
+pandoc_bridge,document,tools,light,< 16 KB · Rust,False,[],False,False,False,False,,Office 文档适配,原生 DOC/DOCX、XLS/XLSX、PPT/PPTX、ODT、RTF、EPUB 读取器。,True,native-converters,可安装原生扩展
+pymupdf4llm,pdf,document,light,< 16 KB · Rust,False,"[""docling""]",False,False,False,False,,PDF 文本与版面,Rust PDF 文本、表格、内嵌图片提取，扫描页回退 OCR。,True,pdf-text,可安装原生扩展
+docling,pdf,document,heavy,< 16 KB · Rust,False,"[""pymupdf4llm""]",False,False,False,False,,PDF 扫描识别,优先原生 PDF OCR，识别器不可用时回退文本提取。,True,pdf-text,可安装原生扩展
+faster_whisper,audio,audio,heavy,< 16 KB · Rust,False,"[""whisper""]",False,False,False,False,,离线分段转写,系统语音识别及 FFmpeg 解码，保留分段时间戳。,True,system-speech,可安装原生扩展
+markdownify,web,document,light,< 16 KB · Rust,False,"[""trafilatura""]",False,False,False,False,,本地 HTML 适配,Rust HTML 读取器转换本地网页，移除可执行内容。,True,readability,可安装原生扩展
+trafilatura,web,document,light,< 16 KB · Rust,False,"[""markdownify""]",False,False,False,False,,网页正文恢复,原生文字密度提取器选择正文，减少导航和侧栏噪声。,True,readability,可安装原生扩展
+charset_normalizer,encoding,text,light,< 16 KB · Rust,False,[],False,False,False,False,,文本编码识别,原生 UTF-8、GB18030、Big5 等文本解码参与转换。,True,encoding-detect,可安装原生扩展

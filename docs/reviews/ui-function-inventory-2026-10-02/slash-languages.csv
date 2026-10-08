@@ -1,0 +1,26 @@
+﻿id,name,aliases
+javascript,JavaScript,"[""js"", ""node"", ""jsx""]"
+typescript,TypeScript,"[""ts"", ""tsx""]"
+python,Python,"[""py""]"
+bash,Bash,"[""sh"", ""shell"", ""zsh"", ""terminal""]"
+json,JSON,[]
+html,HTML,"[""xml""]"
+css,CSS,"[""scss"", ""style""]"
+markdown,Markdown,"[""md""]"
+rust,Rust,"[""rs""]"
+go,Go,"[""golang""]"
+java,Java,[]
+c,C,[]
+cpp,C++,"[""c++"", ""cxx""]"
+csharp,C#,"[""cs"", ""dotnet""]"
+sql,SQL,"[""mysql"", ""postgres""]"
+yaml,YAML,"[""yml""]"
+toml,TOML,"[""ini""]"
+diff,Diff,"[""patch""]"
+php,PHP,[]
+ruby,Ruby,"[""rb""]"
+swift,Swift,[]
+kotlin,Kotlin,"[""kt""]"
+latex,LaTeX,"[""tex""]"
+powershell,PowerShell,"[""ps1"", ""pwsh""]"
+dockerfile,Dockerfile,"[""docker""]"

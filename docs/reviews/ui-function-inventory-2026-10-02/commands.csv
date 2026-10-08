@@ -1,0 +1,73 @@
+﻿id,group,title,shortcut,hidden,available,condition,run,source,line
+,file,新建文档,Mod+N,False,True,无注册级when；调用目标仍有平台/状态保护,() => call('newDocument'),assets/js/shell/shell-deferred.js,153
+,file,打开文件…,Mod+O,False,True,无注册级when；调用目标仍有平台/状态保护,() => call('loadFileDialog'),assets/js/shell/shell-deferred.js,154
+,file,打开文件夹…,,False,False,() => enabled('btn-folder'),() => call('openFolder'),assets/js/shell/shell-deferred.js,155
+,file,最近文件…,,False,True,无注册级when；调用目标仍有平台/状态保护,() => call('openHistoryModal'),assets/js/shell/shell-deferred.js,156
+,file,保存,Mod+S,False,False,ctx.editing,() => call('saveEdit'),assets/js/shell/shell-deferred.js,157
+,file,另存为…,Mod+Shift+S,False,False,() => enabled('btn-saveas'),() => call('saveAs'),assets/js/shell/shell-deferred.js,158
+,file,创建编辑副本,,False,False,ctx.hasDoc,() => window.ReadMDRecovery.createCopy(),assets/js/shell/shell-deferred.js,159
+,file,恢复与版本历史,,False,True,无注册级when；调用目标仍有平台/状态保护,() => window.ReadMDRecovery.open(),assets/js/shell/shell-deferred.js,160
+,file,从磁盘重新加载,Mod+R,False,False,ctx.isFile,"() => call('loadFile', S().file, { force: true })",assets/js/shell/shell-deferred.js,161
+,file,重命名文件,F2,False,False,() => ctx.hasDoc() && !ctx.editing(),() => call('openFileRename'),assets/js/shell/shell-deferred.js,162
+,file,从剪贴板新建,Mod+V,False,True,无注册级when；调用目标仍有平台/状态保护,() => call('createFromClipboard'),assets/js/shell/shell-deferred.js,163
+,file,返回主页,,False,False,ctx.notWelcome,() => call('goHome'),assets/js/shell/shell-deferred.js,164
+,import,万物转 MD…,,False,True,无注册级when；调用目标仍有平台/状态保护,() => call('openConvertModal'),assets/js/shell/shell-deferred.js,166
+,import,网页转 MD…,Mod+U,False,True,无注册级when；调用目标仍有平台/状态保护,() => call('openWebDialog'),assets/js/shell/shell-deferred.js,167
+,import,扫描识别图片或 PDF（OCR）…,,False,True,无注册级when；调用目标仍有平台/状态保护,"() => call('chooseFile', 'ocr')",assets/js/shell/shell-deferred.js,168
+,export,导出文档…,Mod+P,False,False,ctx.hasDoc：file/virtual 且original非空,() => call('openExportModal'),assets/js/shell/shell-deferred.js,170
+,export,导出为 PDF…,,False,False,ctx.hasDoc：file/virtual 且original非空,() => openExportAs(fmt),assets/js/shell/shell-deferred.js,170
+,export,导出为 Word (DOCX)…,,False,False,ctx.hasDoc：file/virtual 且original非空,() => openExportAs(fmt),assets/js/shell/shell-deferred.js,170
+,export,导出为 EPUB…,,False,False,ctx.hasDoc：file/virtual 且original非空,() => openExportAs(fmt),assets/js/shell/shell-deferred.js,170
+,export,导出为 HTML…,,False,False,ctx.hasDoc：file/virtual 且original非空,() => openExportAs(fmt),assets/js/shell/shell-deferred.js,170
+,export,导出为 LaTeX…,,False,False,ctx.hasDoc：file/virtual 且original非空,() => openExportAs(fmt),assets/js/shell/shell-deferred.js,170
+,export,导出为 Reveal.js…,,False,False,ctx.hasDoc：file/virtual 且original非空,() => openExportAs(fmt),assets/js/shell/shell-deferred.js,170
+,view,开始演示,F5,False,False,ctx.hasDoc,() => call('launchPresentationMode'),assets/js/shell/shell-deferred.js,175
+,export,扫码共享到手机…,,False,False,() => enabled('btn-share'),() => call('openShareModal'),assets/js/shell/shell-deferred.js,176
+,view,显示/隐藏目录,Mod+Shift+F,False,True,无注册级when；调用目标仍有平台/状态保护,"() => call('toggleSide', 'toc')",assets/js/shell/shell-deferred.js,178
+,view,显示/隐藏文件侧栏,,False,True,无注册级when；调用目标仍有平台/状态保护,"() => call('toggleSide', 'files')",assets/js/shell/shell-deferred.js,179
+,view,在文档中查找,Mod+F,False,False,ctx.hasDoc,() => call('toggleSearch'),assets/js/shell/shell-deferred.js,180
+,view,切换禅模式,F11,False,True,无注册级when；调用目标仍有平台/状态保护,() => call('toggleZenMode'),assets/js/shell/shell-deferred.js,181
+,view,切换分页 / 连续阅读,,False,False,ctx.paged,() => call('togglePaginationMode'),assets/js/shell/shell-deferred.js,182
+,view,增大字号,Mod+=,False,False,ctx.notWelcome,"() => call('zoom', 10)",assets/js/shell/shell-deferred.js,183
+,view,减小字号,Mod+-,False,False,ctx.notWelcome,"() => call('zoom', -10)",assets/js/shell/shell-deferred.js,184
+,view,重置字号,Mod+0,False,False,ctx.notWelcome,() => { if (typeof state === 'undefined') return; state.fontSize = 100; call('applySettings'); call('saveSettings'); },assets/js/shell/shell-deferred.js,185
+,view,打开知识图谱,Mod+G,False,False,() => ctx.hasDoc() && !!window.ReadMDGraph,"() => {
+    const s = S();
+    const f = s.file || '';
+    const dir = f ? f.substring(0, Math.max(f.lastIndexOf('/'), f.lastIndexOf('\\'))) : '';
+    if (window.ReadMDGraph) window.ReadMDGraph.open(dir);
+  }",assets/js/shell/shell-deferred.js,186
+,view,查看反向链接,,False,False,() => enabled('btn-backlinks-menu'),() => byId('btn-backlinks-menu').click(),assets/js/shell/shell-deferred.js,187
+,view,查看自动修正报告,,False,False,() => enabled('btn-fix'),() => call('showFixModal'),assets/js/shell/shell-deferred.js,188
+,theme,切换主题,Mod+D,False,True,无注册级when；调用目标仍有平台/状态保护,() => call('toggleTheme'),assets/js/shell/shell-deferred.js,190
+,theme,主题：跟随系统,,False,True,无注册级when；调用目标仍有平台/状态保护,() => setThemeChoice(choice),assets/js/shell/shell-deferred.js,190
+,theme,主题：浅色,,False,True,无注册级when；调用目标仍有平台/状态保护,() => setThemeChoice(choice),assets/js/shell/shell-deferred.js,190
+,theme,主题：深色,,False,True,无注册级when；调用目标仍有平台/状态保护,() => setThemeChoice(choice),assets/js/shell/shell-deferred.js,190
+,theme,主题：护眼,,False,True,无注册级when；调用目标仍有平台/状态保护,() => setThemeChoice(choice),assets/js/shell/shell-deferred.js,190
+,edit,进入/退出编辑,Mod+E,False,False,() => ctx.editing() || enabled('btn-edit'),() => call('toggleEdit'),assets/js/shell/shell-deferred.js,197
+,edit,加粗,Mod+B,False,False,ctx.editing,"() => call('cmInsertSyntax', 'bold')",assets/js/shell/shell-deferred.js,198
+,edit,斜体,Mod+I,False,False,ctx.editing,"() => call('cmInsertSyntax', 'italic')",assets/js/shell/shell-deferred.js,199
+,edit,链接,,False,False,ctx.editing,"() => call('cmInsertSyntax', 'link')",assets/js/shell/shell-deferred.js,200
+,edit,标题,,False,False,ctx.editing,"() => call('cmInsertSyntax', 'h2')",assets/js/shell/shell-deferred.js,201
+,edit,代码块,,False,False,ctx.editing,"() => call('cmInsertSyntax', 'codeblock')",assets/js/shell/shell-deferred.js,202
+,edit,插入表格…,,False,False,ctx.editing,() => call('openTableModal'),assets/js/shell/shell-deferred.js,203
+,edit,插入公式…,,False,False,ctx.editing,"() => call('openFormulaModal', 'inline')",assets/js/shell/shell-deferred.js,204
+,edit,右侧预览,,False,False,ctx.editing,"() => call('setPvLayout', 'right')",assets/js/shell/shell-deferred.js,205
+,edit,下方预览,,False,False,ctx.editing,"() => call('setPvLayout', 'bottom')",assets/js/shell/shell-deferred.js,206
+,edit,关闭预览,,False,False,ctx.editing,"() => call('setPvLayout', 'none')",assets/js/shell/shell-deferred.js,207
+,ai,打开/关闭 AI 助手,Mod+Shift+A,False,True,无注册级when；调用目标仍有平台/状态保护,() => (typeof window.handleTopAiButtonClick === 'function' ? window.handleTopAiButtonClick() : call('toggleAiPanel')),assets/js/shell/shell-deferred.js,209
+,ai,AI：总结当前文档,,False,False,ctx.hasDoc,"() => call('openAiPanelWithPrompt', 'ask', _t('ux.askSummary'))",assets/js/shell/shell-deferred.js,210
+,ai,AI：带着问题阅读,,False,False,ctx.hasDoc,"() => call('openAiPanelWithPrompt', 'ask', _t('ux.askQuestions'))",assets/js/shell/shell-deferred.js,211
+,ai,AI：编辑选中内容,Alt+K,False,False,ctx.editing,() => call('openEditAiBar'),assets/js/shell/shell-deferred.js,212
+,ai,AI 连接设置…,,False,True,无注册级when；调用目标仍有平台/状态保护,"() => call('openAiModal', 'ai-settings-modal', byId('btn-ai'))",assets/js/shell/shell-deferred.js,213
+,ai,AI 会话历史…,,False,True,无注册级when；调用目标仍有平台/状态保护,"() => { call('openAiModal', 'ai-history-modal', byId('btn-ai')); call('loadAiSessions'); }",assets/js/shell/shell-deferred.js,214
+,ai,Skill 工作台…,,False,True,无注册级when；调用目标仍有平台/状态保护,() => call('openTplModal'),assets/js/shell/shell-deferred.js,215
+,settings,样式定制（CSS / Head）…,,False,True,无注册级when；调用目标仍有平台/状态保护,() => call('openStyleModal'),assets/js/shell/shell-deferred.js,217
+,settings,切换界面语言…,,False,True,无注册级when；调用目标仍有平台/状态保护,() => window.i18n && window.i18n.openModal(),assets/js/shell/shell-deferred.js,218
+,settings,桌宠设置…,,False,True,() => typeof window.openPetSettings === 'function',() => call('openPetSettings'),assets/js/shell/shell-deferred.js,219
+,settings,插件中心…,,False,True,无注册级when；调用目标仍有平台/状态保护,() => call('openPluginModal'),assets/js/shell/shell-deferred.js,220
+,settings,设为 .md 默认打开方式,,False,True,无注册级when；调用目标仍有平台/状态保护,() => call('installAssoc'),assets/js/shell/shell-deferred.js,221
+,settings,切换开机自启,,False,True,无注册级when；调用目标仍有平台/状态保护,() => call('toggleAutostart'),assets/js/shell/shell-deferred.js,222
+,settings,检查更新,,False,True,无注册级when；调用目标仍有平台/状态保护,"() => call('checkUpdate', false)",assets/js/shell/shell-deferred.js,223
+,help,键盘快捷键,Mod+/,False,True,无注册级when；调用目标仍有平台/状态保护,() => window.ReadMDShortcuts && window.ReadMDShortcuts.open(),assets/js/shell/shell-deferred.js,225
+,help,命令面板,Mod+K,True,True,无注册级when；调用目标仍有平台/状态保护,() => {},assets/js/shell/shell-deferred.js,226

@@ -1,0 +1,80 @@
+﻿slug,name,renderer,group,local,resource,description
+,伴读使者 / Hermes,hermes-sprite,内置,True,assets/pet/hermes-sprite.png,默认伴读角色
+mochi,糯米 / Mochi,hermes-sprite,内置,True,assets/pet/mochi-sprite.png,奶油白的小猫，焦糖色耳尖与尾巴，系一条鼠尾草绿围巾。
+moss,苔苔 / Moss,hermes-sprite,内置,True,assets/pet/moss-sprite.png,圆润的浅绿色史莱姆，头顶两片嫩叶，深墨绿豆豆眼。
+amber,琥珀 / Amber,hermes-sprite,内置,True,assets/pet/amber-sprite.png,橘色小狐狸，奶白胸口与尾尖，短腿大尾巴。
+bongocat,BongoCat,bongocat（卡片归精灵图类）,内置,True,assets/pet/bongocat-preview.png,原生键盘/鼠标、左右手与音效机制
+arch-chan,Arch-Chan,live2d,内置,True,assets/pet/model/arch chan model0.model3.json,Live2D模型跟随/动作/表情；当前唯一内置Live2D角色
+cache-capy,Cache Capy（淡定水豚）,hermes-sprite,目录/creature,True,assets/pet/thumbs/cache-capy.png,author: railly
+niu-lai,牛来（招财毛绒牛）,hermes-sprite,目录/creature,True,assets/pet/thumbs/niu-lai.png,author: henryjing96
+boba,Boba（波霸奶茶兽）,hermes-sprite,目录/creature,False,assets/pet/thumbs/boba.png,author: railly
+boxcat,Boxcat（纸箱猫咪）,hermes-sprite,目录/creature,False,assets/pet/thumbs/boxcat.png,author: railly
+byte-bunny,Byte Bunny（字节小兔）,hermes-sprite,目录/creature,False,assets/pet/thumbs/byte-bunny.png,author: railly
+captain-quack,Captain Quack（嘎嘎鸭船长）,hermes-sprite,目录/creature,False,assets/pet/thumbs/captain-quack.png,author: Petdex seed
+cash-cuy,Cash Cuy,hermes-sprite,目录/creature,False,assets/pet/thumbs/cash-cuy.png,author: railly
+daemon-dumpling,Daemon Dumpling（守护饺子）,hermes-sprite,目录/creature,False,assets/pet/thumbs/daemon-dumpling.png,author: Petdex seed
+gourmand-slugcat,RainWorld 饕餮蛞蝓猫,hermes-sprite,目录/creature,False,assets/pet/thumbs/gourmand-slugcat.png,author: ruohan l.
+kebo,Kebo,hermes-sprite,目录/creature,False,assets/pet/thumbs/kebo.png,author: railly
+lulu-capybara-2,噜噜水豚,hermes-sprite,目录/creature,False,assets/pet/thumbs/lulu-capybara-2.png,author: gitcjp
+mecha-xiaobai,机甲小白,hermes-sprite,目录/character,False,assets/pet/thumbs/mecha-xiaobai.png,author: 369772958
+mini-midgardsormr,Mini Midgardsormr（FF14 迷你尘世幻龙）,hermes-sprite,目录/creature,False,assets/pet/thumbs/mini-midgardsormr.png,author: pmcpm
+nikita-boar,Nikita Boar（小野猪骑士）,hermes-sprite,目录/creature,False,assets/pet/thumbs/nikita-boar.png,author: asimons81
+nivo,Nivo,hermes-sprite,目录/creature,False,assets/pet/thumbs/nivo.png,author: pipilu
+noir-webling,Noir Webling,hermes-sprite,目录/creature,False,assets/pet/thumbs/noir-webling.png,author: railly
+pixel-panda,Pixel Panda（像素大熊猫）,hermes-sprite,目录/creature,False,assets/pet/thumbs/pixel-panda.png,author: railly
+prompt-penguin,Prompt Penguin（提示词企鹅）,hermes-sprite,目录/creature,False,assets/pet/thumbs/prompt-penguin.png,author: railly
+roubao,肉包（蒸笼包子萌宠）,hermes-sprite,目录/creature,False,assets/pet/thumbs/roubao.png,author: happy y.
+shuangsheng-linger,双生灵儿,hermes-sprite,目录/creature,False,assets/pet/thumbs/shuangsheng-linger.png,author: 369772958
+skipper,Skipper,hermes-sprite,目录/creature,False,assets/pet/thumbs/skipper.png,author: Petdex seed
+socksy,Socksy（白袜黑猫）,hermes-sprite,目录/character,False,assets/pet/thumbs/socksy.png,author: railly
+spritesheet-11,Haru Corgi（乳牛柯基犬）,hermes-sprite,目录/creature,False,assets/pet/thumbs/spritesheet-11.png,author: Julia
+yy,源源,hermes-sprite,目录/character,False,assets/pet/thumbs/yy.png,author: zhenyuefu
+ban-niujiao-xiaowu,半牛角小乌,hermes-sprite,目录/creature,False,assets/pet/thumbs/ban-niujiao-xiaowu.png,author: 佳宾 吴.
+chun-niuma,纯牛马（打工人）,hermes-sprite,目录/creature,False,assets/pet/thumbs/chun-niuma.png,author: wantwant123
+cowboy-tidings-of-spring,牛仔·春日信使,hermes-sprite,目录/character,False,assets/pet/thumbs/cowboy-tidings-of-spring.png,author: 旭 阿.
+cyber-niuma,Cyber Niuma,hermes-sprite,目录/creature,False,assets/pet/thumbs/cyber-niuma.png,author: endluca
+david-chao-duo,牛经理与超超,hermes-sprite,目录/character,False,assets/pet/thumbs/david-chao-duo.png,author: weicheng f.
+grassland-cow,草地牛,hermes-sprite,目录/creature,False,assets/pet/thumbs/grassland-cow.png,author: Kesi S.
+hengheng-cow,哼哼牛,hermes-sprite,目录/creature,False,assets/pet/thumbs/hengheng-cow.png,author: yunfei L.
+moumou,牟牟草地牛,hermes-sprite,目录/creature,False,assets/pet/thumbs/moumou.png,author: zpd6814
+niu-niu,牛牛,hermes-sprite,目录/creature,False,assets/pet/thumbs/niu-niu.png,author: zcloveyou2333
+niu-xiaohan,草原牛·小憨,hermes-sprite,目录/creature,False,assets/pet/thumbs/niu-xiaohan.png,author: zhixiang z.
+niuniu,牛牛,hermes-sprite,目录/creature,False,assets/pet/thumbs/niuniu.png,author: 小艺 粥.
+niuniu-2,妞妞,hermes-sprite,目录/creature,False,assets/pet/thumbs/niuniu-2.png,author: Yunhao L.
+quarrel-cow,吵架牛,hermes-sprite,目录/creature,False,assets/pet/thumbs/quarrel-cow.png,author: ibreeze2017
+xianling-niu-v2,县令牛（威严断案）,hermes-sprite,目录/character,False,assets/pet/thumbs/xianling-niu-v2.png,author: alpacaknight
+batmeme,Batmeme（蝙蝠侠经典梗图）,hermes-sprite,目录/character,False,assets/pet/thumbs/batmeme.png,author: Furkan T.
+cosmo,Crafternauta,hermes-sprite,目录/character,False,assets/pet/thumbs/cosmo.png,author: railly
+dalek,Dalek（戴立克）,hermes-sprite,目录/character,False,assets/pet/thumbs/dalek.png,author: hanjin714
+denia-2,Denia,hermes-sprite,目录/character,False,assets/pet/thumbs/denia-2.png,author: a-shishen
+homelander,Homelander（祖国人）,hermes-sprite,目录/character,False,assets/pet/thumbs/homelander.png,author: Serhat
+humboldt,Humboldt,hermes-sprite,目录/character,False,assets/pet/thumbs/humboldt.png,author: daviddao
+hyein,Hyein,hermes-sprite,目录/character,False,assets/pet/thumbs/hyein.png,author: yingqi
+jill-stingray,Jill Stingray（赛博朋克酒保行动）,hermes-sprite,目录/character,False,assets/pet/thumbs/jill-stingray.png,author: anigilator322
+kuni-tibetan,Kuni Tibetan,hermes-sprite,目录/character,False,assets/pet/thumbs/kuni-tibetan.png,author: 兴宇 高.
+niko,Niko（OneShot 日光猫猫）,hermes-sprite,目录/character,False,assets/pet/thumbs/niko.png,author: joewangxxx
+nina-3,Nina（井芹仁菜 - GBC）,hermes-sprite,目录/character,False,assets/pet/thumbs/nina-3.png,author: mytristan
+panam,Panam（赛博朋克2077 帕南）,hermes-sprite,目录/character,False,assets/pet/thumbs/panam.png,author: Degenerative A.
+alder-catalog-foot,Alder Catalog Foot,hermes-sprite,目录/object,False,assets/pet/thumbs/alder-catalog-foot.png,author: codexfede
+alder-divider-block,Alder Divider Block,hermes-sprite,目录/object,False,assets/pet/thumbs/alder-divider-block.png,author: codexfede
+cotton-index-bridge,Cotton Index Bridge,hermes-sprite,目录/object,False,assets/pet/thumbs/cotton-index-bridge.png,author: codexfede
+creamware-archive-wedge,Creamware Archive Wedge,hermes-sprite,目录/object,False,assets/pet/thumbs/creamware-archive-wedge.png,author: codexfede
+enamel-ledger-spacer,Enamel Ledger Spacer,hermes-sprite,目录/object,False,assets/pet/thumbs/enamel-ledger-spacer.png,author: codexfede
+glass-index-bridge,Glass Index Bridge,hermes-sprite,目录/object,False,assets/pet/thumbs/glass-index-bridge.png,author: codexfede
+glass-label-runner,Glass Label Runner,hermes-sprite,目录/object,False,assets/pet/thumbs/glass-label-runner.png,author: codexfede
+linen-catalog-foot,Linen Catalog Foot,hermes-sprite,目录/object,False,assets/pet/thumbs/linen-catalog-foot.png,author: codexfede
+maple-sleeve-rest,Maple Sleeve Rest,hermes-sprite,目录/object,False,assets/pet/thumbs/maple-sleeve-rest.png,author: codexfede
+marble-index-bridge,Marble Index Bridge,hermes-sprite,目录/object,False,assets/pet/thumbs/marble-index-bridge.png,author: codexfede
+nickel-index-bridge,Nickel Index Bridge,hermes-sprite,目录/object,False,assets/pet/thumbs/nickel-index-bridge.png,author: codexfede
+nickel-ledger-spacer,Nickel Ledger Spacer,hermes-sprite,目录/object,False,assets/pet/thumbs/nickel-ledger-spacer.png,author: codexfede
+nukey,Nukey（复古核弹发射按钮）,hermes-sprite,目录/object,False,assets/pet/thumbs/nukey.png,author: railly
+opal-file-ledger,Opal File Ledger,hermes-sprite,目录/object,False,assets/pet/thumbs/opal-file-ledger.png,author: codexfede
+paper-ledger-spacer,Paper Ledger Spacer,hermes-sprite,目录/object,False,assets/pet/thumbs/paper-ledger-spacer.png,author: codexfede
+paperclip,Paperclip（微软经典大眼夹 / 回形针助手）,hermes-sprite,目录/object,False,assets/pet/thumbs/paperclip.png,author: Vlad T.
+pearl-index-bridge,Pearl Index Bridge,hermes-sprite,目录/object,False,assets/pet/thumbs/pearl-index-bridge.png,author: codexfede
+pewter-catalog-foot,Pewter Catalog Foot,hermes-sprite,目录/object,False,assets/pet/thumbs/pewter-catalog-foot.png,author: codexfede
+porcelain-folio-button,Porcelain Folio Button,hermes-sprite,目录/object,False,assets/pet/thumbs/porcelain-folio-button.png,author: codexfede
+scoop,Scoop（像素小冰淇淋勺）,hermes-sprite,目录/object,False,assets/pet/thumbs/scoop.png,author: railly
+tarnished-folder-rail,Tarnished Folder Rail,hermes-sprite,目录/object,False,assets/pet/thumbs/tarnished-folder-rail.png,author: codexfede
+walnut-catalog-foot,Walnut Catalog Foot,hermes-sprite,目录/object,False,assets/pet/thumbs/walnut-catalog-foot.png,author: codexfede
+walnut-divider-block,Walnut Divider Block,hermes-sprite,目录/object,False,assets/pet/thumbs/walnut-divider-block.png,author: codexfede

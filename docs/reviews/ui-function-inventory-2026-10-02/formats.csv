@@ -1,0 +1,144 @@
+﻿extension,family,collected,legacy_collected,engine,status,operation,source,symbol
+.7z,二进制/归档/字体,False,False,unsupported_format,不支持直接转换,列在BINARY_ONLY_EXTS或二进制检测中；没有相应转换器。非ZIP归档也没有前端专用拆包入口。,rust/readmd-kernel/src/convert.rs,convert_triple
+.aac,音频/视频,True,False,system-speech,已实现：系统离线ASR,选自动/中文/英文/日文；安装的SAPI识别器处理16k PCM，压缩音视频经本机FFmpeg解码；真实段落和时间戳；无识别器/语言缺失/无语音/损坏输入/取消明确失败。WAV与MP3真实识别已验证，不承诺Whisper模型质量。,rust/readmd-kernel/src/transcribe.rs,transcribe_audio
+.adoc,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识asciidoc的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.asciidoc,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识asciidoc的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.avi,音频/视频,True,False,system-speech,已实现：系统离线ASR,选自动/中文/英文/日文；安装的SAPI识别器处理16k PCM，压缩音视频经本机FFmpeg解码；真实段落和时间戳；无识别器/语言缺失/无语音/损坏输入/取消明确失败。WAV与MP3真实识别已验证，不承诺Whisper模型质量。,rust/readmd-kernel/src/transcribe.rs,transcribe_audio
+.azw,Kindle电子书,False,False,mobi,已实现（源码核对）,同MOBI解析分支；目录collect没有此后缀。,rust/readmd-kernel/src/convert.rs,mobi_file_to_md
+.azw3,Kindle电子书,True,False,mobi,已实现（源码核对）,KF8/MOBI兼容解析；不能据此认为所有DRM电子书可读。,rust/readmd-kernel/src/convert.rs,mobi_file_to_md
+.bash,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识bash的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.bat,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识batch的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.bib,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识bibtex的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.bin,二进制/归档/字体,False,False,unsupported_format,不支持直接转换,列在BINARY_ONLY_EXTS或二进制检测中；没有相应转换器。非ZIP归档也没有前端专用拆包入口。,rust/readmd-kernel/src/convert.rs,convert_triple
+.bmp,图片OCR,False,False,ocr,条件实现：系统OCR,万物转换前端将图片分到OCR队列；目录CONVERT_EXTS本身不含图片。文字识别依赖宿主OCR语言与引擎，空结果/错误不能计成功识别。,rust/readmd-kernel/src/ocr.rs,ocr_image_to_md
+.bz2,二进制/归档/字体,False,False,unsupported_format,不支持直接转换,列在BINARY_ONLY_EXTS或二进制检测中；没有相应转换器。非ZIP归档也没有前端专用拆包入口。,rust/readmd-kernel/src/convert.rs,convert_triple
+.c,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识c的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.cc,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识cpp的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.cfg,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识ini的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.cjs,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识javascript的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.cmd,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识batch的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.conf,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识ini的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.config,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识xml的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.cpp,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识cpp的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.cs,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识csharp的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.css,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识css的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.csv,CSV表格,True,False,csv,已实现（源码核对）,读取编码、分隔字段及引号，生成Markdown表格。,rust/readmd-kernel/src/convert.rs,csv_to_md
+.cxx,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识cpp的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.dart,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识dart的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.dat,二进制/归档/字体,False,False,unsupported_format,不支持直接转换,列在BINARY_ONLY_EXTS或二进制检测中；没有相应转换器。非ZIP归档也没有前端专用拆包入口。,rust/readmd-kernel/src/convert.rs,convert_triple
+.db,二进制/归档/字体,False,False,unsupported_format,不支持直接转换,列在BINARY_ONLY_EXTS或二进制检测中；没有相应转换器。非ZIP归档也没有前端专用拆包入口。,rust/readmd-kernel/src/convert.rs,convert_triple
+.diff,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识diff的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.dll,二进制/归档/字体,False,False,unsupported_format,不支持直接转换,列在BINARY_ONLY_EXTS或二进制检测中；没有相应转换器。非ZIP归档也没有前端专用拆包入口。,rust/readmd-kernel/src/convert.rs,convert_triple
+.doc,Word旧格式,True,False,doc,已实现（源码核对）,OLE2/旧DOC文本、结构解析；错误时文本回退须排除NUL乱码，不依赖安装Office。,rust/readmd-kernel/src/convert.rs,doc_to_md
+.dockerfile,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识dockerfile的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.docx,Word OOXML,True,True,docx,已实现（源码核对）,原生ZIP/XML解析段落、标题、列表、表格、图片与公式；form_tables参与结构处理；不等于Word像素排版复刻。,rust/readmd-kernel/src/convert.rs,docx_to_md
+.dylib,二进制/归档/字体,False,False,unsupported_format,不支持直接转换,列在BINARY_ONLY_EXTS或二进制检测中；没有相应转换器。非ZIP归档也没有前端专用拆包入口。,rust/readmd-kernel/src/convert.rs,convert_triple
+.editorconfig,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识ini的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.eml,邮件,True,False,mime,已实现：原生MIME,折叠/RFC2047邮件头、Q/Base64正文、multipart/alternative优先HTML、嵌套邮件、RFC2231附件名与CID图片；附件安全落盘，不执行HTML脚本。,rust/readmd-kernel/src/mail.rs,eml_to_md
+.env,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识bash的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.epub,EPUB电子书,True,False,epub,已实现（源码核对）,ZIP、OPF清单/阅读顺序及章节HTML转Markdown。,rust/readmd-kernel/src/convert.rs,epub_to_md
+.err,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识log的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.exe,二进制/归档/字体,False,False,unsupported_format,不支持直接转换,列在BINARY_ONLY_EXTS或二进制检测中；没有相应转换器。非ZIP归档也没有前端专用拆包入口。,rust/readmd-kernel/src/convert.rs,convert_triple
+.fish,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识fish的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.flac,音频/视频,True,False,system-speech,已实现：系统离线ASR,选自动/中文/英文/日文；安装的SAPI识别器处理16k PCM，压缩音视频经本机FFmpeg解码；真实段落和时间戳；无识别器/语言缺失/无语音/损坏输入/取消明确失败。WAV与MP3真实识别已验证，不承诺Whisper模型质量。,rust/readmd-kernel/src/transcribe.rs,transcribe_audio
+.gif,图片OCR,False,False,ocr,条件实现：系统OCR,万物转换前端将图片分到OCR队列；目录CONVERT_EXTS本身不含图片。文字识别依赖宿主OCR语言与引擎，空结果/错误不能计成功识别。,rust/readmd-kernel/src/ocr.rs,ocr_image_to_md
+.gitattributes,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识gitignore的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.gitignore,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识gitignore的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.go,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识go的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.gradle,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识groovy的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.gz,二进制/归档/字体,False,False,unsupported_format,不支持直接转换,列在BINARY_ONLY_EXTS或二进制检测中；没有相应转换器。非ZIP归档也没有前端专用拆包入口。,rust/readmd-kernel/src/convert.rs,convert_triple
+.h,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识c的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.hpp,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识cpp的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.htm,本地网页,True,False,html,已实现（源码核对）,同.html。,rust/readmd-kernel/src/convert.rs,html_file_to_md
+.html,本地网页,True,False,html,已实现（源码核对）,读取本地HTML，净化和正文结构转Markdown；不运行页面JavaScript。,rust/readmd-kernel/src/convert.rs,html_file_to_md
+.inf,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识ini的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.ini,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识ini的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.iso,二进制/归档/字体,False,False,unsupported_format,不支持直接转换,列在BINARY_ONLY_EXTS或二进制检测中；没有相应转换器。非ZIP归档也没有前端专用拆包入口。,rust/readmd-kernel/src/convert.rs,convert_triple
+.java,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识java的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.jpeg,图片OCR,False,False,ocr,条件实现：系统OCR,万物转换前端将图片分到OCR队列；目录CONVERT_EXTS本身不含图片。文字识别依赖宿主OCR语言与引擎，空结果/错误不能计成功识别。,rust/readmd-kernel/src/ocr.rs,ocr_image_to_md
+.jpg,图片OCR,False,False,ocr,条件实现：系统OCR,万物转换前端将图片分到OCR队列；目录CONVERT_EXTS本身不含图片。文字识别依赖宿主OCR语言与引擎，空结果/错误不能计成功识别。,rust/readmd-kernel/src/ocr.rs,ocr_image_to_md
+.js,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识javascript的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.json,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识json的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.json5,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识json5的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.jsonc,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识jsonc的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.jsx,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识jsx的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.kt,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识kotlin的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.kts,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识kotlin的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.latex,LaTeX源文档,True,False,texmd,已实现（源码核对）,同.tex；复杂包/宏的覆盖范围由texmd实现决定。,rust/readmd-kernel/src/convert.rs,latex_to_md
+.less,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识less的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.log,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识log的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.lua,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识lua的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.m,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识objectivec的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.m4a,音频/视频,True,False,system-speech,已实现：系统离线ASR,选自动/中文/英文/日文；安装的SAPI识别器处理16k PCM，压缩音视频经本机FFmpeg解码；真实段落和时间戳；无识别器/语言缺失/无语音/损坏输入/取消明确失败。WAV与MP3真实识别已验证，不承诺Whisper模型质量。,rust/readmd-kernel/src/transcribe.rs,transcribe_audio
+.makefile,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识makefile的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.markdown,Markdown直接阅读,False,False,file/render,已实现（源码核对）,打开文档直接阅读/编辑，不必万物转换；.mdx不执行React组件。目录万物collect不把Markdown源文件列为待转换文档。,assets/js/reader/render.js,loadFile
+.md,Markdown直接阅读,False,False,file/render,已实现（源码核对）,打开文档直接阅读/编辑，不必万物转换；.mdx不执行React组件。目录万物collect不把Markdown源文件列为待转换文档。,assets/js/reader/render.js,loadFile
+.mdown,Markdown直接阅读,False,False,file/render,已实现（源码核对）,打开文档直接阅读/编辑，不必万物转换；.mdx不执行React组件。目录万物collect不把Markdown源文件列为待转换文档。,assets/js/reader/render.js,loadFile
+.mdx,Markdown直接阅读,False,False,file/render,已实现（源码核对）,打开文档直接阅读/编辑，不必万物转换；.mdx不执行React组件。目录万物collect不把Markdown源文件列为待转换文档。,assets/js/reader/render.js,loadFile
+.mjs,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识javascript的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.mkd,Markdown直接阅读,False,False,file/render,已实现（源码核对）,打开文档直接阅读/编辑，不必万物转换；.mdx不执行React组件。目录万物collect不把Markdown源文件列为待转换文档。,assets/js/reader/render.js,loadFile
+.mkv,音频/视频,True,False,system-speech,已实现：系统离线ASR,选自动/中文/英文/日文；安装的SAPI识别器处理16k PCM，压缩音视频经本机FFmpeg解码；真实段落和时间戳；无识别器/语言缺失/无语音/损坏输入/取消明确失败。WAV与MP3真实识别已验证，不承诺Whisper模型质量。,rust/readmd-kernel/src/transcribe.rs,transcribe_audio
+.mobi,Kindle电子书,True,False,mobi,已实现（源码核对）,原生Palm/MOBI结构、压缩文本、HTML正文提取；加密/不可解码格式返回错误。,rust/readmd-kernel/src/convert.rs,mobi_file_to_md
+.mov,音频/视频,True,False,system-speech,已实现：系统离线ASR,选自动/中文/英文/日文；安装的SAPI识别器处理16k PCM，压缩音视频经本机FFmpeg解码；真实段落和时间戳；无识别器/语言缺失/无语音/损坏输入/取消明确失败。WAV与MP3真实识别已验证，不承诺Whisper模型质量。,rust/readmd-kernel/src/transcribe.rs,transcribe_audio
+.mp3,音频/视频,True,False,system-speech,已实现：系统离线ASR,选自动/中文/英文/日文；安装的SAPI识别器处理16k PCM，压缩音视频经本机FFmpeg解码；真实段落和时间戳；无识别器/语言缺失/无语音/损坏输入/取消明确失败。WAV与MP3真实识别已验证，不承诺Whisper模型质量。,rust/readmd-kernel/src/transcribe.rs,transcribe_audio
+.mp4,音频/视频,True,False,system-speech,已实现：系统离线ASR,选自动/中文/英文/日文；安装的SAPI识别器处理16k PCM，压缩音视频经本机FFmpeg解码；真实段落和时间戳；无识别器/语言缺失/无语音/损坏输入/取消明确失败。WAV与MP3真实识别已验证，不承诺Whisper模型质量。,rust/readmd-kernel/src/transcribe.rs,transcribe_audio
+.msg,Outlook邮件,True,False,outlook-msg,已实现：原生CFB邮件,分层CFB普通流/小流；Unicode或代码页正文、邮件头、HTML/压缩RTF回退、附件/CID及嵌入邮件；同名属性按storage隔离，资源路径防逃逸。,rust/readmd-kernel/src/mail.rs,msg_to_md
+.npmrc,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识ini的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.odt,OpenDocument文本,True,False,odt,已实现（源码核对）,ZIP内content.xml等结构转Markdown，处理标题、段落、列表、表格等。,rust/readmd-kernel/src/convert.rs,odt_to_md
+.ogg,音频/视频,True,False,system-speech,已实现：系统离线ASR,选自动/中文/英文/日文；安装的SAPI识别器处理16k PCM，压缩音视频经本机FFmpeg解码；真实段落和时间戳；无识别器/语言缺失/无语音/损坏输入/取消明确失败。WAV与MP3真实识别已验证，不承诺Whisper模型质量。,rust/readmd-kernel/src/transcribe.rs,transcribe_audio
+.out,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识log的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.patch,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识diff的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.pdb,Palm数据库/电子书,False,False,mobi,已实现（源码核对）,仅按MOBI/Palm电子书结构尝试，不是通用PDB数据库转换；目录collect没有此后缀。,rust/readmd-kernel/src/convert.rs,mobi_file_to_md
+.pdf,PDF文档,True,True,pdf / ocr,已实现（源码核对）,原生PDF对象/字体文本、布局与表格/资源提取；低质量文本尝试OCR升级，失败可按页OCR。扫描件依赖系统OCR与页栅格化能力。,rust/readmd-kernel/src/convert.rs,pdf_to_md
+.php,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识php的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.plist,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识xml的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.png,图片OCR,False,False,ocr,条件实现：系统OCR,万物转换前端将图片分到OCR队列；目录CONVERT_EXTS本身不含图片。文字识别依赖宿主OCR语言与引擎，空结果/错误不能计成功识别。,rust/readmd-kernel/src/ocr.rs,ocr_image_to_md
+.ppt,Office旧二进制,True,False,ppt,已实现（源码核对）,原生OLE2/BIFF或PowerPoint记录解析；失败明确legacy_office_parse_failed，不把原始二进制当Markdown。,rust/readmd-kernel/src/ppt_binary.rs,ppt_to_md
+.pptx,PowerPoint OOXML,True,False,pptx,已实现（源码核对）,按幻灯片解析文字、结构和资源；不是演示画面截图识别。,rust/readmd-kernel/src/convert.rs,pptx_to_md
+.prc,Palm电子书,False,False,mobi,已实现（源码核对）,MOBI/Palm兼容入口；目录collect没有此后缀。,rust/readmd-kernel/src/convert.rs,mobi_file_to_md
+.properties,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识properties的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.ps1,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识powershell的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.psm1,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识powershell的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.py,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识python的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.r,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识r的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.rar,二进制/归档/字体,False,False,unsupported_format,不支持直接转换,列在BINARY_ONLY_EXTS或二进制检测中；没有相应转换器。非ZIP归档也没有前端专用拆包入口。,rust/readmd-kernel/src/convert.rs,convert_triple
+.rb,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识ruby的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.rs,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识rust的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.rst,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识rst的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.rtf,RTF富文本,True,False,rtf,已实现（源码核对）,解析RTF控制词、转义、文本样式和段落；不承诺所有嵌入对象。,rust/readmd-kernel/src/convert.rs,rtf_to_md
+.sass,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识sass的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.scss,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识scss的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.sh,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识bash的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.so,二进制/归档/字体,False,False,unsupported_format,不支持直接转换,列在BINARY_ONLY_EXTS或二进制检测中；没有相应转换器。非ZIP归档也没有前端专用拆包入口。,rust/readmd-kernel/src/convert.rs,convert_triple
+.sql,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识sql的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.sqlite,二进制/归档/字体,False,False,unsupported_format,不支持直接转换,列在BINARY_ONLY_EXTS或二进制检测中；没有相应转换器。非ZIP归档也没有前端专用拆包入口。,rust/readmd-kernel/src/convert.rs,convert_triple
+.svelte,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识svelte的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.svg,向量图,False,False,text fallback,非OCR格式,可在Markdown中作为图资源展示，但不在OCR_IMAGE_EXTS中；转换只可能当文本回退，不识别图中文字。,rust/readmd-kernel/src/convert.rs,convert_triple
+.swift,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识swift的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.tar,二进制/归档/字体,False,False,unsupported_format,不支持直接转换,列在BINARY_ONLY_EXTS或二进制检测中；没有相应转换器。非ZIP归档也没有前端专用拆包入口。,rust/readmd-kernel/src/convert.rs,convert_triple
+.tex,LaTeX源文档,True,False,texmd,已实现（源码核对）,Rust texmd解析结构、命令与数学内容；不是调用TeX编译器生成PDF再识别。,rust/readmd-kernel/src/convert.rs,latex_to_md
+.text,普通文本,False,False,txtmd,已实现（源码核对）,与.txt相同的直接转换分支，但目录collect枚举没有.text。,rust/readmd-kernel/src/convert.rs,txt_to_markdown
+.tif,图片OCR,False,False,ocr,条件实现：系统OCR,万物转换前端将图片分到OCR队列；目录CONVERT_EXTS本身不含图片。文字识别依赖宿主OCR语言与引擎，空结果/错误不能计成功识别。,rust/readmd-kernel/src/ocr.rs,ocr_image_to_md
+.tiff,图片OCR,False,False,ocr,条件实现：系统OCR,万物转换前端将图片分到OCR队列；目录CONVERT_EXTS本身不含图片。文字识别依赖宿主OCR语言与引擎，空结果/错误不能计成功识别。,rust/readmd-kernel/src/ocr.rs,ocr_image_to_md
+.toml,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识toml的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.ts,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识typescript的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.tsv,TSV表格,True,False,csv,已实现（源码核对）,制表符分隔表格，不是简单给原文套代码围栏。,rust/readmd-kernel/src/convert.rs,csv_to_md
+.tsx,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识tsx的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.txt,普通文本,True,False,txtmd,已实现（源码核对）,智能识别标题、列表、段落等并生成Markdown；编码由read_text_smart处理。,rust/readmd-kernel/src/convert.rs,txt_to_markdown
+.vbs,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识vbscript的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.vue,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识vue的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.wav,音频/视频,True,False,system-speech,已实现：系统离线ASR,选自动/中文/英文/日文；安装的SAPI识别器处理16k PCM，压缩音视频经本机FFmpeg解码；真实段落和时间戳；无识别器/语言缺失/无语音/损坏输入/取消明确失败。WAV与MP3真实识别已验证，不承诺Whisper模型质量。,rust/readmd-kernel/src/transcribe.rs,transcribe_audio
+.webm,音频/视频,True,False,system-speech,已实现：系统离线ASR,选自动/中文/英文/日文；安装的SAPI识别器处理16k PCM，压缩音视频经本机FFmpeg解码；真实段落和时间戳；无识别器/语言缺失/无语音/损坏输入/取消明确失败。WAV与MP3真实识别已验证，不承诺Whisper模型质量。,rust/readmd-kernel/src/transcribe.rs,transcribe_audio
+.webp,图片OCR,False,False,ocr,条件实现：系统OCR,万物转换前端将图片分到OCR队列；目录CONVERT_EXTS本身不含图片。文字识别依赖宿主OCR语言与引擎，空结果/错误不能计成功识别。,rust/readmd-kernel/src/ocr.rs,ocr_image_to_md
+.wma,音频/视频,True,False,system-speech,已实现：系统离线ASR,选自动/中文/英文/日文；安装的SAPI识别器处理16k PCM，压缩音视频经本机FFmpeg解码；真实段落和时间戳；无识别器/语言缺失/无语音/损坏输入/取消明确失败。WAV与MP3真实识别已验证，不承诺Whisper模型质量。,rust/readmd-kernel/src/transcribe.rs,transcribe_audio
+.woff,二进制/归档/字体,False,False,unsupported_format,不支持直接转换,列在BINARY_ONLY_EXTS或二进制检测中；没有相应转换器。非ZIP归档也没有前端专用拆包入口。,rust/readmd-kernel/src/convert.rs,convert_triple
+.woff2,二进制/归档/字体,False,False,unsupported_format,不支持直接转换,列在BINARY_ONLY_EXTS或二进制检测中；没有相应转换器。非ZIP归档也没有前端专用拆包入口。,rust/readmd-kernel/src/convert.rs,convert_triple
+.xhtml,本地网页,False,False,html,已实现（源码核对）,与HTML分派相同，目录collect没有此后缀。,rust/readmd-kernel/src/convert.rs,html_file_to_md
+.xls,Office旧二进制,True,False,xls,已实现（源码核对）,原生OLE2/BIFF或PowerPoint记录解析；失败明确legacy_office_parse_failed，不把原始二进制当Markdown。,rust/readmd-kernel/src/xls_biff.rs,xls_to_md
+.xlsx,Excel OOXML,True,False,xlsx,已实现（源码核对）,工作簿/工作表XML、单元格值和表格转Markdown；不计算Excel公式或复刻表格软件交互。,rust/readmd-kernel/src/convert.rs,xlsx_to_md
+.xml,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识xml的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.xz,二进制/归档/字体,False,False,unsupported_format,不支持直接转换,列在BINARY_ONLY_EXTS或二进制检测中；没有相应转换器。非ZIP归档也没有前端专用拆包入口。,rust/readmd-kernel/src/convert.rs,convert_triple
+.yaml,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识yaml的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.yml,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识yaml的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md
+.zip,归档,True,False,extract-zip → batch,已实现：专用拆包批次,选文件、文件夹collect或拖放得到ZIP均走/api/batch/extract-zip，在隔离目录过滤安全条目后逐项转换；直接/api/convert不把ZIP二进制当文字。,assets/js/features/batch.js,enqueueBatchFiles
+.zsh,代码/配置/日志,True,False,code,已实现（源码核对）,正文封装为语言标识bash的Markdown代码围栏及文件标题；不是解析语义为说明文档。,rust/readmd-kernel/src/convert.rs,code_to_md

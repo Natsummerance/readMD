@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "clips": [
+    {
+      "id": "session-restore",
+      "passed": true,
+      "frames": 40,
+      "findings": [],
+      "videoSha256": "fd189feff2d99827ba11b8b6c285d476bdbd1afb90e5162b4ddff7c74daafbad",
+      "posterSha256": "30ead81137d4cac6428c3c3789d5bb7e7d2ecc32bb2ac139f528b5d58f19735d"
+    },
+    {
+      "id": "consistent-controls",
+      "passed": true,
+      "frames": 33,
+      "findings": [],
+      "videoSha256": "292b246aed56a054aae4dc3148d953990790b6dcf74138c2d8d9c2243d4dbeef",
+      "posterSha256": "8906581c05374c7eaafe0b7979b8fce714998b6bad1e52c13903b2985fd8f0c1"
+    }
+  ]
+}

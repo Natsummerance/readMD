@@ -1,0 +1,101 @@
+﻿route,handler,source,line,method_literals,frontend_refs,bridge_lines,feature_refs,usage
+,h_ping,rust/readmd-kernel/src/server.rs,1929,[],[],"[2206, 2602]",[],native桥间接使用
+,h_kernel_status,rust/readmd-kernel/src/server.rs,1946,[],[],[],[],后台/控制/基础设施或仅API，未发现前端字面引用
+,h_file,rust/readmd-kernel/src/server.rs,1969,[],"[{""file"": ""assets/js/core/history.js"", ""lines"": [453]}, {""file"": ""assets/js/editor/preview.js"", ""lines"": [696]}, {""file"": ""assets/js/reader/render.js"", ""lines"": [139]}]",[3337],"[""F001"", ""F008"", ""F009"", ""F013"", ""F015"", ""F018"", ""F079"", ""F081""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_list,rust/readmd-kernel/src/server.rs,2046,[],"[{""file"": ""assets/js/reader/folder.js"", ""lines"": [27]}]",[],"[""F002"", ""F008"", ""F013""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_raw,rust/readmd-kernel/src/server.rs,2127,[],"[{""file"": ""assets/js/reader/render.js"", ""lines"": [2928, 2932, 3012, 3017, 3027]}]",[],"[""F019""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_save,rust/readmd-kernel/src/server.rs,2255,[],"[{""file"": ""assets/js/editor/preview.js"", ""lines"": [597]}]","[3166, 3318, 3322]","[""F003"", ""F009"", ""F012"", ""F021"", ""F023"", ""F026"", ""F045"", ""F082"", ""F098""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_upload,rust/readmd-kernel/src/server.rs,2394,[],"[{""file"": ""assets/js/features/convert.js"", ""lines"": [168]}]",[],"[""F001"", ""F058""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_rename,rust/readmd-kernel/src/server.rs,2649,[],[],[3943],"[""F011""]",native桥间接使用
+,h_recent_status,rust/readmd-kernel/src/server.rs,2783,[],"[{""file"": ""assets/js/core/history.js"", ""lines"": [13, 61]}]","[2707, 2715, 3383, 3417]","[""F005""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_recent_add,rust/readmd-kernel/src/server.rs,2817,[],"[{""file"": ""assets/js/core/history.js"", ""lines"": [221]}]",[3390],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,h_recent_remove,rust/readmd-kernel/src/server.rs,2849,[],"[{""file"": ""assets/js/core/history.js"", ""lines"": [29]}]",[3400],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,h_recent_clear,rust/readmd-kernel/src/server.rs,2875,[],"[{""file"": ""assets/js/core/history.js"", ""lines"": [201]}]",[3410],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,h_links_index,rust/readmd-kernel/src/server.rs,2904,"[""POST""]","[{""file"": ""assets/js/features/graph.js"", ""lines"": [651]}]",[3631],"[""F078""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_links_graph,rust/readmd-kernel/src/server.rs,2957,[],"[{""file"": ""assets/js/features/graph.js"", ""lines"": [647]}]",[3607],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,h_links_backlinks,rust/readmd-kernel/src/server.rs,2983,[],"[{""file"": ""assets/js/features/graph.js"", ""lines"": [732]}]",[3625],"[""F080""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_links_deadlinks,rust/readmd-kernel/src/server.rs,3012,[],[],[],[],后台/控制/基础设施或仅API，未发现前端字面引用
+,h_settings,rust/readmd-kernel/src/server.rs,3050,"[""GET""]",[],"[2723, 3429, 3436, 3448]","[""F016"", ""F017"", ""F027"", ""F041""]",native桥间接使用
+,h_style_get,rust/readmd-kernel/src/server.rs,3134,[],"[{""file"": ""assets/app.js"", ""lines"": [1331]}]",[3458],"[""F083""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_style_save,rust/readmd-kernel/src/server.rs,3169,[],"[{""file"": ""assets/app.js"", ""lines"": [1365]}]",[3464],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,h_language,rust/readmd-kernel/src/server.rs,3237,"[""GET""]",[],[3766],[],native桥间接使用
+,h_autostart_get,rust/readmd-kernel/src/server.rs,3252,[],"[{""file"": ""assets/js/core/settings.js"", ""lines"": [135]}]",[3366],"[""F084""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_autostart_set,rust/readmd-kernel/src/server.rs,3257,[],"[{""file"": ""assets/js/core/settings.js"", ""lines"": [160]}]",[3373],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,h_modules,rust/readmd-kernel/src/server.rs,3372,[],"[{""file"": ""assets/js/core/modules.js"", ""lines"": [17, 78, 85]}, {""file"": ""assets/js/features/ai.js"", ""lines"": [176]}, {""file"": ""assets/js/reader/render.js"", ""lines"": [3087, 3094]}]","[2516, 2590, 2591, 2593, 2595, 3782]","[""F041""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_skills,rust/readmd-kernel/src/server.rs,3387,[],"[{""file"": ""assets/js/features/ai.js"", ""lines"": [203, 667, 701, 713, 729, 749]}]",[],"[""F052"", ""F053"", ""F055""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,parity_pets::h_pets,rust/readmd-kernel/src/parity_pets.rs,4014,"[""GET""]","[{""file"": ""assets/js/features/pet-batch.js"", ""lines"": [55, 82, 86, 509, 941, 980, 993, 1235, 1313, 1335, 1349, 1406, 1417, 1441, 1586, 1612]}, {""file"": ""assets/js/features/pet-companion-actions.js"", ""lines"": [52]}, {""file"": ""assets/js/features/pet-workbench.js"", ""lines"": [231, 248, 374]}]","[3788, 3794, 3804, 3814, 3820, 3830, 3836, 3842, 3848, 3854, 3864, 3874, 3884, 3890, 3896]","[""F086"", ""F087"", ""F088"", ""F089"", ""F090"", ""F091"", ""F092""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,parity_pets::h_pets_status,rust/readmd-kernel/src/parity_pets.rs,4027,"[""GET""]","[{""file"": ""assets/js/features/pet-batch.js"", ""lines"": [55]}]",[3788],"[""F086""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_plugins_list,rust/readmd-kernel/src/server.rs,3453,[],"[{""file"": ""assets/js/features/convert.js"", ""lines"": [235]}]",[],"[""F062""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,crate::plugin_manager::h_plugins_toggle,rust/readmd-kernel/src/plugin_manager.rs,1237,"[""POST""]","[{""file"": ""assets/js/features/convert.js"", ""lines"": [555]}]",[],"[""F064""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_ai_config,rust/readmd-kernel/src/server.rs,3466,"[""POST""]","[{""file"": ""assets/js/features/ai.js"", ""lines"": [1490, 1746, 1807]}]",[],"[""F041"", ""F046"", ""F047"", ""F048"", ""F049"", ""F050""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_ai_models,rust/readmd-kernel/src/server.rs,3515,[],"[{""file"": ""assets/js/features/ai.js"", ""lines"": [1969, 2307]}]",[],"[""F047"", ""F050""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_ai_chat,rust/readmd-kernel/src/server.rs,4005,[],"[{""file"": ""assets/app.js"", ""lines"": [785]}, {""file"": ""assets/js/editor/editor.js"", ""lines"": [1468]}, {""file"": ""assets/js/features/ai.js"", ""lines"": [2152]}, {""file"": ""assets/js/features/export.js"", ""lines"": [1511]}, {""file"": ""assets/js/reader/fixes.js"", ""lines"": [54]}]",[],"[""F024"", ""F042"", ""F043"", ""F044"", ""F045"", ""F054"", ""F073"", ""F082"", ""F083"", ""F098""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_ai_history,rust/readmd-kernel/src/server.rs,4062,"[""GET""]","[{""file"": ""assets/js/features/ai.js"", ""lines"": [1142, 1189, 1192, 1210, 1435, 1453, 1704, 1715, 2346]}]",[],"[""F042"", ""F051""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_ai_prompts,rust/readmd-kernel/src/server.rs,4091,"[""GET""]","[{""file"": ""assets/js/features/ai.js"", ""lines"": [203, 874, 1090, 1123]}]",[],"[""F041"", ""F052"", ""F053"", ""F056""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_image_save,rust/readmd-kernel/src/server.rs,4116,[],"[{""file"": ""assets/js/editor/editor.js"", ""lines"": [1185]}, {""file"": ""assets/js/editor/image.js"", ""lines"": [381]}]",[],"[""F026"", ""F028"", ""F030""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_url_parity,rust/readmd-kernel/src/server.rs,4199,[],[],[],[],后台/控制/基础设施或仅API，未发现前端字面引用
+,h_web_extract_parity,rust/readmd-kernel/src/server.rs,4207,[],"[{""file"": ""assets/js/features/web.js"", ""lines"": [55]}]",[],"[""F067"", ""F068"", ""F101""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_web_cancel_parity,rust/readmd-kernel/src/server.rs,4213,[],"[{""file"": ""assets/js/features/web.js"", ""lines"": [141]}]",[],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,h_bibtex,rust/readmd-kernel/src/server.rs,4219,[],"[{""file"": ""assets/js/reader/render.js"", ""lines"": [323]}]",[3656],"[""F020""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,parity_diagram::h_diagram_capabilities,rust/readmd-kernel/src/parity_diagram.rs,33,[],[],[3542],[],native桥间接使用
+,h_control_open,rust/readmd-kernel/src/server.rs,4375,[],[],"[2223, 2229, 2603, 2629, 2633]",[],native桥间接使用
+,h_control_next,rust/readmd-kernel/src/server.rs,4397,[],"[{""file"": ""assets/js/reader/render.js"", ""lines"": [260]}]","[2636, 2641]",[],前端文本引用（含委托/常量/注释，需结合主流程）
+,h_control_pet_batch,rust/readmd-kernel/src/server.rs,4406,[],"[{""file"": ""assets/js/features/pet-batch.js"", ""lines"": [1164]}]","[3906, 3916]","[""F095""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_control_pet_menu,rust/readmd-kernel/src/server.rs,4416,[],"[{""file"": ""assets/js/features/pet-batch.js"", ""lines"": [1165]}]",[],"[""F094""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_import_process,rust/readmd-kernel/src/server.rs,4258,[],"[{""file"": ""assets/js/reader/render.js"", ""lines"": [860]}]",[3567],"[""F035""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_modules_load,rust/readmd-kernel/src/server.rs,6546,[],"[{""file"": ""assets/js/core/modules.js"", ""lines"": [78]}, {""file"": ""assets/js/features/ai.js"", ""lines"": [176]}, {""file"": ""assets/js/reader/render.js"", ""lines"": [3087]}]",[2516],"[""F041""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_upstream_sources,rust/readmd-kernel/src/server.rs,6640,[],[],[],[],后台/控制/基础设施或仅API，未发现前端字面引用
+,h_share_start,rust/readmd-kernel/src/server.rs,6947,"[""POST""]","[{""file"": ""assets/js/features/share.js"", ""lines"": [118]}]","[4309, 4314]","[""F077""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_share_status,rust/readmd-kernel/src/server.rs,7012,[],"[{""file"": ""assets/js/features/share.js"", ""lines"": [56]}]",[],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,h_share_stop,rust/readmd-kernel/src/server.rs,7021,[],"[{""file"": ""assets/js/features/share.js"", ""lines"": [118]}]",[],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,parity_pets::h_pet_active,rust/readmd-kernel/src/parity_pets.rs,4169,"[""POST""]","[{""file"": ""assets/js/features/pet-batch.js"", ""lines"": [1417]}, {""file"": ""assets/js/features/pet-workbench.js"", ""lines"": [231, 248]}]",[3874],"[""F087""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,parity_pets::h_pet_remove,rust/readmd-kernel/src/parity_pets.rs,4134,"[""DELETE"", ""POST""]","[{""file"": ""assets/js/features/pet-batch.js"", ""lines"": [1441]}]",[3864],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,parity_pets::h_pet_thumb,rust/readmd-kernel/src/parity_pets.rs,4040,"[""GET""]","[{""file"": ""assets/js/features/pet-batch.js"", ""lines"": [509, 941, 980, 993]}, {""file"": ""assets/js/features/pet-workbench.js"", ""lines"": [374]}]",[],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,parity_pets::h_pet_update_status,rust/readmd-kernel/src/parity_pets.rs,4434,"[""GET""]","[{""file"": ""assets/js/features/pet-batch.js"", ""lines"": [1335]}]",[3814],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,parity_pets::h_pet_uninstall,rust/readmd-kernel/src/parity_pets.rs,4347,[],"[{""file"": ""assets/js/features/pet-batch.js"", ""lines"": [1235]}]",[3842],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,parity_pets::h_pet_interact,rust/readmd-kernel/src/parity_pets.rs,4393,"[""POST""]","[{""file"": ""assets/js/features/pet-companion-actions.js"", ""lines"": [52]}]",[3804],"[""F091""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,parity_pets::h_pet_import,rust/readmd-kernel/src/parity_pets.rs,4081,"[""POST""]","[{""file"": ""assets/js/features/pet-batch.js"", ""lines"": [1406]}]",[3854],"[""F088""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_export,rust/readmd-kernel/src/server.rs,7438,[],"[{""file"": ""assets/js/features/export.js"", ""lines"": [187, 811, 884, 1277, 1318, 1327, 1344, 1452]}, {""file"": ""assets/js/reader/render.js"", ""lines"": [2893]}]","[3474, 3484, 3494, 3953, 3959]","[""F070"", ""F071"", ""F072"", ""F074"", ""F076""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_export_preview,rust/readmd-kernel/src/server.rs,7417,"[""POST""]","[{""file"": ""assets/js/features/export.js"", ""lines"": [811, 884]}]",[],"[""F072""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_task_cancel,rust/readmd-kernel/src/server.rs,7598,[],"[{""file"": ""assets/js/core/task-feedback.js"", ""lines"": [14, 65]}]",[],"[""F074""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_export_presets,rust/readmd-kernel/src/server.rs,7310,"[""POST""]","[{""file"": ""assets/js/features/export.js"", ""lines"": [187, 1452]}]","[3953, 3959]","[""F070"", ""F071""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,batch2::h_update_check,rust/readmd-kernel/src/batch2.rs,205,[],"[{""file"": ""assets/js/features/updater.js"", ""lines"": [23]}]",[3705],"[""F085""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,batch2::h_update_download,rust/readmd-kernel/src/batch2.rs,660,[],"[{""file"": ""assets/js/features/updater.js"", ""lines"": [149]}]",[3734],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,batch2::h_update_status,rust/readmd-kernel/src/batch2.rs,702,[],"[{""file"": ""assets/js/features/updater.js"", ""lines"": [183]}]",[3744],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,batch2::h_update_cancel,rust/readmd-kernel/src/batch2.rs,745,[],"[{""file"": ""assets/js/features/updater.js"", ""lines"": [256]}]",[3750],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,batch2::h_update_apply,rust/readmd-kernel/src/batch2.rs,887,[],"[{""file"": ""assets/js/features/updater.js"", ""lines"": [276]}]",[3756],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,parity_diagram::h_diagram_render,rust/readmd-kernel/src/parity_diagram.rs,38,[],"[{""file"": ""assets/js/reader/render.js"", ""lines"": [2464, 2479]}]",[3525],"[""F039"", ""F040""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,batch2::h_export_epub,rust/readmd-kernel/src/batch2.rs,1135,[],"[{""file"": ""assets/js/features/export.js"", ""lines"": [1318]}]",[3484],"[""F074""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,crate::plugin_manager::h_plugins_uninstall,rust/readmd-kernel/src/plugin_manager.rs,1311,"[""POST""]","[{""file"": ""assets/js/features/convert.js"", ""lines"": [634]}]",[],"[""F065""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,batch2::h_skill_imports_list,rust/readmd-kernel/src/batch2.rs,1303,"[""DELETE"", ""GET""]","[{""file"": ""assets/js/features/ai.js"", ""lines"": [941, 1046]}]",[],"[""F057""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,batch2::h_skill_imports_preview,rust/readmd-kernel/src/batch2.rs,1358,"[""POST""]","[{""file"": ""assets/js/features/ai.js"", ""lines"": [941]}]",[],"[""F057""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,batch2::h_skill_imports_apply,rust/readmd-kernel/src/batch2.rs,1468,[],"[{""file"": ""assets/js/features/ai.js"", ""lines"": [1046]}]",[],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,batch2::h_convert_collect,rust/readmd-kernel/src/batch2.rs,1606,[],"[{""file"": ""assets/js/features/convert.js"", ""lines"": [67]}]",[],"[""F058""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,batch2::h_convert_progress,rust/readmd-kernel/src/batch2.rs,1626,[],"[{""file"": ""assets/js/features/batch.js"", ""lines"": [173]}]",[],"[""F059""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,batch2::h_convert_cancel,rust/readmd-kernel/src/batch2.rs,1665,[],"[{""file"": ""assets/js/features/batch.js"", ""lines"": [163]}]",[],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,batch2::h_batch_extract_zip,rust/readmd-kernel/src/batch2.rs,1786,"[""POST""]","[{""file"": ""assets/js/core/dragdrop.js"", ""lines"": [26, 33]}]",[3585],"[""F061""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,parity_pets::h_pet_install,rust/readmd-kernel/src/parity_pets.rs,4342,[],"[{""file"": ""assets/js/features/pet-batch.js"", ""lines"": [1235]}]","[3836, 3884]",[],前端文本引用（含委托/常量/注释，需结合主流程）
+,parity_pets::h_pet_check_update,rust/readmd-kernel/src/parity_pets.rs,4460,"[""POST""]","[{""file"": ""assets/js/features/pet-batch.js"", ""lines"": [1313]}]",[3820],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,parity_pets::h_pet_apply_update,rust/readmd-kernel/src/parity_pets.rs,4491,"[""POST""]","[{""file"": ""assets/js/features/pet-batch.js"", ""lines"": [1349]}]",[3830],[],前端文本引用（含委托/常量/注释，需结合主流程）
+,parity_pets::h_pet_configure,rust/readmd-kernel/src/parity_pets.rs,4371,"[""POST""]","[{""file"": ""assets/js/features/pet-batch.js"", ""lines"": [82, 86]}]","[3794, 3896]","[""F089"", ""F092""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,parity_pets::h_pet_runtime_install,rust/readmd-kernel/src/parity_pets.rs,4358,[],"[{""file"": ""assets/js/features/pet-batch.js"", ""lines"": [1586]}]",[3890],"[""F090""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,crate::plugin_manager::h_plugins_install,rust/readmd-kernel/src/plugin_manager.rs,1291,"[""POST""]","[{""file"": ""assets/js/features/convert.js"", ""lines"": [601]}]",[],"[""F063""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,batch2::h_export_presentation,rust/readmd-kernel/src/batch2.rs,2141,[],"[{""file"": ""assets/js/features/export.js"", ""lines"": [1327]}, {""file"": ""assets/js/reader/render.js"", ""lines"": [2893]}]",[3474],"[""F074"", ""F076""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,parity_code::h_code_run,rust/readmd-kernel/src/parity_code.rs,44,[],"[{""file"": ""assets/js/reader/render.js"", ""lines"": [1802]}]",[3512],"[""F033"", ""F037"", ""F038""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_ocr_parity,rust/readmd-kernel/src/server.rs,4186,[],"[{""file"": ""assets/js/features/batch.js"", ""lines"": [235]}, {""file"": ""assets/js/features/convert.js"", ""lines"": [108]}]",[],"[""F059"", ""F066""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_transcribe_parity,rust/readmd-kernel/src/server.rs,4193,[],[],[3548],"[""F100""]",native桥间接使用
+,batch2::h_convert,rust/readmd-kernel/src/batch2.rs,2658,[],"[{""file"": ""assets/js/features/batch.js"", ""lines"": [147, 163, 173]}, {""file"": ""assets/js/features/convert.js"", ""lines"": [67]}, {""file"": ""assets/js/reader/render.js"", ""lines"": [3116]}]",[],"[""F058"", ""F059"", ""F060"", ""F100""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,batch2::h_convert_batch,rust/readmd-kernel/src/batch2.rs,2737,[],"[{""file"": ""assets/js/features/batch.js"", ""lines"": [147]}]",[],"[""F100""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_dialog_choose_folder,rust/readmd-kernel/src/server.rs,7075,[],[],"[3247, 3275]","[""F002""]",native桥间接使用
+,h_dialog_choose_file,rust/readmd-kernel/src/server.rs,7081,[],[],"[3254, 3275, 3283]","[""F001""]",native桥间接使用
+,h_dialog_choose_any_file,rust/readmd-kernel/src/server.rs,7087,[],[],[3261],[],native桥间接使用
+,h_dialog_choose_many_files,rust/readmd-kernel/src/server.rs,7093,[],[],[3268],"[""F058""]",native桥间接使用
+,h_dialog_save_file,rust/readmd-kernel/src/server.rs,7102,[],[],[],"[""F003""]",后台/控制/基础设施或仅API，未发现前端字面引用
+,h_dialog_save_as,rust/readmd-kernel/src/server.rs,7151,[],[],[3299],"[""F003"", ""F012"", ""F021"", ""F102""]",native桥间接使用
+,h_file_save_fixed,rust/readmd-kernel/src/server.rs,7626,[],[],[3337],"[""F081""]",native桥间接使用
+,h_system_open_path,rust/readmd-kernel/src/server.rs,7122,[],"[{""file"": ""assets/js/features/batch.js"", ""lines"": [289]}]","[3972, 3990, 4002, 4021]","[""F018"", ""F059""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_system_reveal_path,rust/readmd-kernel/src/server.rs,7143,[],[],[4012],[],native桥间接使用
+,h_system_assoc,rust/readmd-kernel/src/server.rs,7645,[],[],[3348],"[""F084""]",native桥间接使用
+,h_clipboard_read,rust/readmd-kernel/src/server.rs,7677,[],[],[3358],"[""F067"", ""F069""]",native桥间接使用
+,h_clipboard_convert_html,rust/readmd-kernel/src/server.rs,7381,"[""POST""]","[{""file"": ""assets/js/features/clipboard.js"", ""lines"": [69]}]",[],"[""F069""]",前端文本引用（含委托/常量/注释，需结合主流程）
+,h_document_history,rust/readmd-kernel/src/server.rs,2108,"[""GET"", ""POST""]","[{""file"": ""assets/js/features/document-history.js"", ""lines"": [11]}]",[],"[""F021"", ""F102"", ""F103""]",前端文本引用（含委托/常量/注释，需结合主流程）
