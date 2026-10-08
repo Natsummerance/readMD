@@ -51,7 +51,7 @@ export const intro = {
   'zh-TW': r => `下載 ReadMD <span class="latest-version-badge" data-version-slot>${r.releaseTag}</span> 目前正式版，發行於 <time data-release-date datetime="${r.updatedAt}">${r.updatedAt.slice(0, 10)}</time>。選擇下方安裝套件，安裝前請核對 SHA256SUMS.txt。`,
   ja: r => `ReadMD <span class="latest-version-badge" data-version-slot>${r.releaseTag}</span> 安定版。公開日：<time data-release-date datetime="${r.updatedAt}">${r.updatedAt.slice(0, 10)}</time>。以下のパッケージを選び、インストール前に SHA256SUMS.txt を確認してください。`,
 };
-export function updateReleaseHtml(html, r, { download = false, historical = false } = {}) {
+export function updateReleaseHtml(html, r, { download = false, historical = false, candidate = false } = {}) {
   const previous = new Set();
   // Legacy deployments can have current JSON-LD but stale visible titles/badges.
   for (const label of html.matchAll(/<(?:title\b[^>]*|[a-z]+\b[^>]*(?:data-version-slot|class="latest-version-badge)[^>]*)>([^<]*)</gi))
@@ -60,7 +60,7 @@ export function updateReleaseHtml(html, r, { download = false, historical = fals
     let value; try { value = JSON.parse(body); } catch { return original; }
     const visit = object => {
       if (!object || typeof object !== 'object') return;
-      if (object['@type'] === 'SoftwareApplication') {
+      if (object['@type'] === 'SoftwareApplication' && !candidate) {
         if (object.softwareVersion) previous.add(object.softwareVersion);
         object.softwareVersion = r.version;
         if (object.dateModified) object.dateModified = r.updatedAt.slice(0, 10);
@@ -73,7 +73,7 @@ export function updateReleaseHtml(html, r, { download = false, historical = fals
     return '<script type="application/ld+json">' + JSON.stringify(value, null, 2) + '</script>';
   });
   html = html.replace(/https:\/\/github\.com\/Natsummerance\/(?:rust-)?readmd\/[^\s"'<>]+/gi, url => releaseLink(url, r));
-  if (!historical) for (const v of previous)
+  if (!historical && !candidate) for (const v of previous)
     html = html.replace(new RegExp(`[vV]${v.replaceAll('.', '\\.')}(?![\\d.])`, 'g'), r.releaseTag);
   if (download) {
     const lang = /<html[^>]*lang="([^"]+)"/i.exec(html)?.[1] || 'en';

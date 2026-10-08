@@ -2,6 +2,7 @@ import { API_URL, publishedRelease, releaseLink } from './release-contract.mjs';
 let applied;
 function apply(data) {
   const release = publishedRelease(data);
+  const candidate = /\/(?:ai-autocomplete|integrations)\//.test(location.pathname);
   if (applied) {
     const next = release.version.split('.').map(Number), current = applied.version.split('.').map(Number);
     for (let i = 0; i < 3; i++) {
@@ -17,7 +18,7 @@ function apply(data) {
       const value = JSON.parse(script.textContent);
       const visit = object => {
         if (!object || typeof object !== 'object') return;
-        if (object['@type'] === 'SoftwareApplication') {
+        if (object['@type'] === 'SoftwareApplication' && !candidate) {
           oldTags.add(object.softwareVersion); object.softwareVersion = release.version;
           if (object.dateModified) object.dateModified = release.updatedAt.slice(0, 10);
         }
@@ -32,7 +33,7 @@ function apply(data) {
     for (const v of oldTags) text = text.replace(new RegExp('[vV]' + v.replaceAll('.', '\\.') + '(?![\\d.])', 'g'), release.releaseTag);
     return text;
   };
-  if (!/\/release-notes\//.test(location.pathname)) {
+  if (!candidate && !/\/release-notes\//.test(location.pathname)) {
     document.title = replaceTags(document.title);
     document.querySelectorAll('meta[content]').forEach(meta => meta.content = replaceTags(meta.content));
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);

@@ -2,6 +2,7 @@
 // Validate the staged website, SEO metadata and inventory-backed recordings.
 // Usage: node website/tools/validate-website.mjs [--release] [--root DIR]
 import fs from 'node:fs';
+import { publishedRelease } from '../public/assets/release-contract.mjs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -43,12 +44,7 @@ for (const [key, slug] of ANSWER_TOPICS) {
 
 const RELEASE_INFO = JSON.parse(fs.readFileSync(path.join(SITE, 'release.json'), 'utf8'));
 const VERSION = RELEASE_INFO.stable;
-const RELEASE_ASSETS = new Set([
-  'ReadMDSetup-windows-x64.exe', 'ReadMD-windows-x64.zip',
-  'ReadMD-macos-arm64.zip', 'ReadMD-macos-x64.zip', 'ReadMD-macos-arm64.dmg', 'ReadMD-macos-x64.dmg',
-  'ReadMD-linux-x86_64.tar.gz', 'ReadMD-linux-x86_64.deb', 'SHA256SUMS.txt',
-  `readmd-vscode-${VERSION}.vsix`, `readmd-mcp-server-${VERSION}.zip`,
-]);
+const RELEASE_ASSETS = new Set(publishedRelease(JSON.parse(fs.readFileSync(path.join(SITE, 'published-release.json'), 'utf8'))).assets.map(asset => asset.name));
 const AI_CRAWLERS = ['GPTBot', 'OAI-SearchBot', 'ClaudeBot', 'PerplexityBot'];
 const FAQ_QUESTION_COUNTS = {};
 for (const c of Object.values(LANGUAGES)) FAQ_QUESTION_COUNTS[c.canonical] = 6;

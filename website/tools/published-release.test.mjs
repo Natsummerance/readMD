@@ -48,3 +48,9 @@ test('stale visible title is repaired even when structured metadata was already 
   const out=updateReleaseHtml(html,publishedRelease(fixture()),{download:true});
   assert.match(out,/<title>Download ReadMD \| V0\.0\.5<\/title>/);assert.doesNotMatch(out,/2\.3\.9/);
 });
+test('candidate pages keep their candidate title while downloads use the stable release',()=>{
+  const html='<html><head><title>V0.0.5 AI autocomplete</title></head><body>V0.0.5 candidate <a href="https://github.com/Natsummerance/rust-ReadMD/releases/download/v2.3.9/ReadMD.exe">Stable</a></body></html>';
+  const out=updateReleaseHtml(html,publishedRelease(snapshot),{candidate:true});
+  assert.match(out,/<title>V0\.0\.5 AI autocomplete/);assert.match(out,/V0\.0\.5 candidate/);
+  assert.ok(out.includes(snapshot.assetsBaseUrl+'ReadMD-windows-x64.zip'));
+});

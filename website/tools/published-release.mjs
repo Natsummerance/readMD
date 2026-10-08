@@ -5,6 +5,12 @@ import crypto from 'node:crypto';
 import { API_URL, publishedRelease, updateReleaseHtml } from '../public/assets/release-contract.mjs';
 const site = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const snapshot = path.join(site, 'published-release.json');
+async function writeChanged(file, text) {
+  try { if (await fs.readFile(file, 'utf8') === text) return; } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  const temporary = file + '.readmd-build-' + process.pid + '.tmp';
+  await fs.writeFile(temporary, text);
+  await fs.rename(temporary, file);
+}
 export async function refreshRelease() {
   const headers = { Accept: 'application/vnd.github+json' };
   if (process.env.GITHUB_TOKEN) headers.Authorization = 'Bearer ' + process.env.GITHUB_TOKEN;
@@ -27,8 +33,9 @@ export async function syncRelease() {
       if (entry.name === 'showcase') continue;
       const file = path.join(directory, entry.name);
       if (entry.isDirectory()) await walk(file);
-      else if (entry.name.endsWith('.html')) await fs.writeFile(file, updateReleaseHtml(await fs.readFile(file, 'utf8'), r, {
+      else if (entry.name.endsWith('.html')) await writeChanged(file, updateReleaseHtml(await fs.readFile(file, 'utf8'), r, {
         download: /[\\/]download[\\/]index\.html$/.test(file), historical: /[\\/]release-notes[\\/]/.test(file),
+        candidate: /[\\/](?:ai-autocomplete|integrations)[\\/]/.test(file),
       }));
     }
   }
@@ -36,7 +43,7 @@ export async function syncRelease() {
     const directory = path.join(site, folder);
     try { await fs.access(directory); } catch { continue; }
     await walk(directory);
-    await fs.writeFile(path.join(directory, 'version.json'), JSON.stringify(r, null, 2) + '\n');
+    await writeChanged(path.join(directory, 'version.json'), JSON.stringify(r, null, 2) + '\n');
     const headerFile = path.join(directory, '_headers');
     let headers = await fs.readFile(headerFile, 'utf8');
     for (const language of ['', 'zh-cn/', 'zh-tw/', 'ja/']) {
@@ -47,7 +54,7 @@ export async function syncRelease() {
         if (!headers.includes(hash)) headers = headers.replace("script-src 'self'", "script-src 'self' " + hash);
       }
     }
-    await fs.writeFile(headerFile, headers);
+    await writeChanged(headerFile, headers);
   }
   console.log('[sync-version] Offline ' + r.releaseTag + ': pages, metadata and downloads synchronized');
 }
