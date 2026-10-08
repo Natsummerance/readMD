@@ -43,3 +43,8 @@ test('historical release prose is preserved while old binary links are upgraded'
   const out=updateReleaseHtml(html,publishedRelease(fixture()),{historical:true});
   assert.match(out,/v2\.3\.9/);assert.match(out,/download\/V0\.0\.5\/ReadMD-windows-x64.zip/);
 });
+test('stale visible title is repaired even when structured metadata was already updated',()=>{
+  const html='<html><head><title>Download ReadMD | v2.3.9</title><script type="application/ld+json">{"@type":"SoftwareApplication","softwareVersion":"0.0.4"}</script></head><body>Stable · v2.3.9</body></html>';
+  const out=updateReleaseHtml(html,publishedRelease(fixture()),{download:true});
+  assert.match(out,/<title>Download ReadMD \| V0\.0\.5<\/title>/);assert.doesNotMatch(out,/2\.3\.9/);
+});

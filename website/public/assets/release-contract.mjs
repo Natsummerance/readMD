@@ -53,6 +53,9 @@ export const intro = {
 };
 export function updateReleaseHtml(html, r, { download = false, historical = false } = {}) {
   const previous = new Set();
+  // Legacy deployments can have current JSON-LD but stale visible titles/badges.
+  for (const label of html.matchAll(/<(?:title\b[^>]*|[a-z]+\b[^>]*(?:data-version-slot|class="latest-version-badge)[^>]*)>([^<]*)</gi))
+    for (const tag of label[1].matchAll(/[vV](\d+\.\d+\.\d+)/g)) previous.add(tag[1]);
   html = html.replace(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g, (original, body) => {
     let value; try { value = JSON.parse(body); } catch { return original; }
     const visit = object => {

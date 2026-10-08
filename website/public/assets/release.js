@@ -10,6 +10,8 @@ function apply(data) {
     }
   }
   const oldTags = new Set();
+  for (const text of [document.title, ...[...document.querySelectorAll('.latest-version-badge,[data-version-slot]')].map(el => el.textContent)])
+    for (const tag of text.matchAll(/[vV](\d+\.\d+\.\d+)/g)) oldTags.add(tag[1]);
   document.querySelectorAll('script[type="application/ld+json"]').forEach(script => {
     try {
       const value = JSON.parse(script.textContent);
